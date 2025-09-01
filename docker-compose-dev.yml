@@ -1,0 +1,36 @@
+version: "3.4"
+
+services:
+  redis-dev:
+    image: redis:latest
+    container_name: redis-dev
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - one-hub-dev
+
+  mysql-dev:
+    image: mysql:8.2.0
+    restart: always
+    container_name: mysql-dev
+    volumes:
+      - ./data/mysql-dev:/var/lib/mysql # 开发环境数据持久化
+    ports:
+      - "3306:3306"
+    environment:
+      TZ: Asia/Shanghai # 设置时区
+      MYSQL_ROOT_PASSWORD: "OneAPI@justsong" # 设置 root 用户的密码
+      MYSQL_USER: oneapi # 创建专用用户
+      MYSQL_PASSWORD: "123456" # 设置专用用户密码
+      MYSQL_DATABASE: one-api # 自动创建数据库
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - one-hub-dev
+
+networks:
+  one-hub-dev:
+    driver: bridge
