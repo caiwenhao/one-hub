@@ -19,21 +19,21 @@ const TechSection = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
 
-  const codeExample = `import OpenAI from 'openai';
+  const codeExample = `from openai import OpenAI
 
-const client = new OpenAI({
-  apiKey: "your-kapon-api-key",
-  baseURL: "https://api.kapon.ai/v1"
-});
+client = OpenAI(
+    api_key="your-kapon-api-key",
+    base_url="https://models.kapon.cloud/v1"
+)
 
-const response = await client.chat.completions.create({
-  model: "gpt-4o",
-  messages: [
-    {"role": "user", "content": "Hello!"}
-  ]
-});
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "Hello!"}
+    ]
+)
 
-console.log(response.choices[0].message.content);`;
+print(response.choices[0].message.content)`;
 
   return (
     <Box
@@ -134,7 +134,7 @@ console.log(response.choices[0].message.content);`;
                     fontWeight: 500
                   }}
                 >
-                  main.js
+                  main.py
                 </Typography>
               </Box>
 
@@ -149,27 +149,11 @@ console.log(response.choices[0].message.content);`;
                   margin: 0,
                   position: 'relative',
                   zIndex: 1,
-                  '& .keyword': { color: '#8b5cf6' },
-                  '& .string': { color: colors.accent, fontWeight: 600 },
-                  '& .comment': { color: '#6b7280' }
+                  color: '#e2e8f0'
                 }}
               >
-                <code>
-                  {codeExample.split('\n').map((line, index) => (
-                    <div key={index} style={{ minHeight: '1.5em' }}>
-                      {line
-                        .replace(/import|const|await|new/g, '<span class="keyword">$&</span>')
-                        .replace(/"[^"]*"/g, '<span class="string">$&</span>')
-                        .split('<span').map((part, i) => {
-                          if (part.startsWith(' class="keyword"')) {
-                            return <span key={i} className="keyword" dangerouslySetInnerHTML={{ __html: part.replace(' class="keyword">', '') }} />;
-                          } else if (part.startsWith(' class="string"')) {
-                            return <span key={i} className="string" dangerouslySetInnerHTML={{ __html: part.replace(' class="string">', '') }} />;
-                          }
-                          return part;
-                        })}
-                    </div>
-                  ))}
+                <code style={{ color: '#e2e8f0' }}>
+                  {codeExample}
                 </code>
               </Box>
             </Box>
@@ -221,7 +205,7 @@ console.log(response.choices[0].message.content);`;
                 <Button
                   variant="text"
                   endIcon={<ArrowForward />}
-                  onClick={() => navigate('/playground')}
+                  onClick={() => navigate('/developer')}
                   sx={{
                     fontSize: '1.125rem',
                     color: colors.accent,

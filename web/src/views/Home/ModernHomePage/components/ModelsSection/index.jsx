@@ -23,31 +23,31 @@ const ModelsSection = () => {
 
   const models = [
     {
-      name: 'GPT-4o',
+      name: 'GPT-5',
       provider: 'OpenAI',
-      description: '旗舰级多模态模型，智能与速度的完美结合',
+      description: '最新一代旗舰模型，突破性的推理能力与创造力',
       tag: '🔥 火爆',
       tagColor: 'linear-gradient(to right, #ef4444, #ec4899)',
       iconBg: gradients.modelGPT,
       iconText: 'GPT'
     },
     {
-      name: 'Claude 3.5 Sonnet',
-      provider: 'Anthropic',
-      description: 'Anthropic最新模型，性价比与性能的卓越平衡',
-      tag: '✨ 最新',
-      tagColor: 'linear-gradient(to right, #3b82f6, #8b5cf6)',
-      iconBg: gradients.modelClaude,
-      iconText: 'CLU'
-    },
-    {
-      name: 'Gemini 1.5 Flash',
+      name: 'Gemini-2.5-Pro',
       provider: 'Google',
-      description: 'Google出品，极速响应，成本友好',
-      tag: '💎 推荐',
-      tagColor: 'linear-gradient(to right, #8b5cf6, #ec4899)',
+      description: 'Google最强大模型，卓越的多模态理解能力',
+      tag: '🔥 火爆',
+      tagColor: 'linear-gradient(to right, #ef4444, #ec4899)',
       iconBg: gradients.modelGemini,
       iconText: 'GEM'
+    },
+    {
+      name: 'Claude Sonnet 4',
+      provider: 'Anthropic',
+      description: 'Anthropic顶级模型，安全可靠的AI助手',
+      tag: '🔥 火爆',
+      tagColor: 'linear-gradient(to right, #ef4444, #ec4899)',
+      iconBg: gradients.modelClaude,
+      iconText: 'CLU'
     }
   ];
 

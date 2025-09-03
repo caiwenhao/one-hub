@@ -2,7 +2,6 @@ import React from 'react';
 import { Box } from '@mui/material';
 import HeroSection from './components/HeroSection';
 import FeaturesSection from './components/FeaturesSection';
-import StatsSection from './components/StatsSection';
 import TechSection from './components/TechSection';
 import ModelsSection from './components/ModelsSection';
 import AudienceSection from './components/AudienceSection';
@@ -26,7 +25,6 @@ const ModernHomePage = () => {
     >
       <HeroSection />
       <FeaturesSection />
-      <StatsSection />
       <TechSection />
       <ModelsSection />
       <AudienceSection />

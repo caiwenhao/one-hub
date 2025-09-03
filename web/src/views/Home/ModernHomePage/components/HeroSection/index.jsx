@@ -25,9 +25,9 @@ const HeroSection = () => {
       sx={{
         position: 'relative',
         background: gradients.heroBackground,
-        pt: { xs: 10, md: 16 },
-        pb: { xs: 10, md: 16 },
-        minHeight: '800px',
+        pt: { xs: 8, md: 12 },
+        pb: { xs: 8, md: 12 },
+        minHeight: '700px',
         display: 'flex',
         alignItems: 'center',
         overflow: 'hidden'
@@ -135,11 +135,11 @@ const HeroSection = () => {
           <Typography
             variant="h1"
             sx={{
-              fontSize: { xs: '3rem', md: '5rem', lg: '6rem' },
+              fontSize: { xs: '2.5rem', md: '4rem', lg: '4.5rem' },
               fontWeight: 200,
               color: colors.primary,
-              mb: 4,
-              lineHeight: 1.1,
+              mb: 3,
+              lineHeight: 1.2,
               letterSpacing: '-0.02em',
               textShadow: '0 2px 4px rgba(0,0,0,0.1)',
               '& .gradient-text': {
@@ -158,12 +158,12 @@ const HeroSection = () => {
           <Typography
             variant="h4"
             sx={{
-              fontSize: { xs: '1.25rem', md: '1.5rem', lg: '2rem' },
+              fontSize: { xs: '1.2rem', md: '1.4rem', lg: '1.75rem' },
               color: colors.secondary,
-              mb: 6,
-              maxWidth: '800px',
+              mb: 5,
+              maxWidth: '850px',
               mx: 'auto',
-              lineHeight: 1.5,
+              lineHeight: 1.4,
               fontWeight: 300,
               textShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
