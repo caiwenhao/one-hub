@@ -55,7 +55,7 @@ const AudienceSection = () => {
       sx={{
         position: 'relative',
         background: 'linear-gradient(to bottom right, rgba(249, 250, 251, 0.5) 0%, rgba(59, 130, 246, 0.03) 30%, rgba(139, 92, 246, 0.03) 70%, rgba(249, 250, 251, 0.5) 100%)',
-        py: { xs: 12, md: 16 },
+        py: { xs: 8, md: 16 },
         overflow: 'hidden'
       }}
     >
@@ -115,7 +115,7 @@ const AudienceSection = () => {
                     background: gradients.card,
                     border: '1px solid rgba(0, 0, 0, 0.05)',
                     borderRadius: '24px',
-                    p: { xs: 4, md: 6 },
+                    p: { xs: 3, md: 4 },
                     position: 'relative',
                     overflow: 'hidden',
                     ...animationStyles.hoverLift,

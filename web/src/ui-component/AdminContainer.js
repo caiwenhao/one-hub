@@ -7,7 +7,7 @@ const AdminContainer = styled(Container)(({ theme }) => ({
   paddingBottom: '30px !important',
   marginBottom: '30px !important',
   [theme.breakpoints.up('md')]: {
-    maxWidth: '100% !important',
+    maxWidth: '1200px !important',
     width: '100%'
   }
 }));

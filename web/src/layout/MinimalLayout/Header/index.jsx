@@ -247,25 +247,6 @@ const Header = () => {
               </Button>
             ) : (
               <>
-                {/* 登录文字链接 - 完全对齐设计稿 */}
-                <Typography
-                  component={Link}
-                  to="/login"
-                  sx={{
-                    color: '#718096', // text-gray-700
-                    fontWeight: 500, // font-medium
-                    textDecoration: 'none',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    transition: 'colors 0.3s ease', // transition-colors
-                    '&:hover': {
-                      color: '#4299E1' // hover:text-accent
-                    }
-                  }}
-                >
-                  登录
-                </Typography>
-
                 {/* 登录按钮 - 完全对齐设计稿 */}
                 <Button
                   component={Link}

@@ -30,7 +30,7 @@ const MinimalLayout = () => {
           transition: 'all 0.3s ease' // transition-all duration-300
         }}
       >
-        <Container maxWidth="xl" sx={{ maxWidth: '1280px' }}> {/* max-w-7xl */}
+        <Container maxWidth="xl" sx={{ maxWidth: '1200px' }}> {/* max-w-6xl */}
           <Toolbar sx={{
             px: 3, // px-6 = 24px
             py: 2.5, // py-5 = 20px

@@ -56,7 +56,7 @@ const ModelsSection = () => {
       component="section"
       sx={{
         backgroundColor: '#ffffff',
-        py: { xs: 12, md: 16 },
+        py: { xs: 8, md: 16 },
         position: 'relative'
       }}
     >

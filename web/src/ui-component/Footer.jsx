@@ -19,7 +19,7 @@ const DesignFooter = () => {
 
   return (
     <Box component="footer" sx={{ backgroundColor: '#ffffff', borderTop: '1px solid rgba(0,0,0,0.08)', py: { xs: 8, md: 12 } }}>
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ maxWidth: '1200px' }}>
         <Grid container spacing={{ xs: 4, md: 6 }}>
           {/* 品牌区域 */}
           <Grid item xs={12} md={4}>

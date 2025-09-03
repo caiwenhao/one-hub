@@ -25,7 +25,7 @@ const CTASection = () => {
       sx={{
         position: 'relative',
         background: gradients.finalCTA,
-        py: { xs: 12, md: 16 },
+        py: { xs: 8, md: 16 },
         overflow: 'hidden'
       }}
     >
@@ -98,7 +98,7 @@ const CTASection = () => {
         }}
       />
 
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10 }}>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10, maxWidth: '1200px' }}>
         <Box
           sx={{
             textAlign: 'center',

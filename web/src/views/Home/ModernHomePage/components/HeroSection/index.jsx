@@ -25,9 +25,9 @@ const HeroSection = () => {
       sx={{
         position: 'relative',
         background: gradients.heroBackground,
-        pt: { xs: 12, md: 16 },
-        pb: { xs: 16, md: 20 },
-        minHeight: '100vh',
+        pt: { xs: 10, md: 16 },
+        pb: { xs: 10, md: 16 },
+        minHeight: '800px',
         display: 'flex',
         alignItems: 'center',
         overflow: 'hidden'
@@ -122,7 +122,7 @@ const HeroSection = () => {
         }}
       />
 
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10 }}>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10, maxWidth: '1200px' }}>
         <Box
           sx={{
             textAlign: 'center',
@@ -160,7 +160,7 @@ const HeroSection = () => {
             sx={{
               fontSize: { xs: '1.25rem', md: '1.5rem', lg: '2rem' },
               color: colors.secondary,
-              mb: 8,
+              mb: 6,
               maxWidth: '800px',
               mx: 'auto',
               lineHeight: 1.5,

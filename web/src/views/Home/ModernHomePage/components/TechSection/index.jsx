@@ -41,7 +41,7 @@ console.log(response.choices[0].message.content);`;
       sx={{
         position: 'relative',
         background: 'linear-gradient(to bottom right, #ffffff 0%, rgba(59, 130, 246, 0.02) 30%, rgba(139, 92, 246, 0.02) 70%, #ffffff 100%)',
-        py: { xs: 12, md: 16 },
+        py: { xs: 8, md: 16 },
         overflow: 'hidden'
       }}
     >
@@ -60,7 +60,7 @@ console.log(response.choices[0].message.content);`;
         }}
       />
 
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, maxWidth: '1200px' }}>
         <Grid container spacing={{ xs: 4, md: 8 }} alignItems="center">
           {/* 代码示例 */}
           <Grid item xs={12} lg={6}>
@@ -184,7 +184,7 @@ console.log(response.choices[0].message.content);`;
                   fontSize: { xs: '2.5rem', md: '3.5rem', lg: '4rem' },
                   fontWeight: 200,
                   color: colors.primary,
-                  mb: 4,
+                  mb: 3,
                   lineHeight: 1.2,
                   letterSpacing: '-0.01em',
                   textShadow: '0 2px 4px rgba(0,0,0,0.1)',

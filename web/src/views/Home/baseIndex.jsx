@@ -14,7 +14,7 @@ const BaseIndex = () => {
         p: 4
       }}
     >
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ maxWidth: '1200px' }}>
         <Grid container columns={12} wrap="nowrap" alignItems="center" sx={{ minHeight: 'calc(100vh - 230px)' }}>
           <Grid md={7} lg={6}>
             <Stack spacing={3}>

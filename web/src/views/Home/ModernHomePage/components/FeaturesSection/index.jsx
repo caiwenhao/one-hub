@@ -64,7 +64,7 @@ const FeaturesSection = () => {
       sx={{
         position: 'relative',
         backgroundColor: '#ffffff',
-        py: { xs: 12, md: 16 },
+        py: { xs: 8, md: 16 },
         overflow: 'hidden'
       }}
     >
@@ -82,7 +82,7 @@ const FeaturesSection = () => {
         <Box
           sx={{
             textAlign: 'center',
-            mb: { xs: 8, md: 12 },
+            mb: { xs: 5, md: 8 },
             ...animationStyles.fadeIn
           }}
         >
@@ -131,7 +131,7 @@ const FeaturesSection = () => {
                     background: gradients.card,
                     border: '1px solid rgba(0, 0, 0, 0.05)',
                     borderRadius: '24px',
-                    p: { xs: 3, md: 4 },
+                    p: { xs: 2.5, md: 3 },
                     position: 'relative',
                     overflow: 'hidden',
                     ...animationStyles.hoverLift,

@@ -139,7 +139,7 @@ const Header = () => {
           transform: scrolled ? 'translateY(0)' : 'translateY(0)',
         }}
       >
-        <Container maxWidth="xl">
+        <Container maxWidth="xl" sx={{ maxWidth: '1200px' }}>
           <Toolbar sx={{ py: 2.5, justifyContent: 'space-between' }}>
             {/* Logo */}
             <Box 
