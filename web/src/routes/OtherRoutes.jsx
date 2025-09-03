@@ -21,6 +21,7 @@ const Playground = Loadable(lazy(() => import('views/Playground')));
 const ModelPrice = Loadable(lazy(() => import('views/ModelPrice')));
 const PricingPage = Loadable(lazy(() => import('views/PricingPage')));
 const HotModels = Loadable(lazy(() => import('views/HotModels')));
+const DeveloperCenter = Loadable(lazy(() => import('views/DeveloperCenter')));
 
 const WithMargins = ({ children }) => (
   <Box
@@ -103,6 +104,10 @@ const OtherRoutes = {
           <HotModels />
         </WithMargins>
       )
+    },
+    {
+      path: '/developer',
+      element: <DeveloperCenter />
     }
   ]
 };

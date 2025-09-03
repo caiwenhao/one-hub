@@ -119,17 +119,17 @@ const Header = () => {
 
         <Typography
           component={Link}
-          to="/playground"
+          to="/developer"
           sx={{
-            color: '#718096', // text-gray-700
-            fontWeight: 500, // font-medium
+            color: pathname.startsWith('/developer') ? '#4299E1' : '#718096',
+            fontWeight: pathname.startsWith('/developer') ? 600 : 500,
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
             position: 'relative',
-            transition: 'all 0.3s ease', // transition-all duration-300
+            transition: 'all 0.3s ease',
             '&:hover': {
-              color: '#4299E1' // hover:text-accent
+              color: '#4299E1'
             },
             '&::after': {
               content: '""',
@@ -137,11 +137,11 @@ const Header = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              height: '2px', // h-0.5
-              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
-              transform: 'scaleX(0)',
+              height: '2px',
+              background: 'linear-gradient(to right, #4299E1, #3182CE)',
+              transform: pathname.startsWith('/developer') ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
-              transition: 'transform 0.3s ease' // transition-transform duration-300
+              transition: 'transform 0.3s ease'
             },
             '&:hover::after': {
               transform: 'scaleX(1)'
@@ -149,6 +149,40 @@ const Header = () => {
           }}
         >
           开发者中心
+        </Typography>
+
+        <Typography
+          component={Link}
+          to="/playground"
+          sx={{
+            color: pathname === '/playground' ? '#4299E1' : '#718096',
+            fontWeight: pathname === '/playground' ? 600 : 500,
+            textDecoration: 'none',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            position: 'relative',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              color: '#4299E1'
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: '2px',
+              background: 'linear-gradient(to right, #4299E1, #3182CE)',
+              transform: pathname === '/playground' ? 'scaleX(1)' : 'scaleX(0)',
+              transformOrigin: 'center',
+              transition: 'transform 0.3s ease'
+            },
+            '&:hover::after': {
+              transform: 'scaleX(1)'
+            }
+          }}
+        >
+          应用体验
         </Typography>
 
         <Typography
