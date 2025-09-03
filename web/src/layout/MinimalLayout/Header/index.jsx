@@ -51,10 +51,10 @@ const Header = () => {
       >
         <Typography
           component={Link}
-          to="/models"
+          to="/"
           sx={{
-            color: '#718096', // text-gray-700
-            fontWeight: 500, // font-medium
+            color: pathname === '/' ? '#4299E1' : '#718096', // text-gray-700
+            fontWeight: pathname === '/' ? 600 : 500, // font-medium
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
@@ -71,7 +71,41 @@ const Header = () => {
               bottom: 0,
               height: '2px', // h-0.5
               background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
-              transform: 'scaleX(0)',
+              transform: pathname === '/' ? 'scaleX(1)' : 'scaleX(0)',
+              transformOrigin: 'center',
+              transition: 'transform 0.3s ease' // transition-transform duration-300
+            },
+            '&:hover::after': {
+              transform: 'scaleX(1)'
+            }
+          }}
+        >
+          首页
+        </Typography>
+
+        <Typography
+          component={Link}
+          to="/models"
+          sx={{
+            color: pathname === '/models' ? '#4299E1' : '#718096', // text-gray-700
+            fontWeight: pathname === '/models' ? 600 : 500, // font-medium
+            textDecoration: 'none',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            position: 'relative',
+            transition: 'all 0.3s ease', // transition-all duration-300
+            '&:hover': {
+              color: '#4299E1' // hover:text-accent
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: '2px', // h-0.5
+              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
+              transform: pathname === '/models' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
             },
@@ -87,8 +121,8 @@ const Header = () => {
           component={Link}
           to="/price"
           sx={{
-            color: '#718096', // text-gray-700
-            fontWeight: 500, // font-medium
+            color: pathname === '/price' ? '#4299E1' : '#718096', // text-gray-700
+            fontWeight: pathname === '/price' ? 600 : 500, // font-medium
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
@@ -105,7 +139,7 @@ const Header = () => {
               bottom: 0,
               height: '2px', // h-0.5
               background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
-              transform: 'scaleX(0)',
+              transform: pathname === '/price' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
             },
