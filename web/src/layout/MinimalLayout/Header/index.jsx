@@ -187,10 +187,10 @@ const Header = () => {
 
         <Typography
           component={Link}
-          to="/about"
+          to="/contact"
           sx={{
-            color: '#718096', // text-gray-700
-            fontWeight: 500, // font-medium
+            color: pathname === '/contact' ? '#4299E1' : '#718096', // text-gray-700
+            fontWeight: pathname === '/contact' ? 600 : 500, // font-medium
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
@@ -207,7 +207,7 @@ const Header = () => {
               bottom: 0,
               height: '2px', // h-0.5
               background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
-              transform: 'scaleX(0)',
+              transform: pathname === '/contact' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
             },
