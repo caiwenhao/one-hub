@@ -37,18 +37,7 @@ const DesignFooter = () => {
               <Typography variant="body1" sx={{ color: '#718096', lineHeight: 1.6, fontSize: '1.125rem', fontWeight: 300, mb: 4 }}>
                 稳定，是AI应用的唯一标准
               </Typography>
-              {/* 社交/链接 */}
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                {[
-                  { label: 'GitHub', href: 'https://github.com/MartialBE/one-hub' },
-                  { label: '文档', href: '/playground' },
-                  { label: '状态', href: '#' }
-                ].map((item) => (
-                  <Box key={item.label} onClick={() => navigateTo(item.href)} sx={{ px: 2, py: 1, borderRadius: '20px', backgroundColor: 'rgba(66,153,225,0.05)', border: '1px solid rgba(66,153,225,0.1)', cursor: 'pointer', transition: 'all 0.3s ease', '&:hover': { backgroundColor: 'rgba(66,153,225,0.10)', borderColor: 'rgba(66,153,225,0.2)', transform: 'translateY(-2px)' } }}>
-                    <Typography variant="body2" sx={{ color: '#3182CE' }}>{item.label}</Typography>
-                  </Box>
-                ))}
-              </Box>
+              {/* 社交/链接区域已移除 */}
             </Box>
           </Grid>
 
@@ -56,8 +45,8 @@ const DesignFooter = () => {
           <Grid item xs={12} md={8}>
             <Grid container spacing={{ xs: 4, md: 6 }}>
               {[
-                { title: '导航', links: [ { label: '热门模型', href: '/price' }, { label: '价格方案', href: '/price' }, { label: '开发者中心', href: '/playground' } ] },
-                { title: '支持', links: [ { label: '联系我们', href: '/about' }, { label: '常见问题', href: '/about' }, { label: '服务状态', href: '#' } ] },
+                { title: '导航', links: [ { label: '热门模型', href: '/models' }, { label: '价格方案', href: '/price' }, { label: '开发者中心', href: '/developer' } ] },
+                { title: '支持', links: [ { label: '联系我们', href: '/contact' }, { label: '常见问题', href: '/about' }, { label: '服务状态', href: '#' } ] },
                 { title: '联系', links: [ { label: 'sales@kapon.ai', href: 'mailto:sales@kapon.ai' }, { label: 'support@kapon.ai', href: 'mailto:support@kapon.ai' } ] }
               ].map((section) => (
                 <Grid key={section.title} item xs={12} sm={4}>
