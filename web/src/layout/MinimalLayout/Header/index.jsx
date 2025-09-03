@@ -4,28 +4,15 @@ import { useTheme } from '@mui/material/styles';
 import {
   Box,
   Button,
-  Stack,
-  Popper,
   IconButton,
-  List,
-  ListItemButton,
-  Paper,
-  ListItemText,
   Typography,
-  Divider,
-  ClickAwayListener
+  useMediaQuery
 } from '@mui/material';
 import LogoSection from 'layout/MainLayout/LogoSection';
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import ThemeButton from 'ui-component/ThemeButton';
-import { NoticeButton } from 'ui-component/notice';
-import I18nButton from 'ui-component/i18nButton';
 import { IconMenu2 } from '@tabler/icons-react';
-import Transitions from 'ui-component/extended/Transitions';
-import MainCard from 'ui-component/cards/MainCard';
-import { useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 // ==============================|| MINIMAL NAVBAR / HEADER ||============================== //
@@ -35,9 +22,9 @@ const Header = () => {
   const { pathname } = useLocation();
   const account = useSelector((state) => state.account);
   const [open, setOpen] = useState(null);
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { t } = useTranslation();
-  const siteInfo = useSelector((state) => state.siteInfo);
+
   const handleOpenMenu = (event) => {
     setOpen(open ? null : event.currentTarget);
   };
@@ -47,365 +34,312 @@ const Header = () => {
   };
 
   return (
-    <>
-      <Box
-        sx={{
-          width: 228,
-          display: 'flex',
-          alignItems: 'center',
-          [theme.breakpoints.down('md')]: {
-            width: 'auto'
-          }
-        }}
-      >
-        <Box component="span" sx={{ display: 'block' }}>
-          <LogoSection />
-        </Box>
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+      {/* Logo区域 - 完全对齐设计稿 */}
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <LogoSection />
       </Box>
 
-      <Box sx={{ flexGrow: 1 }} />
-      <Stack spacing={{ xs: 0.5, sm: 1, md: 2 }} direction="row" justifyContent="center" alignItems="center">
+      {/* 中间导航菜单 - 完全对齐设计稿 */}
+      <Box
+        component="nav"
+        sx={{
+          display: { xs: 'none', md: 'flex' },
+          alignItems: 'center',
+          gap: 5 // space-x-10 = 40px
+        }}
+      >
+        <Typography
+          component={Link}
+          to="/models"
+          sx={{
+            color: '#718096', // text-gray-700
+            fontWeight: 500, // font-medium
+            textDecoration: 'none',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            position: 'relative',
+            transition: 'all 0.3s ease', // transition-all duration-300
+            '&:hover': {
+              color: '#4299E1' // hover:text-accent
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: '2px', // h-0.5
+              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
+              transform: 'scaleX(0)',
+              transformOrigin: 'center',
+              transition: 'transform 0.3s ease' // transition-transform duration-300
+            },
+            '&:hover::after': {
+              transform: 'scaleX(1)'
+            }
+          }}
+        >
+          热门模型
+        </Typography>
+
+        <Typography
+          component={Link}
+          to="/price"
+          sx={{
+            color: '#718096', // text-gray-700
+            fontWeight: 500, // font-medium
+            textDecoration: 'none',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            position: 'relative',
+            transition: 'all 0.3s ease', // transition-all duration-300
+            '&:hover': {
+              color: '#4299E1' // hover:text-accent
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: '2px', // h-0.5
+              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
+              transform: 'scaleX(0)',
+              transformOrigin: 'center',
+              transition: 'transform 0.3s ease' // transition-transform duration-300
+            },
+            '&:hover::after': {
+              transform: 'scaleX(1)'
+            }
+          }}
+        >
+          价格方案
+        </Typography>
+
+        <Typography
+          component={Link}
+          to="/playground"
+          sx={{
+            color: '#718096', // text-gray-700
+            fontWeight: 500, // font-medium
+            textDecoration: 'none',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            position: 'relative',
+            transition: 'all 0.3s ease', // transition-all duration-300
+            '&:hover': {
+              color: '#4299E1' // hover:text-accent
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: '2px', // h-0.5
+              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
+              transform: 'scaleX(0)',
+              transformOrigin: 'center',
+              transition: 'transform 0.3s ease' // transition-transform duration-300
+            },
+            '&:hover::after': {
+              transform: 'scaleX(1)'
+            }
+          }}
+        >
+          开发者中心
+        </Typography>
+
+        <Typography
+          component={Link}
+          to="/about"
+          sx={{
+            color: '#718096', // text-gray-700
+            fontWeight: 500, // font-medium
+            textDecoration: 'none',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            position: 'relative',
+            transition: 'all 0.3s ease', // transition-all duration-300
+            '&:hover': {
+              color: '#4299E1' // hover:text-accent
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: '2px', // h-0.5
+              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
+              transform: 'scaleX(0)',
+              transformOrigin: 'center',
+              transition: 'transform 0.3s ease' // transition-transform duration-300
+            },
+            '&:hover::after': {
+              transform: 'scaleX(1)'
+            }
+          }}
+        >
+          联系我们
+        </Typography>
+      </Box>
+
+      {/* 右侧按钮区域 - 完全对齐设计稿 */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}> {/* space-x-4 */}
         {isMobile ? (
-          <>
-            <NoticeButton sx={{ color: theme.palette.text.primary, mr: 1 }} />
-            <ThemeButton sx={{ color: theme.palette.text.primary, mr: 1 }} />
-            <I18nButton sx={{ color: theme.palette.text.primary, mr: 1 }} />
-            <IconButton
-              onClick={handleOpenMenu}
-              sx={{
-                color: theme.palette.text.primary,
-                borderRadius: '12px',
-                padding: '8px',
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-                '&:hover': {
-                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'
-                }
-              }}
-            >
-              <IconMenu2 stroke={1.5} size="1.3rem" />
-            </IconButton>
-          </>
+          <IconButton
+            onClick={handleOpenMenu}
+            sx={{
+              color: theme.palette.text.primary,
+              borderRadius: '12px',
+              padding: '8px',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+              '&:hover': {
+                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'
+              }
+            }}
+          >
+            <IconMenu2 stroke={1.5} size="1.3rem" />
+          </IconButton>
         ) : (
           <>
-            <Button
-              component={Link}
-              variant="text"
-              to="/"
-              color={pathname === '/' ? 'primary' : 'inherit'}
-              sx={{
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                textTransform: 'none'
-              }}
-            >
-              {t('menu.home')}
-            </Button>
-            {account.user && (
-              <Button
-                component={Link}
-                variant="text"
-                to="/playground"
-                color={pathname === '/playground' ? 'primary' : 'inherit'}
-                sx={{
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  textTransform: 'none'
-                }}
-              >
-                {t('playground')}
-              </Button>
-            )}
-            <Button
-              component={Link}
-              variant="text"
-              to="/price"
-              color={pathname === '/price' ? 'primary' : 'inherit'}
-              sx={{
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                textTransform: 'none'
-              }}
-            >
-              {t('price')}
-            </Button>
-            <Button
-              component={Link}
-              variant="text"
-              to="/about"
-              color={pathname === '/about' ? 'primary' : 'inherit'}
-              sx={{
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                textTransform: 'none'
-              }}
-            >
-              {t('menu.about')}
-            </Button>
-            {siteInfo.UptimeEnabled && (
-              <Button
-                component="a"
-                variant="text"
-                href={siteInfo.UptimeDomain}
-                target="_blank"
-                rel="noopener noreferrer"
-                color={pathname === '/status' ? 'primary' : 'inherit'}
-                sx={{
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  textTransform: 'none'
-                }}
-              >
-                {t('menu.status')}
-              </Button>
-            )}
-
-            <NoticeButton sx={{ color: theme.palette.text.primary, ml: 1 }} />
-            <ThemeButton sx={{ color: theme.palette.text.primary, ml: 0.5 }} />
-            <I18nButton sx={{ color: theme.palette.text.primary, ml: 0.5 }} />
             {account.user ? (
               <Button
                 component={Link}
                 variant="contained"
                 to="/panel"
-                color="primary"
                 sx={{
-                  ml: 2,
-                  px: 2,
-                  height: '40px',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  textTransform: 'none'
+                  px: 3, // px-6
+                  py: 1.25, // py-2.5
+                  fontSize: '1rem',
+                  fontWeight: 500, // font-medium
+                  textTransform: 'none',
+                  borderRadius: '25px', // rounded-full
+                  background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)', // animated-gradient
+                  backgroundSize: '400% 400%',
+                  color: 'white', // text-white
+                  border: 'none',
+                  boxShadow: 'none',
+                  animation: 'gradient-shift 4s ease infinite, pulse-glow 3s ease-in-out infinite', // animated-gradient + glow-effect
+                  '@keyframes gradient-shift': {
+                    '0%': { backgroundPosition: '0% 50%' },
+                    '50%': { backgroundPosition: '100% 50%' },
+                    '100%': { backgroundPosition: '0% 50%' }
+                  },
+                  '@keyframes pulse-glow': {
+                    '0%, 100%': {
+                      boxShadow: '0 0 20px rgba(66, 153, 225, 0.3)'
+                    },
+                    '50%': {
+                      boxShadow: '0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3)'
+                    }
+                  },
+                  '&:hover': {
+                    background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
+                    transform: 'scale(1.05)', // hover:scale-105
+                    transition: 'all 0.3s ease'
+                  }
                 }}
               >
                 {t('menu.console')}
               </Button>
             ) : (
-              <Button
-                component={Link}
-                variant="contained"
-                to="/login"
-                color="primary"
-                sx={{
-                  ml: 2,
-                  px: 2.5,
-                  height: '40px',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  textTransform: 'none'
-                }}
-              >
-                {t('menu.login')}
-              </Button>
+              <>
+                {/* 登录文字链接 - 完全对齐设计稿 */}
+                <Typography
+                  component={Link}
+                  to="/login"
+                  sx={{
+                    color: '#718096', // text-gray-700
+                    fontWeight: 500, // font-medium
+                    textDecoration: 'none',
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    transition: 'colors 0.3s ease', // transition-colors
+                    '&:hover': {
+                      color: '#4299E1' // hover:text-accent
+                    }
+                  }}
+                >
+                  登录
+                </Typography>
+
+                {/* 登录按钮 - 完全对齐设计稿 */}
+                <Button
+                  component={Link}
+                  variant="outlined"
+                  to="/login"
+                  sx={{
+                    px: 2.5, // px-5
+                    py: 1.25, // py-2.5
+                    fontSize: '1rem',
+                    fontWeight: 500, // font-medium
+                    textTransform: 'none',
+                    borderRadius: '25px', // rounded-full
+                    border: '1px solid #d1d5db', // border border-gray-300
+                    color: '#718096', // text-gray-700
+                    backgroundColor: 'transparent',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', // hover-lift transition
+                    '&:hover': {
+                      borderColor: '#4299E1', // hover:border-accent
+                      color: '#4299E1', // hover:text-accent
+                      backgroundColor: 'transparent',
+                      transform: 'translateY(-8px) scale(1.02)', // hover-lift effect
+                      boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+                    }
+                  }}
+                >
+                  登录
+                </Button>
+
+                {/* 注册按钮 - 完全对齐设计稿 */}
+                <Button
+                  component={Link}
+                  variant="contained"
+                  to="/register"
+                  sx={{
+                    px: 3, // px-6
+                    py: 1.25, // py-2.5
+                    fontSize: '1rem',
+                    fontWeight: 500, // font-medium
+                    textTransform: 'none',
+                    borderRadius: '25px', // rounded-full
+                    background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)', // animated-gradient
+                    backgroundSize: '400% 400%',
+                    color: 'white', // text-white
+                    border: 'none',
+                    boxShadow: 'none',
+                    animation: 'gradient-shift 4s ease infinite, pulse-glow 3s ease-in-out infinite', // animated-gradient + glow-effect
+                    '@keyframes gradient-shift': {
+                      '0%': { backgroundPosition: '0% 50%' },
+                      '50%': { backgroundPosition: '100% 50%' },
+                      '100%': { backgroundPosition: '0% 50%' }
+                    },
+                    '@keyframes pulse-glow': {
+                      '0%, 100%': {
+                        boxShadow: '0 0 20px rgba(66, 153, 225, 0.3)'
+                      },
+                      '50%': {
+                        boxShadow: '0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3)'
+                      }
+                    },
+                    '&:hover': {
+                      background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
+                      transform: 'scale(1.05)', // hover:scale-105
+                      transition: 'all 0.3s ease'
+                    }
+                  }}
+                >
+                  注册免费试用
+                </Button>
+              </>
             )}
           </>
         )}
-      </Stack>
-
-      <Popper
-        open={!!open}
-        anchorEl={open}
-        transition
-        disablePortal
-        placement="bottom-end"
-        popperOptions={{
-          modifiers: [
-            {
-              name: 'offset',
-              options: {
-                offset: [0, 14]
-              }
-            }
-          ]
-        }}
-        style={{ zIndex: theme.zIndex.drawer + 2 }}
-      >
-        {({ TransitionProps }) => (
-          <Transitions in={open} {...TransitionProps}>
-            <ClickAwayListener onClickAway={handleCloseMenu}>
-              <Paper
-                sx={{
-                  width: { xs: '30vw', sm: '320px' },
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  boxShadow: theme.shadows[8],
-                  textAlign: 'center'
-                }}
-              >
-                <MainCard border={false} elevation={0} content={false} boxShadow>
-                  <List
-                    component="nav"
-                    sx={{
-                      width: '100%',
-                      backgroundColor: theme.palette.background.paper,
-                      py: 1,
-                      '& .MuiListItemButton-root': {
-                        py: 0.75,
-                        px: 2.5,
-                        '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'
-                        }
-                      },
-                      '& .Mui-selected': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                        '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)'
-                        }
-                      }
-                    }}
-                    onClick={handleCloseMenu}
-                  >
-                    <ListItemButton component={Link} to="/" selected={pathname === '/'}>
-                      <ListItemText
-                        primary={
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontWeight: pathname === '/' ? 500 : 400,
-                              textAlign: 'center',
-                              color: pathname === '/' ? theme.palette.primary.main : theme.palette.text.primary
-                            }}
-                          >
-                            {t('menu.home')}
-                          </Typography>
-                        }
-                      />
-                    </ListItemButton>
-
-                    {account.user && (
-                      <ListItemButton component={Link} to="/playground" selected={pathname === '/playground'}>
-                        <ListItemText
-                          primary={
-                            <Typography
-                              variant="body1"
-                              sx={{
-                                fontWeight: pathname === '/playground' ? 500 : 400,
-                                textAlign: 'center',
-                                color: pathname === '/playground' ? theme.palette.primary.main : theme.palette.text.primary
-                              }}
-                            >
-                              {t('playground')}
-                            </Typography>
-                          }
-                        />
-                      </ListItemButton>
-                    )}
-
-                    <ListItemButton component={Link} to="/price" selected={pathname === '/price'}>
-                      <ListItemText
-                        primary={
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontWeight: pathname === '/price' ? 500 : 400,
-                              textAlign: 'center',
-                              color: pathname === '/price' ? theme.palette.primary.main : theme.palette.text.primary
-                            }}
-                          >
-                            {t('price')}
-                          </Typography>
-                        }
-                      />
-                    </ListItemButton>
-
-                    <ListItemButton component={Link} to="/about" selected={pathname === '/about'}>
-                      <ListItemText
-                        primary={
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontWeight: pathname === '/about' ? 500 : 400,
-                              textAlign: 'center',
-                              color: pathname === '/about' ? theme.palette.primary.main : theme.palette.text.primary
-                            }}
-                          >
-                            {t('menu.about')}
-                          </Typography>
-                        }
-                      />
-                    </ListItemButton>
-                    {siteInfo.UptimeEnabled && (
-                      <ListItemButton
-                        component="a"
-                        href={siteInfo.UptimeDomain}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ListItemText
-                          primary={
-                            <Typography
-                              variant="body1"
-                              sx={{
-                                fontWeight: pathname === '/status' ? 500 : 400,
-                                textAlign: 'center',
-                                color: pathname === '/status' ? theme.palette.primary.main : theme.palette.text.primary
-                              }}
-                            >
-                              {t('menu.status')}
-                            </Typography>
-                          }
-                        />
-                      </ListItemButton>
-                    )}
-                    <Divider sx={{ my: 1 }} />
-                    {account.user ? (
-                      <ListItemButton
-                        component={Link}
-                        to="/panel"
-                        sx={{
-                          fontWeight: pathname === '/panel' ? 500 : 400,
-                          color: pathname === '/panel' ? theme.palette.primary.main : theme.palette.text.primary
-                        }}
-                      >
-                        <ListItemText
-                          primary={
-                            <Typography
-                              color="primary"
-                              variant="body1"
-                              sx={{
-                                fontWeight: 600,
-                                textAlign: 'center',
-                                transition: 'color 0.2s ease'
-                              }}
-                            >
-                              {t('menu.console')}
-                            </Typography>
-                          }
-                        />
-                      </ListItemButton>
-                    ) : (
-                      <ListItemButton
-                        component={Link}
-                        to="/login"
-                        sx={{
-                          fontWeight: pathname === '/login' ? 500 : 400,
-                          color: pathname === '/login' ? theme.palette.primary.main : theme.palette.text.primary
-                        }}
-                      >
-                        <ListItemText
-                          primary={
-                            <Typography
-                              color="primary"
-                              variant="body1"
-                              sx={{
-                                fontWeight: 600,
-                                textAlign: 'center',
-                                transition: 'color 0.2s ease'
-                              }}
-                            >
-                              {t('menu.login')}
-                            </Typography>
-                          }
-                        />
-                      </ListItemButton>
-                    )}
-                  </List>
-                </MainCard>
-              </Paper>
-            </ClickAwayListener>
-          </Transitions>
-        )}
-      </Popper>
-    </>
+      </Box>
+    </Box>
   );
 };
 

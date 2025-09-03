@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { showError } from 'utils/common';
 import { API } from 'utils/api';
-import BaseIndex from './baseIndex';
+import ModernHomePage from './ModernHomePage';
 import { Box } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import ContentViewer from 'ui-component/ContentViewer';
@@ -36,7 +36,7 @@ const Home = () => {
   return (
     <>
       {homePageContentLoaded && homePageContent === '' ? (
-        <BaseIndex />
+        <ModernHomePage />
       ) : (
         <Box>
           <ContentViewer

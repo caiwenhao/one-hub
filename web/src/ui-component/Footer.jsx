@@ -1,40 +1,114 @@
 // material-ui
-import { Link, Container, Box } from '@mui/material';
 import React from 'react';
+import { Box, Container, Typography, Grid, Link as MuiLink } from '@mui/material';
 import { useSelector } from 'react-redux';
-import { useTranslation } from 'react-i18next';
 
-// ==============================|| FOOTER - AUTHENTICATION 2 & 3 ||============================== //
+// ==============================|| SITE-WIDE DESIGN FOOTER (方案B) ||============================== //
+
+const DesignFooter = () => {
+  const navigateTo = (href) => {
+    if (!href) return;
+    if (href.startsWith('http') || href.startsWith('mailto:')) {
+      window.open(href, '_blank');
+    } else {
+      window.location.href = href;
+    }
+  };
+
+  const gradient = 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)';
+
+  return (
+    <Box component="footer" sx={{ backgroundColor: '#ffffff', borderTop: '1px solid rgba(0,0,0,0.08)', py: { xs: 8, md: 12 } }}>
+      <Container maxWidth="lg">
+        <Grid container spacing={{ xs: 4, md: 6 }}>
+          {/* 品牌区域 */}
+          <Grid item xs={12} md={4}>
+            <Box>
+              {/* Logo */}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, cursor: 'pointer' }} onClick={() => navigateTo('/') }>
+                <Box sx={{ width: 48, height: 48, borderRadius: '16px', background: gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: '1.25rem', mr: 2, boxShadow: '0 4px 15px rgba(66,153,225,0.3)' }}>
+                  K
+                </Box>
+                <Typography variant="h5" sx={{ color: '#1A202C', fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '-0.5px', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                  Kapon AI
+                </Typography>
+              </Box>
+              {/* 标语 */}
+              <Typography variant="body1" sx={{ color: '#718096', lineHeight: 1.6, fontSize: '1.125rem', fontWeight: 300, mb: 4 }}>
+                稳定，是AI应用的唯一标准
+              </Typography>
+              {/* 社交/链接 */}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                {[
+                  { label: 'GitHub', href: 'https://github.com/MartialBE/one-hub' },
+                  { label: '文档', href: '/playground' },
+                  { label: '状态', href: '#' }
+                ].map((item) => (
+                  <Box key={item.label} onClick={() => navigateTo(item.href)} sx={{ px: 2, py: 1, borderRadius: '20px', backgroundColor: 'rgba(66,153,225,0.05)', border: '1px solid rgba(66,153,225,0.1)', cursor: 'pointer', transition: 'all 0.3s ease', '&:hover': { backgroundColor: 'rgba(66,153,225,0.10)', borderColor: 'rgba(66,153,225,0.2)', transform: 'translateY(-2px)' } }}>
+                    <Typography variant="body2" sx={{ color: '#3182CE' }}>{item.label}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          </Grid>
+
+          {/* 导航与支持 */}
+          <Grid item xs={12} md={8}>
+            <Grid container spacing={{ xs: 4, md: 6 }}>
+              {[
+                { title: '导航', links: [ { label: '热门模型', href: '/price' }, { label: '价格方案', href: '/price' }, { label: '开发者中心', href: '/playground' } ] },
+                { title: '支持', links: [ { label: '联系我们', href: '/about' }, { label: '常见问题', href: '/about' }, { label: '服务状态', href: '#' } ] },
+                { title: '联系', links: [ { label: 'sales@kapon.ai', href: 'mailto:sales@kapon.ai' }, { label: 'support@kapon.ai', href: 'mailto:support@kapon.ai' } ] }
+              ].map((section) => (
+                <Grid key={section.title} item xs={12} sm={4}>
+                  <Typography variant="h6" sx={{ color: '#1A202C', fontWeight: 'bold', mb: 3, fontSize: '1.125rem' }}>
+                    {section.title}
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {section.links.map((l) => (
+                      <Typography key={l.label} onClick={() => navigateTo(l.href)} sx={{ color: '#718096', fontSize: '1rem', fontWeight: 300, cursor: 'pointer', transition: 'all 0.3s ease', '&:hover': { color: '#4299E1', transform: 'translateX(4px)' } }}>
+                        {l.label}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Grid>
+        </Grid>
+
+        {/* 底部版权信息 */}
+        <Box sx={{ borderTop: '1px solid rgba(0, 0, 0, 0.08)', pt: 6, mt: 8, textAlign: 'center' }}>
+          <Typography variant="body2" sx={{ color: '#718096', fontSize: '1rem', fontWeight: 300 }}>
+            © 2025 Kapon AI. All rights reserved.
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, opacity: 0.6 }}>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+              {[...Array(3)].map((_, i) => (
+                <Box key={i} sx={{ width: 6, height: 6, borderRadius: '50%', background: gradient }} />
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      </Container>
+    </Box>
+  );
+};
 
 const Footer = () => {
   const siteInfo = useSelector((state) => state.siteInfo);
-  const { t } = useTranslation();
-
-  return (
-    <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '64px', borderRadius: 0 }}>
-      <Box sx={{ textAlign: 'center' }}>
-        {siteInfo.footer_html ? (
-          <div className="custom-footer" dangerouslySetInnerHTML={{ __html: siteInfo.footer_html }}></div>
-        ) : (
-          <>
-            <Link href="https://github.com/MartialBE/one-hub" target="_blank">
-              {siteInfo.system_name} {import.meta.env.VITE_APP_VERSION}{' '}
-            </Link>
-            {t('footer.developedBy')}{' '}
-            <Link href="https://github.com/MartialBE" target="_blank">
-              MartialBE
-            </Link>
-            ，{t('footer.basedOn')}{' '}
-            <Link href="https://github.com/songquanpeng" target="_blank">
-              JustSong
-            </Link>{' '}
-            One Hub，{t('footer.sourceCode')}
-            <Link href="https://opensource.org/licenses/mit-license.php"> {t('footer.license')}</Link>
-          </>
-        )}
-      </Box>
-    </Container>
-  );
+  // 如果后台设置了自定义 Footer HTML，仍然优先展示
+  if (siteInfo?.footer_html) {
+    return (
+      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4, borderRadius: 0 }}>
+        <Box sx={{ textAlign: 'center', width: '100%' }}>
+          <div className="custom-footer" dangerouslySetInnerHTML={{ __html: siteInfo.footer_html }} />
+        </Box>
+      </Container>
+    );
+  }
+  // 否则使用设计稿版 Footer（整站统一）
+  return <DesignFooter />;
 };
 
 export default Footer;
