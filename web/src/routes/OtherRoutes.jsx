@@ -19,6 +19,7 @@ const NotFoundView = Loadable(lazy(() => import('views/Error')));
 const Jump = Loadable(lazy(() => import('views/Jump')));
 const Playground = Loadable(lazy(() => import('views/Playground')));
 const ModelPrice = Loadable(lazy(() => import('views/ModelPrice')));
+const HotModels = Loadable(lazy(() => import('views/HotModels')));
 
 const WithMargins = ({ children }) => (
   <Box
@@ -91,6 +92,14 @@ const OtherRoutes = {
       element: (
         <WithMargins>
           <ModelPrice />
+        </WithMargins>
+      )
+    },
+    {
+      path: '/models',
+      element: (
+        <WithMargins>
+          <HotModels />
         </WithMargins>
       )
     }

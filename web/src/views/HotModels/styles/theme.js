@@ -1,0 +1,130 @@
+// 热门模型页面的主题样式定义
+export const colors = {
+  primary: '#1A202C',
+  accent: '#4299E1',
+  accentLight: '#63B3ED',
+  accentDark: '#3182CE',
+  background: '#F7FAFC',
+  secondary: '#718096',
+  purple: '#8B5CF6',
+  pink: '#EC4899',
+  orange: '#F59E0B',
+  green: '#10B981',
+  red: '#EF4444',
+  blue: '#3B82F6'
+};
+
+export const gradients = {
+  primary: 'linear-gradient(135deg, #4299E1 0%, #3182CE 50%, #2B6CB0 100%)',
+  heroBackground: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  card: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+  textGradient: 'linear-gradient(45deg, #4299E1 30%, #8B5CF6 90%)',
+  
+  // 特性卡片渐变
+  featureAccent: 'linear-gradient(135deg, rgba(66, 153, 225, 0.05), transparent)',
+  featurePurple: 'linear-gradient(135deg, rgba(139, 92, 246, 0.05), transparent)',
+  featurePink: 'linear-gradient(135deg, rgba(236, 72, 153, 0.05), transparent)',
+  featureOrange: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05), transparent)',
+  
+  // 图标渐变
+  iconAccent: 'linear-gradient(135deg, #4299E1, #3182CE)',
+  iconPurple: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
+  iconPink: 'linear-gradient(135deg, #EC4899, #DB2777)',
+  iconOrange: 'linear-gradient(135deg, #F59E0B, #D97706)',
+  iconGreen: 'linear-gradient(135deg, #10B981, #059669)',
+  iconBlue: 'linear-gradient(135deg, #3B82F6, #2563EB)'
+};
+
+// 动画样式
+export const animationStyles = {
+  fadeIn: {
+    '@keyframes fadeIn': {
+      '0%': {
+        opacity: 0,
+        transform: 'translateY(30px)'
+      },
+      '100%': {
+        opacity: 1,
+        transform: 'translateY(0)'
+      }
+    },
+    animation: 'fadeIn 0.8s ease-out forwards'
+  },
+  
+  hoverLift: {
+    transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+    '&:hover': {
+      transform: 'translateY(-12px) scale(1.03)',
+      boxShadow: '0 25px 50px rgba(0,0,0,0.15)'
+    }
+  },
+  
+  pulseGlow: {
+    '@keyframes pulseGlow': {
+      '0%, 100%': {
+        boxShadow: '0 0 20px rgba(66, 153, 225, 0.3)'
+      },
+      '50%': {
+        boxShadow: '0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3)'
+      }
+    },
+    animation: 'pulseGlow 3s ease-in-out infinite'
+  },
+  
+  gradientShift: {
+    '@keyframes gradientShift': {
+      '0%': { backgroundPosition: '0% 50%' },
+      '50%': { backgroundPosition: '100% 50%' },
+      '100%': { backgroundPosition: '0% 50%' }
+    },
+    backgroundSize: '400% 400%',
+    animation: 'gradientShift 4s ease infinite'
+  },
+  
+  shimmer: {
+    '@keyframes shimmer': {
+      '0%': { transform: 'translateX(-100%)' },
+      '100%': { transform: 'translateX(100%)' }
+    },
+    position: 'relative',
+    overflow: 'hidden',
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+      transform: 'translateX(-100%)',
+      animation: 'shimmer 2s infinite'
+    }
+  }
+};
+
+// 创建渐变文本的工具函数
+export const createGradientText = (gradient = gradients.textGradient) => ({
+  background: gradient,
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text'
+});
+
+// 标签样式
+export const tagStyles = {
+  hot: {
+    background: 'linear-gradient(135deg, #FF6B6B, #FF8E8E)',
+    color: 'white',
+    fontWeight: 'bold'
+  },
+  new: {
+    background: 'linear-gradient(135deg, #4ECDC4, #44A08D)',
+    color: 'white',
+    fontWeight: 'bold'
+  },
+  recommended: {
+    background: 'linear-gradient(135deg, #A8E6CF, #7FCDCD)',
+    color: 'white',
+    fontWeight: 'bold'
+  }
+};
