@@ -1,0 +1,230 @@
+import { Box, Typography, Button, Card, keyframes } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
+import { Icon } from '@iconify/react';
+
+// 动画定义
+const shimmer = keyframes`
+  0% { 
+    transform: translateX(-100%); 
+  }
+  100% { 
+    transform: translateX(100%); 
+  }
+`;
+
+const pulseGlow = keyframes`
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3); 
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3); 
+  }
+`;
+
+const gradientShift = keyframes`
+  0% { 
+    background-position: 0% 50%; 
+  }
+  50% { 
+    background-position: 100% 50%; 
+  }
+  100% { 
+    background-position: 0% 50%; 
+  }
+`;
+
+const FreeTrialSection = () => {
+  const { t } = useTranslation();
+  const theme = useTheme();
+
+  const handleRegisterClick = () => {
+    // 跳转到注册页面
+    window.location.href = '/register';
+  };
+
+  return (
+    <Box
+      sx={{
+        py: { xs: 8, md: 10 },
+        px: { xs: 3, md: 6, lg: 12 }
+      }}
+    >
+      <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
+        <Card
+          sx={{
+            position: 'relative',
+            p: { xs: 6, md: 8 },
+            borderRadius: '24px',
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%)',
+            border: '2px solid',
+            borderColor: 'rgba(34, 197, 94, 0.2)',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.1)',
+            overflow: 'hidden',
+            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            '&:hover': {
+              transform: 'translateY(-8px) scale(1.02)',
+              boxShadow: '0 32px 64px rgba(0,0,0,0.15)'
+            },
+            ...(theme.palette.mode === 'dark' && {
+              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
+              borderColor: 'rgba(34, 197, 94, 0.3)'
+            })
+          }}
+        >
+          {/* 背景渐变层 */}
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%)',
+              ...(theme.palette.mode === 'dark' && {
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)'
+              })
+            }}
+          />
+
+          {/* 主要内容 */}
+          <Box sx={{ position: 'relative', zIndex: 10, textAlign: 'center' }}>
+            {/* 限时福利标签 */}
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                px: 3,
+                py: 1.5,
+                borderRadius: '50px',
+                mb: 3,
+                border: '1px solid rgba(34, 197, 94, 0.2)',
+                ...(theme.palette.mode === 'dark' && {
+                  backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                  borderColor: 'rgba(34, 197, 94, 0.3)'
+                })
+              }}
+            >
+              <Icon 
+                icon="solar:gift-bold-duotone" 
+                width={24} 
+                height={24} 
+                style={{ 
+                  color: theme.palette.success.main,
+                  marginRight: '12px'
+                }} 
+              />
+              <Typography
+                variant="body1"
+                sx={{
+                  color: theme.palette.success.main,
+                  fontWeight: 700,
+                  fontSize: '1.125rem'
+                }}
+              >
+                限时福利
+              </Typography>
+            </Box>
+
+            {/* 主标题 */}
+            <Typography
+              variant="h2"
+              sx={{
+                fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem', lg: '3.5rem' },
+                fontWeight: 700,
+                color: theme.palette.text.primary,
+                mb: 3,
+                textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+            >
+              {t('modelpricePage.freeTrialTitle')}
+            </Typography>
+
+            {/* 描述文字 */}
+            <Typography
+              variant="h5"
+              sx={{
+                fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' },
+                color: theme.palette.text.secondary,
+                mb: 4,
+                maxWidth: '600px',
+                mx: 'auto',
+                lineHeight: 1.6
+              }}
+            >
+              每一位新注册用户，均可立即获得{' '}
+              <Box
+                component="span"
+                sx={{
+                  fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+                  fontWeight: 700,
+                  color: theme.palette.success.main
+                }}
+              >
+                ¥10.00
+              </Box>{' '}
+              免费试用额度
+            </Typography>
+
+            {/* CTA按钮区域 */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+            >
+              <Button
+                onClick={handleRegisterClick}
+                sx={{
+                  position: 'relative',
+                  background: `linear-gradient(-45deg, ${theme.palette.primary.main}, #3182CE, #2B6CB0, #2A69AC)`,
+                  backgroundSize: '400% 400%',
+                  color: 'white',
+                  px: 5,
+                  py: 2,
+                  borderRadius: '50px',
+                  fontWeight: 700,
+                  fontSize: '1.125rem',
+                  textTransform: 'none',
+                  animation: `${gradientShift} 4s ease infinite, ${pulseGlow} 3s ease-in-out infinite`,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  overflow: 'hidden',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                    boxShadow: '0 8px 25px rgba(66, 153, 225, 0.4)'
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                    transform: 'translateX(-100%)',
+                    animation: `${shimmer} 2s infinite`
+                  }
+                }}
+              >
+                立即注册，领取额度 →
+              </Button>
+
+              <Typography
+                variant="body2"
+                sx={{
+                  color: theme.palette.text.secondary,
+                  fontSize: '0.875rem'
+                }}
+              >
+                无需信用卡 · 即开即用
+              </Typography>
+            </Box>
+          </Box>
+        </Card>
+      </Box>
+    </Box>
+  );
+};
+
+export default FreeTrialSection;
