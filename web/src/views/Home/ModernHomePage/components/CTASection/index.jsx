@@ -25,7 +25,7 @@ const CTASection = () => {
       sx={{
         position: 'relative',
         background: gradients.finalCTA,
-        py: { xs: 8, md: 16 },
+        py: { xs: 4, md: 8 },
         overflow: 'hidden'
       }}
     >
@@ -291,7 +291,7 @@ const CTASection = () => {
             sx={{
               display: 'flex',
               justifyContent: 'center',
-              mt: 8,
+              mt: 4,
               opacity: 0.6
             }}
           >

@@ -44,7 +44,7 @@ const StatsSection = () => {
       sx={{
         position: 'relative',
         background: gradients.statsBackground,
-        py: { xs: 6, md: 12 },
+        py: { xs: 3, md: 6 },
         overflow: 'hidden'
       }}
     >
@@ -83,7 +83,7 @@ const StatsSection = () => {
         <Box
           sx={{
             textAlign: 'center',
-            mb: { xs: 4, md: 8 },
+            mb: { xs: 2, md: 4 },
             ...animationStyles.fadeIn
           }}
         >
@@ -180,7 +180,7 @@ const StatsSection = () => {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            mt: { xs: 8, md: 12 },
+            mt: { xs: 4, md: 6 },
             gap: { xs: 2, md: 4 },
             flexWrap: 'wrap'
           }}

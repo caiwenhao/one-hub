@@ -6,10 +6,12 @@ import {
   Grid,
   Card,
   CardContent,
+  Button,
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { Business, Code } from '@mui/icons-material';
+import { Business, Code, ArrowForward } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { animationStyles } from '../../styles/animations';
 import { gradients, colors } from '../../styles/gradients';
 import { createGradientText, createFloatingElement } from '../../styles/theme';
@@ -17,6 +19,7 @@ import { createGradientText, createFloatingElement } from '../../styles/theme';
 const AudienceSection = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const navigate = useNavigate();
 
   const audiences = [
     {
@@ -55,7 +58,7 @@ const AudienceSection = () => {
       sx={{
         position: 'relative',
         background: 'linear-gradient(to bottom right, rgba(249, 250, 251, 0.5) 0%, rgba(59, 130, 246, 0.03) 30%, rgba(139, 92, 246, 0.03) 70%, rgba(249, 250, 251, 0.5) 100%)',
-        py: { xs: 8, md: 16 },
+        py: { xs: 4, md: 8 },
         overflow: 'hidden'
       }}
     >
@@ -79,7 +82,7 @@ const AudienceSection = () => {
         <Box
           sx={{
             textAlign: 'center',
-            mb: { xs: 8, md: 12 },
+            mb: { xs: 4, md: 6 },
             ...animationStyles.fadeIn
           }}
         >
@@ -236,6 +239,36 @@ const AudienceSection = () => {
                         </Box>
                       ))}
                     </Box>
+
+                    {/* 企业客户联系我们按钮 */}
+                    {index === 0 && (
+                      <Box sx={{ mt: 4 }}>
+                        <Button
+                          variant="contained"
+                          endIcon={<ArrowForward />}
+                          onClick={() => navigate('/contact')}
+                          sx={{
+                            background: gradients.primary,
+                            color: '#ffffff',
+                            px: 4,
+                            py: 1.5,
+                            borderRadius: '25px',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            textTransform: 'none',
+                            boxShadow: '0 8px 20px rgba(66, 153, 225, 0.3)',
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                              background: gradients.primary,
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 12px 30px rgba(66, 153, 225, 0.4)'
+                            }
+                          }}
+                        >
+                          联系我们
+                        </Button>
+                      </Box>
+                    )}
                   </CardContent>
                 </Card>
               </Grid>
@@ -249,7 +282,7 @@ const AudienceSection = () => {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            mt: { xs: 8, md: 12 },
+            mt: { xs: 4, md: 6 },
             gap: { xs: 2, md: 4 },
             flexWrap: 'wrap'
           }}

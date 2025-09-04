@@ -56,7 +56,7 @@ const ModelsSection = () => {
       component="section"
       sx={{
         backgroundColor: '#ffffff',
-        py: { xs: 8, md: 16 },
+        py: { xs: 4, md: 8 },
         position: 'relative'
       }}
     >
@@ -65,7 +65,7 @@ const ModelsSection = () => {
         <Box
           sx={{
             textAlign: 'center',
-            mb: { xs: 8, md: 12 },
+            mb: { xs: 4, md: 6 },
             ...animationStyles.fadeIn
           }}
         >
@@ -103,7 +103,7 @@ const ModelsSection = () => {
         </Box>
 
         {/* 模型卡片网格 */}
-        <Grid container spacing={{ xs: 3, md: 4 }} sx={{ mb: { xs: 8, md: 12 } }}>
+        <Grid container spacing={{ xs: 3, md: 4 }} sx={{ mb: { xs: 4, md: 6 } }}>
           {models.map((model, index) => (
             <Grid item xs={12} md={4} key={model.name}>
               <Card
@@ -253,7 +253,7 @@ const ModelsSection = () => {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            mt: { xs: 8, md: 12 },
+            mt: { xs: 4, md: 6 },
             gap: { xs: 2, md: 4 },
             flexWrap: 'wrap'
           }}

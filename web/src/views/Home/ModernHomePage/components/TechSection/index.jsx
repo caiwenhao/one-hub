@@ -19,21 +19,80 @@ const TechSection = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
 
-  const codeExample = `from openai import OpenAI
-
-client = OpenAI(
-    api_key="your-kapon-api-key",
-    base_url="https://models.kapon.cloud/v1"
-)
-
-response = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[
-        {"role": "user", "content": "Hello!"}
-    ]
-)
-
-print(response.choices[0].message.content)`;
+  // 带语法高亮的代码示例
+  const renderCodeWithHighlight = () => {
+    return (
+      <>
+        <span style={{ color: '#ff7b72' }}>from</span>{' '}
+        <span style={{ color: '#79c0ff' }}>openai</span>{' '}
+        <span style={{ color: '#ff7b72' }}>import</span>{' '}
+        <span style={{ color: '#79c0ff' }}>OpenAI</span>
+        {'\n\n'}
+        <span style={{ color: '#f85149' }}>client</span>{' '}
+        <span style={{ color: '#ff7b72' }}>=</span>{' '}
+        <span style={{ color: '#79c0ff' }}>OpenAI</span>
+        <span style={{ color: '#e6edf3' }}>(</span>
+        {'\n    '}
+        <span style={{ color: '#79c0ff' }}>api_key</span>
+        <span style={{ color: '#ff7b72' }}>=</span>
+        <span style={{ color: '#a5d6ff' }}>"your-kapon-api-key"</span>
+        <span style={{ color: '#e6edf3' }}>,</span>
+        {'\n    '}
+        <span style={{ color: '#79c0ff' }}>base_url</span>
+        <span style={{ color: '#ff7b72' }}>=</span>
+        <span style={{ color: '#a5d6ff' }}>"https://models.kapon.cloud/v1"</span>
+        {'\n'}
+        <span style={{ color: '#e6edf3' }}>)</span>
+        {'\n\n'}
+        <span style={{ color: '#f85149' }}>response</span>{' '}
+        <span style={{ color: '#ff7b72' }}>=</span>{' '}
+        <span style={{ color: '#f85149' }}>client</span>
+        <span style={{ color: '#e6edf3' }}>.</span>
+        <span style={{ color: '#f85149' }}>chat</span>
+        <span style={{ color: '#e6edf3' }}>.</span>
+        <span style={{ color: '#f85149' }}>completions</span>
+        <span style={{ color: '#e6edf3' }}>.</span>
+        <span style={{ color: '#d2a8ff' }}>create</span>
+        <span style={{ color: '#e6edf3' }}>(</span>
+        {'\n    '}
+        <span style={{ color: '#79c0ff' }}>model</span>
+        <span style={{ color: '#ff7b72' }}>=</span>
+        <span style={{ color: '#a5d6ff' }}>"gpt-4o"</span>
+        <span style={{ color: '#e6edf3' }}>,</span>
+        {'\n    '}
+        <span style={{ color: '#79c0ff' }}>messages</span>
+        <span style={{ color: '#ff7b72' }}>=</span>
+        <span style={{ color: '#e6edf3' }}>[</span>
+        {'\n        '}
+        <span style={{ color: '#e6edf3' }}>{"{"}</span>
+        <span style={{ color: '#a5d6ff' }}>"role"</span>
+        <span style={{ color: '#e6edf3' }}>:</span>{' '}
+        <span style={{ color: '#a5d6ff' }}>"user"</span>
+        <span style={{ color: '#e6edf3' }}>,</span>{' '}
+        <span style={{ color: '#a5d6ff' }}>"content"</span>
+        <span style={{ color: '#e6edf3' }}>:</span>{' '}
+        <span style={{ color: '#a5d6ff' }}>"Hello!"</span>
+        <span style={{ color: '#e6edf3' }}>{"}"}</span>
+        {'\n    '}
+        <span style={{ color: '#e6edf3' }}>]</span>
+        {'\n'}
+        <span style={{ color: '#e6edf3' }}>)</span>
+        {'\n\n'}
+        <span style={{ color: '#d2a8ff' }}>print</span>
+        <span style={{ color: '#e6edf3' }}>(</span>
+        <span style={{ color: '#f85149' }}>response</span>
+        <span style={{ color: '#e6edf3' }}>.</span>
+        <span style={{ color: '#f85149' }}>choices</span>
+        <span style={{ color: '#e6edf3' }}>[</span>
+        <span style={{ color: '#79c0ff' }}>0</span>
+        <span style={{ color: '#e6edf3' }}>].</span>
+        <span style={{ color: '#f85149' }}>message</span>
+        <span style={{ color: '#e6edf3' }}>.</span>
+        <span style={{ color: '#f85149' }}>content</span>
+        <span style={{ color: '#e6edf3' }}>)</span>
+      </>
+    );
+  };
 
   return (
     <Box
@@ -41,7 +100,7 @@ print(response.choices[0].message.content)`;
       sx={{
         position: 'relative',
         background: 'linear-gradient(to bottom right, #ffffff 0%, rgba(59, 130, 246, 0.02) 30%, rgba(139, 92, 246, 0.02) 70%, #ffffff 100%)',
-        py: { xs: 8, md: 16 },
+        py: { xs: 4, md: 8 },
         overflow: 'hidden'
       }}
     >
@@ -152,8 +211,8 @@ print(response.choices[0].message.content)`;
                   color: '#e2e8f0'
                 }}
               >
-                <code style={{ color: '#e2e8f0' }}>
-                  {codeExample}
+                <code>
+                  {renderCodeWithHighlight()}
                 </code>
               </Box>
             </Box>

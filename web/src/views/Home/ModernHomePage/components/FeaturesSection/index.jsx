@@ -64,7 +64,7 @@ const FeaturesSection = () => {
       sx={{
         position: 'relative',
         backgroundColor: '#ffffff',
-        py: { xs: 8, md: 16 },
+        py: { xs: 4, md: 8 },
         overflow: 'hidden'
       }}
     >
@@ -82,7 +82,7 @@ const FeaturesSection = () => {
         <Box
           sx={{
             textAlign: 'center',
-            mb: { xs: 5, md: 8 },
+            mb: { xs: 3, md: 5 },
             ...animationStyles.fadeIn
           }}
         >
@@ -226,7 +226,7 @@ const FeaturesSection = () => {
           sx={{
             display: 'flex',
             justifyContent: 'center',
-            mt: { xs: 8, md: 12 },
+            mt: { xs: 4, md: 6 },
             opacity: 0.6
           }}
         >
