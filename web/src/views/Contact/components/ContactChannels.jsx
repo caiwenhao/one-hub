@@ -1,9 +1,11 @@
 import React from 'react';
 import { Box, Typography, Container, Grid, Paper } from '@mui/material';
 import { keyframes } from '@mui/system';
-import HandshakeIcon from '@mui/icons-material/Handshake';
 import CodeIcon from '@mui/icons-material/Code';
 import EmailIcon from '@mui/icons-material/Email';
+import PhoneIcon from '@mui/icons-material/Phone';
+import WechatIcon from '@mui/icons-material/Chat';
+import BusinessIcon from '@mui/icons-material/Business';
 
 // 定义动画
 const pulseGlow = keyframes`
@@ -20,12 +22,22 @@ const ContactCard = ({
   title,
   description,
   email,
+  phone,
+  imageUrl,
+  contactType = 'email', // 'email', 'phone', 'image'
   icon: Icon,
   gradientColors,
   bgGradient
 }) => {
-  const handleEmailClick = () => {
-    window.open(`mailto:${email}`, '_blank');
+  const handleContactClick = () => {
+    if (contactType === 'email' && email) {
+      window.open(`mailto:${email}`, '_blank');
+    } else if (contactType === 'phone' && phone) {
+      window.open(`tel:${phone}`, '_blank');
+    } else if (contactType === 'image' && imageUrl) {
+      // 对于图片类型，可以打开图片或者复制到剪贴板
+      window.open(imageUrl, '_blank');
+    }
   };
 
   return (
@@ -92,7 +104,7 @@ const ContactCard = ({
         {description}
       </Typography>
 
-      {/* 邮箱卡片 */}
+      {/* 联系方式卡片 */}
       <Box
         sx={{
           backgroundColor: 'white',
@@ -107,25 +119,79 @@ const ContactCard = ({
             boxShadow: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.1)'
           }
         }}
-        onClick={handleEmailClick}
+        onClick={handleContactClick}
       >
-        <Typography
-          sx={{
-            color: gradientColors.includes('#10B981') ? '#059669' : '#4299E1', // 根据卡片类型调整颜色
-            fontWeight: 600, // font-semibold
-            fontSize: '1.125rem', // text-lg
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 1,
-            '&:hover': {
-              color: gradientColors.includes('#10B981') ? '#047857' : '#3182CE'
-            }
-          }}
-        >
-          <EmailIcon sx={{ fontSize: '1.125rem' }} />
-          {email}
-        </Typography>
+        {contactType === 'email' && email && (
+          <Typography
+            sx={{
+              color: gradientColors.includes('#10B981') ? '#059669' : '#4299E1',
+              fontWeight: 600,
+              fontSize: '1.125rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+              '&:hover': {
+                color: gradientColors.includes('#10B981') ? '#047857' : '#3182CE'
+              }
+            }}
+          >
+            <EmailIcon sx={{ fontSize: '1.125rem' }} />
+            {email}
+          </Typography>
+        )}
+
+        {contactType === 'phone' && phone && (
+          <Typography
+            sx={{
+              color: gradientColors.includes('#10B981') ? '#059669' : '#4299E1',
+              fontWeight: 600,
+              fontSize: '1.125rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+              '&:hover': {
+                color: gradientColors.includes('#10B981') ? '#047857' : '#3182CE'
+              }
+            }}
+          >
+            <PhoneIcon sx={{ fontSize: '1.125rem' }} />
+            {phone}
+          </Typography>
+        )}
+
+        {contactType === 'image' && imageUrl && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            <img
+              src={imageUrl}
+              alt="联系方式二维码"
+              style={{
+                width: '120px',
+                height: '120px',
+                objectFit: 'contain',
+                borderRadius: '8px'
+              }}
+            />
+            <Typography
+              sx={{
+                color: gradientColors.includes('#10B981') ? '#059669' : '#4299E1',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                textAlign: 'center'
+              }}
+            >
+              点击查看大图
+            </Typography>
+          </Box>
+        )}
       </Box>
     </Paper>
   );
@@ -142,26 +208,9 @@ const ContactChannels = () => {
       }}
     >
       <Container maxWidth="lg" sx={{ maxWidth: '1200px' }}>
+        {/* 第一行：邮箱和电话并排 */}
         <Grid container spacing={{ xs: 6, md: 6 }} sx={{ mb: 8 }}>
-          {/* 企业合作卡片 */}
-          <Grid item xs={12} md={6}>
-            <ContactCard
-              title="企业合作与售前咨询"
-              description={
-                <>
-                  寻求企业级AI解决方案？想了解批量折扣或定制服务？
-                  <br />
-                  我们的商务团队将为您提供专业建议
-                </>
-              }
-              email="sales@kapon.ai"
-              icon={HandshakeIcon}
-              gradientColors="linear-gradient(135deg, #4299E1, #3182CE)"
-              bgGradient="linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, white 100%)"
-            />
-          </Grid>
-
-          {/* 技术支持卡片 */}
+          {/* 技术支持邮箱 */}
           <Grid item xs={12} md={6}>
             <ContactCard
               title="技术支持与开发者帮助"
@@ -173,9 +222,70 @@ const ContactChannels = () => {
                 </>
               }
               email="support@kapon.ai"
+              contactType="email"
               icon={CodeIcon}
               gradientColors="linear-gradient(135deg, #10B981, #059669)"
               bgGradient="linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, white 100%)"
+            />
+          </Grid>
+
+          {/* 电话咨询 */}
+          <Grid item xs={12} md={6}>
+            <ContactCard
+              title="电话咨询"
+              description={
+                <>
+                  需要即时沟通？想要详细了解我们的服务？
+                  <br />
+                  欢迎直接致电，我们的客服团队随时为您服务
+                </>
+              }
+              phone="13226413712"
+              contactType="phone"
+              icon={PhoneIcon}
+              gradientColors="linear-gradient(135deg, #F59E0B, #D97706)"
+              bgGradient="linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, white 100%)"
+            />
+          </Grid>
+        </Grid>
+
+        {/* 第二行：微信公众号和企业微信 */}
+        <Grid container spacing={{ xs: 6, md: 6 }}>
+          {/* 微信公众号 */}
+          <Grid item xs={12} md={6}>
+            <ContactCard
+              title="微信公众号"
+              description={
+                <>
+                  关注我们的微信公众号，获取最新产品动态
+                  <br />
+                  和技术资讯，与我们保持密切联系
+                </>
+              }
+              imageUrl="https://kp-os.tos-cn-shanghai.volces.com/models/images/gzh.jpg"
+              contactType="image"
+              icon={WechatIcon}
+              gradientColors="linear-gradient(135deg, #10B981, #059669)"
+              bgGradient="linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, white 100%)"
+            />
+          </Grid>
+
+          {/* 企业微信 */}
+          <Grid item xs={12} md={6}>
+            <ContactCard
+              title="企业微信"
+              description={
+                <>
+                  添加我们的企业微信，享受更专业的
+                  <br />
+                  一对一服务和技术支持
+                </>
+              }
+              imageUrl="https://kp-os.tos-cn-shanghai.volces.com/models/images/qywx.png"
+              contactType="image"
+              icon={BusinessIcon}
+              gradientColors="linear-gradient(135deg, #8B5CF6, #7C3AED)"
+              bgGradient="linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, white 100%)"
             />
           </Grid>
         </Grid>
