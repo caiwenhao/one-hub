@@ -101,7 +101,7 @@ const FeaturedModels = () => {
                   animationDelay: `${index * 0.2}s`
                 }}
               >
-                <ModelCard model={model} showPerformance={true} />
+                <ModelCard model={model} variant="featured" />
               </Box>
             </Grid>
           ))}

@@ -140,7 +140,7 @@ const CategorySection = () => {
                     animationDelay: `${index * 0.1}s`
                   }}
                 >
-                  <ModelCard model={model} showPerformance={false} />
+                  <ModelCard model={model} variant="category" />
                 </Box>
               </Grid>
             ))}
