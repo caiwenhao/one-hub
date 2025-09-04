@@ -24,6 +24,15 @@ export default defineConfig({
       }
     ]
   },
+  build: {
+    outDir: 'build',
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
+  },
   server: {
     // this ensures that the browser opens upon server start
     open: true,
