@@ -65,8 +65,7 @@ const ModelsSection = () => {
         <Box
           sx={{
             textAlign: 'center',
-            mb: { xs: 4, md: 6 },
-            ...animationStyles.fadeIn
+            mb: { xs: 4, md: 6 }
           }}
         >
           <Typography
@@ -78,10 +77,9 @@ const ModelsSection = () => {
               mb: 3,
               lineHeight: 1.2,
               letterSpacing: '-0.01em',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
               '& .gradient-text': {
                 fontWeight: 'bold',
-                ...createGradientText()
+                color: '#4299E1' // 使用纯色替代渐变文字
               }
             }}
           >
@@ -217,9 +215,7 @@ const ModelsSection = () => {
         {/* 查看更多按钮 */}
         <Box
           sx={{
-            textAlign: 'center',
-            ...animationStyles.fadeIn,
-            animationDelay: '0.8s'
+            textAlign: 'center'
           }}
         >
           <Button
@@ -231,15 +227,12 @@ const ModelsSection = () => {
               px: 5,
               py: 2,
               borderRadius: '50px',
-              background: gradients.primary,
+              background: '#4299E1', // 使用纯色背景替代渐变
               fontWeight: 600,
-              boxShadow: '0 8px 32px rgba(66, 153, 225, 0.3)',
-              ...animationStyles.pulseGlow,
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: 'none', // 移除阴影
+              transition: 'background-color 0.2s ease',
               '&:hover': {
-                background: gradients.primary,
-                transform: 'translateY(-2px) scale(1.05)',
-                boxShadow: '0 12px 40px rgba(66, 153, 225, 0.4)'
+                background: '#3182CE' // hover时使用稍深的颜色
               }
             }}
           >
@@ -275,12 +268,9 @@ const ModelsSection = () => {
                 borderRadius: '25px',
                 background: 'rgba(66, 153, 225, 0.05)',
                 border: '1px solid rgba(66, 153, 225, 0.1)',
-                ...animationStyles.fadeIn,
-                animationDelay: `${index * 0.1 + 1}s`,
-                transition: 'all 0.3s ease',
+                transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  background: 'rgba(66, 153, 225, 0.1)',
-                  transform: 'translateY(-2px)'
+                  background: 'rgba(66, 153, 225, 0.1)'
                 }
               }}
             >
@@ -289,8 +279,7 @@ const ModelsSection = () => {
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  background: gradients.primary,
-                  ...animationStyles.pulseGlow
+                  background: '#4299E1' // 使用纯色替代渐变
                 }}
               />
               <Typography

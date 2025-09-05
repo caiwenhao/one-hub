@@ -23,112 +23,33 @@ const HeroSection = () => {
     <Box
       component="section"
       sx={{
-        position: 'relative',
-        background: gradients.heroBackground,
+        backgroundColor: '#ffffff', // 使用白色背景与热门模型页面一致
         pt: { xs: 8, md: 12 },
         pb: { xs: 8, md: 12 },
         minHeight: '700px',
         display: 'flex',
         alignItems: 'center',
+        position: 'relative',
         overflow: 'hidden'
       }}
     >
-      {/* 背景渐变层 */}
+      {/* 背景渐变 - 与热门模型页面一致的轻微渐变 */}
       <Box
         sx={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(to bottom right, rgba(66, 153, 225, 0.08) 0%, rgba(139, 92, 246, 0.05) 50%, rgba(236, 72, 153, 0.08) 100%)'
+          background: 'linear-gradient(to bottom right, rgba(249, 250, 251, 0.5), rgba(59, 130, 246, 0.03))'
         }}
       />
 
-      {/* 浮动装饰元素 */}
-      <Box
-        sx={{
-          ...createFloatingElement('12px', colors.accentAlpha[30]),
-          top: '20%',
-          left: '10%',
-          ...animationStyles.floating,
-          ...animationStyles.pulseGlow
-        }}
-      />
-      <Box
-        sx={{
-          ...createFloatingElement('8px', colors.purpleAlpha[40]),
-          top: '40%',
-          right: '20%',
-          ...animationStyles.floating,
-          animationDelay: '0.3s',
-          ...animationStyles.pulseGlow
-        }}
-      />
-      <Box
-        sx={{
-          ...createFloatingElement('10px', colors.pinkAlpha[35]),
-          bottom: '32%',
-          left: '25%',
-          ...animationStyles.floating,
-          animationDelay: '0.7s',
-          ...animationStyles.pulseGlow
-        }}
-      />
-      <Box
-        sx={{
-          ...createFloatingElement('6px', colors.orangeAlpha[40]),
-          top: '60%',
-          right: '33%',
-          ...animationStyles.floating,
-          animationDelay: '0.5s',
-          ...animationStyles.pulseGlow
-        }}
-      />
-      <Box
-        sx={{
-          ...createFloatingElement('14px', colors.accentAlpha[25]),
-          bottom: '40%',
-          right: '10%',
-          ...animationStyles.floating,
-          animationDelay: '1s',
-          ...animationStyles.pulseGlow
-        }}
-      />
 
-      {/* 大型模糊背景元素 */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '25%',
-          left: '25%',
-          width: '384px',
-          height: '384px',
-          background: gradients.floatingBlur1,
-          borderRadius: '50%',
-          filter: 'blur(60px)',
-          ...animationStyles.floating
-        }}
-      />
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: '25%',
-          right: '25%',
-          width: '320px',
-          height: '320px',
-          background: gradients.floatingBlur2,
-          borderRadius: '50%',
-          filter: 'blur(60px)',
-          ...animationStyles.floating,
-          animationDelay: '0.5s'
-        }}
-      />
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 10, maxWidth: '1200px' }}>
         <Box
           sx={{
             textAlign: 'center',
             maxWidth: '900px',
-            mx: 'auto',
-            ...animationStyles.fadeIn
+            mx: 'auto'
           }}
         >
           {/* 主标题 */}
@@ -141,11 +62,9 @@ const HeroSection = () => {
               mb: 3,
               lineHeight: 1.2,
               letterSpacing: '-0.02em',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
               '& .gradient-text': {
                 fontWeight: 'bold',
-                ...createGradientText(),
-                ...animationStyles.gradientShift
+                color: '#4299E1' // 使用纯色替代渐变文字
               }
             }}
           >
@@ -191,15 +110,12 @@ const HeroSection = () => {
                 px: { xs: 4, md: 6 },
                 py: { xs: 1.5, md: 2 },
                 borderRadius: '50px',
-                background: gradients.primary,
+                background: '#4299E1', // 使用纯色背景替代渐变
                 fontWeight: 600,
-                boxShadow: '0 8px 32px rgba(66, 153, 225, 0.3)',
-                ...animationStyles.pulseGlow,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: 'none', // 移除阴影
+                transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  background: gradients.primary,
-                  transform: 'translateY(-4px) scale(1.05)',
-                  boxShadow: '0 12px 40px rgba(66, 153, 225, 0.4)'
+                  background: '#3182CE' // hover时使用稍深的颜色
                 }
               }}
             >

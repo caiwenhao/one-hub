@@ -82,8 +82,7 @@ const FeaturesSection = () => {
         <Box
           sx={{
             textAlign: 'center',
-            mb: { xs: 3, md: 5 },
-            ...animationStyles.fadeIn
+            mb: { xs: 3, md: 5 }
           }}
         >
           <Typography
@@ -95,10 +94,9 @@ const FeaturesSection = () => {
               mb: 3,
               lineHeight: 1.2,
               letterSpacing: '-0.01em',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
               '& .gradient-text': {
                 fontWeight: 'bold',
-                ...createGradientText()
+                color: '#4299E1' // 使用纯色替代渐变文字
               }
             }}
           >
@@ -134,34 +132,13 @@ const FeaturesSection = () => {
                     p: { xs: 2.5, md: 3 },
                     position: 'relative',
                     overflow: 'hidden',
-                    ...animationStyles.hoverLift,
-                    ...animationStyles.fadeIn,
-                    animationDelay: `${index * 0.1}s`,
-                    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'border-color 0.2s ease',
                     '&:hover': {
-                      borderColor: 'rgba(66, 153, 225, 0.3)',
-                      transform: 'translateY(-8px) scale(1.02)',
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
-                      '& .feature-overlay': {
-                        opacity: 1
-                      },
-                      '& .feature-icon': {
-                        transform: 'scale(1.1)'
-                      }
+                      borderColor: 'rgba(66, 153, 225, 0.3)'
                     }
                   }}
                 >
-                  {/* 悬浮时的背景渐变 */}
-                  <Box
-                    className="feature-overlay"
-                    sx={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: feature.gradient,
-                      opacity: 0,
-                      transition: 'opacity 0.5s ease'
-                    }}
-                  />
+
 
                   <CardContent sx={{ p: 0, position: 'relative', zIndex: 1 }}>
                     {/* 图标 */}
@@ -175,9 +152,7 @@ const FeaturesSection = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        mb: 4,
-                        transition: 'all 0.3s ease',
-                        ...animationStyles.pulseGlow
+                        mb: 4
                       }}
                     >
                       <IconComponent
@@ -195,8 +170,7 @@ const FeaturesSection = () => {
                         fontSize: '1.5rem',
                         fontWeight: 600,
                         color: colors.primary,
-                        mb: 3,
-                        textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        mb: 3
                       }}
                     >
                       {feature.title}
@@ -244,9 +218,7 @@ const FeaturesSection = () => {
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  background: gradients.primary,
-                  ...animationStyles.pulseGlow,
-                  animationDelay: `${index * 0.2}s`
+                  background: gradients.primary
                 }}
               />
             ))}

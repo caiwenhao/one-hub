@@ -164,15 +164,12 @@ const CTASection = () => {
                 px: { xs: 6, md: 8 },
                 py: { xs: 2, md: 2.5 },
                 borderRadius: '50px',
-                background: gradients.primary,
+                background: '#4299E1', // 使用纯色背景替代渐变
                 fontWeight: 'bold',
-                boxShadow: '0 12px 40px rgba(66, 153, 225, 0.4)',
-                ...animationStyles.pulseGlow,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: 'none', // 移除阴影
+                transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  background: gradients.primary,
-                  transform: 'translateY(-4px) scale(1.05)',
-                  boxShadow: '0 16px 50px rgba(66, 153, 225, 0.5)'
+                  background: '#3182CE' // hover时使用稍深的颜色
                 }
               }}
             >

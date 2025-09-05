@@ -104,20 +104,7 @@ const TechSection = () => {
         overflow: 'hidden'
       }}
     >
-      {/* 浮动背景元素 */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '33%',
-          right: '25%',
-          width: '288px',
-          height: '288px',
-          background: 'linear-gradient(to right, rgba(66, 153, 225, 0.08), rgba(139, 92, 246, 0.08))',
-          borderRadius: '50%',
-          filter: 'blur(60px)',
-          ...animationStyles.floating
-        }}
-      />
+
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, maxWidth: '1200px' }}>
         <Grid container spacing={{ xs: 4, md: 8 }} alignItems="center">
@@ -129,22 +116,12 @@ const TechSection = () => {
                 borderRadius: '24px',
                 p: { xs: 3, md: 5 },
                 color: '#ffffff',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
                 border: '1px solid #2d3748',
                 position: 'relative',
-                overflow: 'hidden',
-                ...animationStyles.hoverLift,
-                ...animationStyles.pulseGlow
+                overflow: 'hidden'
               }}
             >
-              {/* 背景渐变 */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'linear-gradient(to bottom right, rgba(66, 153, 225, 0.05), transparent)'
-                }}
-              />
+
 
               {/* 终端头部 */}
               <Box
