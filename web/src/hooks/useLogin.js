@@ -2,7 +2,7 @@ import { API, LoginCheckAPI } from 'utils/api';
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { LOGIN, SET_USER_GROUP } from 'store/actions';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { showSuccess } from 'utils/common';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +10,13 @@ const useLogin = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // 获取重定向URL的辅助函数
+  const getRedirectUrl = () => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get('redirect') || '/panel';
+  };
   const login = async (username, password) => {
     try {
       const res = await API.post(`/api/user/login`, {
@@ -20,7 +27,7 @@ const useLogin = () => {
       if (success) {
         loadUser();
         loadUserGroup();
-        navigate('/panel');
+        navigate(getRedirectUrl());
       }
       return { success, message };
     } catch (err) {
@@ -37,12 +44,12 @@ const useLogin = () => {
       if (success) {
         if (message === 'bind') {
           showSuccess(t('common.bindOk'));
-          navigate('/panel');
+          navigate(getRedirectUrl());
         } else {
           loadUser();
           loadUserGroup();
           showSuccess(t('common.loginOk'));
-          navigate('/panel');
+          navigate(getRedirectUrl());
         }
       }
       return { success, message };
@@ -60,12 +67,12 @@ const useLogin = () => {
       if (success) {
         if (message === 'bind') {
           showSuccess(t('common.bindOk'));
-          navigate('/panel');
+          navigate(getRedirectUrl());
         } else {
           loadUser();
           loadUserGroup();
           showSuccess(t('common.loginOk'));
-          navigate('/panel');
+          navigate(getRedirectUrl());
         }
       }
       return { success, message };
@@ -83,11 +90,11 @@ const useLogin = () => {
       if (success) {
         if (message === 'bind') {
           showSuccess(t('common.bindOk'));
-          navigate('/panel');
+          navigate(getRedirectUrl());
         } else {
           loadUser();
           showSuccess(t('common.loginOk'));
-          navigate('/panel');
+          navigate(getRedirectUrl());
         }
       }
       return { success, message };
@@ -106,7 +113,7 @@ const useLogin = () => {
         loadUser();
         loadUserGroup();
         showSuccess(t('common.loginOk'));
-        navigate('/panel');
+        navigate(getRedirectUrl());
       }
       return { success, message };
     } catch (err) {

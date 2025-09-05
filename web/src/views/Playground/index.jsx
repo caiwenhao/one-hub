@@ -1,11 +1,12 @@
 import PropTypes from 'prop-types';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useContext } from 'react';
 import { API } from 'utils/api';
 import { getChatLinks, showError, replaceChatPlaceholders } from 'utils/common';
 import { Typography, Tabs, Tab, Box, Card } from '@mui/material';
 import SubCard from 'ui-component/cards/SubCard';
-// import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { UserContext } from 'contexts/UserContext';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -45,20 +46,32 @@ const Playground = () => {
   const [tabIndex, setTabIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const siteInfo = useSelector((state) => state.siteInfo);
+  const account = useSelector((state) => state.account);
+  const { isUserLoaded } = useContext(UserContext);
+  const navigate = useNavigate();
   const chatLinks = getChatLinks(true);
   const [iframeSrc, setIframeSrc] = useState(null);
 
   const loadTokens = useCallback(async () => {
     setIsLoading(true);
-    const res = await API.get(`/api/token/playground`);
-    const { success, message, data } = res.data;
-    if (success) {
-      setValue(data);
-    } else {
-      showError(message);
+    try {
+      const res = await API.get(`/api/token/playground`);
+      const { success, message, data } = res.data;
+      if (success) {
+        setValue(data);
+      } else {
+        showError(message);
+      }
+    } catch (error) {
+      // 如果是401错误（未认证），跳转到登录页
+      if (error.response?.status === 401) {
+        navigate('/login?redirect=/playground');
+        return;
+      }
+      showError(error.message || '获取令牌失败');
     }
     setIsLoading(false);
-  }, []);
+  }, [navigate]);
 
   const handleTabChange = useCallback(
     (event, newIndex) => {
@@ -77,14 +90,40 @@ const Playground = () => {
     [siteInfo, value, chatLinks]
   );
 
+  // 检查登录状态
   useEffect(() => {
-    loadTokens().then(() => {
-      if (value !== '') {
-        handleTabChange(null, 0);
-      }
-    });
+    if (isUserLoaded && !account.user) {
+      // 保存当前页面路径，登录后跳转回来
+      navigate('/login?redirect=/playground');
+      return;
+    }
+  }, [account, navigate, isUserLoaded]);
+
+  useEffect(() => {
+    // 只有在用户已登录的情况下才加载令牌
+    if (isUserLoaded && account.user) {
+      loadTokens().then(() => {
+        if (value !== '') {
+          handleTabChange(null, 0);
+        }
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadTokens, value]);
+  }, [loadTokens, value, isUserLoaded, account.user]);
+
+  // 在用户信息加载完成前显示加载状态
+  if (!isUserLoaded) {
+    return (
+      <SubCard title="Playground">
+        <Typography align="center">加载中...</Typography>
+      </SubCard>
+    );
+  }
+
+  // 如果用户未登录，不显示内容（会被重定向到登录页）
+  if (!account.user) {
+    return null;
+  }
 
   if (chatLinks.length === 0 || isLoading || value === '') {
     return (

@@ -267,7 +267,15 @@ export async function onWebAuthnClicked(username, showError, showSuccess, naviga
     if (navigateToStatus) {
       navigateToStatus();
     }
-    window.location.reload();
+
+    // 检查是否有重定向参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectUrl = urlParams.get('redirect');
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
+    } else {
+      window.location.href = '/panel';
+    }
   } catch (error) {
     if (error.name === 'NotAllowedError') {
       showError('WebAuthn认证被拒绝或超时');
