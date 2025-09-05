@@ -3,6 +3,7 @@ import * as Yup from 'yup';
 import { Formik } from 'formik';
 import { useTheme } from '@mui/material/styles';
 import { useCallback, useEffect, useState } from 'react';
+import { convertPrice, convertPriceData, isValidUnitType } from './priceConverter';
 import {
   Alert,
   Autocomplete,
@@ -125,6 +126,10 @@ const EditModal = ({
 
   const [unitType, setUnitType] = useState('rate');
   const [localUnit, setLocalUnit] = useState(unit);
+  const [previousUnitType, setPreviousUnitType] = useState('rate');
+  const [previousLocalUnit, setPreviousLocalUnit] = useState(unit);
+  const [isConverting, setIsConverting] = useState(false);
+  const [pendingConversion, setPendingConversion] = useState(null);
 
   // 当外部unit变化时同步本地unit
   useEffect(() => {
@@ -133,29 +138,9 @@ const EditModal = ({
 
   const calculateRate = useCallback(
     (price) => {
-      if (price === '') {
-        return 0;
-      }
-      if (unitType === 'rate') {
-        return price;
-      }
-
-      let priceValue = new Decimal(price);
-
-      if (localUnit === 'M') {
-        priceValue = priceValue.div(1000);
-      }
-
-      switch (unitType) {
-        case 'USD':
-          priceValue = priceValue.div(0.002);
-          break;
-        case 'RMB':
-          priceValue = priceValue.div(0.014);
-          break;
-      }
-
-      return Number(priceValue.toFixed(4));
+      if (price === '' || price == null) return 0;
+      // 使用统一转换器，确保与USD/RMB切换逻辑一致
+      return convertPrice(price, unitType, localUnit, 'rate', 'K');
     },
     [unitType, localUnit]
   );
@@ -335,8 +320,59 @@ const EditModal = ({
     if (open) {
       setUnitType('rate');
       setLocalUnit('K');
+      setPreviousUnitType('rate');
+      setPreviousLocalUnit('K');
     }
   }, [open]);
+
+  /**
+   * 监听单位变化：仅同步 previous*，不在这里做转换
+   * 转换统一在 pendingConversion 的 effect 中处理，避免重复转换
+   */
+  useEffect(() => {
+    const hasUnitChanged = unitType !== previousUnitType || localUnit !== previousLocalUnit;
+    if (hasUnitChanged) {
+      setPreviousUnitType(unitType);
+      setPreviousLocalUnit(localUnit);
+    }
+  }, [unitType, localUnit, previousUnitType, previousLocalUnit]);
+
+  // 处理待处理的转换
+  useEffect(() => {
+    if (pendingConversion && singleMode) {
+      console.log('Processing pending conversion:', pendingConversion);
+      setIsConverting(true);
+
+      // 使用 setTimeout 来确保状态更新完成
+      setTimeout(() => {
+        setInputs(prevInputs => {
+          const convertedData = convertPriceData(
+            prevInputs,
+            pendingConversion.fromUnitType,
+            pendingConversion.fromLocalUnit,
+            pendingConversion.toUnitType,
+            pendingConversion.toLocalUnit
+          );
+
+          console.log('Conversion completed:', {
+            from: `${pendingConversion.fromUnitType}(${pendingConversion.fromLocalUnit})`,
+            to: `${pendingConversion.toUnitType}(${pendingConversion.toLocalUnit})`,
+            original: { input: prevInputs.input, output: prevInputs.output },
+            converted: { input: convertedData.input, output: convertedData.output }
+          });
+
+          return convertedData;
+        });
+
+        // 更新前一次的单位状态
+        setPreviousUnitType(pendingConversion.toUnitType);
+        setPreviousLocalUnit(pendingConversion.toLocalUnit);
+
+        setIsConverting(false);
+        setPendingConversion(null);
+      }, 50);
+    }
+  }, [pendingConversion, singleMode]);
 
   // 渲染类型选择表单
   const renderTypeSelector = (formProps) => {
@@ -420,37 +456,86 @@ const EditModal = ({
     );
   };
 
-  // 渲染单位类型切换按钮组
-  const renderUnitTypeToggle = () => (
-    <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
-      <Stack direction="row" spacing={2}>
-        <ToggleButtonGroup
-          value={unitType}
-          onChange={(event, newUnitType) => {
-            setUnitType(newUnitType);
-          }}
-          options={unitTypeOptions}
-          aria-label="unit toggle"
-        />
+  // 处理单位变化的统一函数
+  const handleUnitChange = useCallback((newUnitType, newLocalUnit) => {
+    const actualUnitType = newUnitType || unitType;
+    const actualLocalUnit = newLocalUnit || localUnit;
 
-        <ToggleButtonGroup
-          value={localUnit}
-          onChange={(event, newUnit) => {
-            setLocalUnit(newUnit);
-          }}
-          options={unitOptions}
-          aria-label="unit toggle"
-        />
-      </Stack>
-    </FormControl>
-  );
+    console.log('Unit change requested:', {
+      from: `${unitType}(${localUnit})`,
+      to: `${actualUnitType}(${actualLocalUnit})`,
+      singleMode
+    });
+
+    // 如果在单一模式下且单位确实发生了变化
+    if (
+      singleMode &&
+      (actualUnitType !== unitType || actualLocalUnit !== localUnit) &&
+      isValidUnitType(unitType, localUnit) &&
+      isValidUnitType(actualUnitType, actualLocalUnit)
+    ) {
+      const onlyKMChangeUnderRate =
+        actualUnitType === unitType && unitType === 'rate' && actualLocalUnit !== localUnit;
+
+      // 在倍率(rate)模式下，K/M 切换不应改变数值，因此不触发转换
+      if (!onlyKMChangeUnderRate) {
+        setPendingConversion({
+          fromUnitType: unitType,
+          fromLocalUnit: localUnit,
+          toUnitType: actualUnitType,
+          toLocalUnit: actualLocalUnit
+        });
+      }
+    }
+
+    // 更新状态
+    if (newUnitType) setUnitType(newUnitType);
+    if (newLocalUnit) setLocalUnit(newLocalUnit);
+  }, [unitType, localUnit, singleMode]);
+
+  // 渲染单位类型切换按钮组
+  const renderUnitTypeToggle = () => {
+    // 处理货币单位切换
+    const handleUnitTypeChange = (_, newUnitType) => {
+      if (newUnitType && newUnitType !== unitType) {
+        handleUnitChange(newUnitType, null);
+      }
+    };
+
+    // 处理数量单位切换
+    const handleLocalUnitChange = (_, newUnit) => {
+      if (newUnit && newUnit !== localUnit) {
+        handleUnitChange(null, newUnit);
+      }
+    };
+
+    return (
+      <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
+        <Stack direction="row" spacing={2}>
+          <ToggleButtonGroup
+            value={unitType}
+            onChange={handleUnitTypeChange}
+            options={unitTypeOptions}
+            aria-label="unit toggle"
+          />
+
+          <ToggleButtonGroup
+            value={localUnit}
+            onChange={handleLocalUnitChange}
+            options={unitOptions}
+            aria-label="unit toggle"
+          />
+        </Stack>
+      </FormControl>
+    );
+  };
 
   // 渲染输入价格表单
   const renderInputField = (formProps) => {
     const { errors = {}, touched = {}, handleBlur, handleChange: formikHandleChange, values = {} } = formProps || {};
 
     // 根据模式选择正确的处理函数和值
-    const value = singleMode ? inputs.input : values.input;
+    const value = singleMode ? (inputs.input ?? 0) : (values.input ?? 0);
     const onChange = singleMode ? handleChange : formikHandleChange;
     const errorState = singleMode ? !!errors.input : Boolean(touched?.input && errors?.input);
 
@@ -468,6 +553,13 @@ const EditModal = ({
           onBlur={handleBlur}
           onChange={onChange}
           aria-describedby="helper-text-channel-input-label"
+          disabled={isConverting}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: isConverting ? 'rgba(25, 118, 210, 0.04)' : 'transparent',
+              transition: 'background-color 0.2s ease-in-out'
+            }
+          }}
         />
 
         {(singleMode && errors.input) || (!singleMode && touched?.input && errors?.input) ? (
@@ -484,7 +576,7 @@ const EditModal = ({
     const { errors = {}, touched = {}, handleBlur, handleChange: formikHandleChange, values = {} } = formProps || {};
 
     // 根据模式选择正确的处理函数和值
-    const value = singleMode ? inputs.output : values.output;
+    const value = singleMode ? (inputs.output ?? 0) : (values.output ?? 0);
     const onChange = singleMode ? handleChange : formikHandleChange;
     const errorState = singleMode ? !!errors.output : Boolean(touched?.output && errors?.output);
 
@@ -502,6 +594,13 @@ const EditModal = ({
           onBlur={handleBlur}
           onChange={onChange}
           aria-describedby="helper-text-channel-output-label"
+          disabled={isConverting}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: isConverting ? 'rgba(25, 118, 210, 0.04)' : 'transparent',
+              transition: 'background-color 0.2s ease-in-out'
+            }
+          }}
         />
 
         {(singleMode && errors.output) || (!singleMode && touched?.output && errors?.output) ? (
@@ -518,7 +617,7 @@ const EditModal = ({
     const { handleChange: formikHandleChange, values = {} } = formProps || {};
 
     // 在单模式下，我们需要使用不同的处理方式
-    const handleLockChange = (event, newLocked) => {
+    const handleLockChange = (_, newLocked) => {
       if (singleMode) {
         // 在单模式下，直接更新inputs状态
         handleChange({
@@ -591,7 +690,7 @@ const EditModal = ({
           id="channel-models-label"
           options={selectModel || []}
           value={values.models || []}
-          onChange={(e, value) => {
+          onChange={(_, value) => {
             const event = {
               target: {
                 name: 'models',
@@ -692,6 +791,12 @@ const EditModal = ({
 
             {renderLockedToggle()}
             <Alert severity="warning">{t('pricing_edit.lockedTip')}</Alert>
+
+            {isConverting && (
+              <Alert severity="info" sx={{ mt: 1 }}>
+                正在根据新单位自动调整价格...
+              </Alert>
+            )}
 
             {renderExtraRatioSelector()}
 
