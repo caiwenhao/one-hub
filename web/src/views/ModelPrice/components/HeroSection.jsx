@@ -130,35 +130,7 @@ const HeroSection = () => {
           zIndex: 10
         }}
       >
-        <Typography
-          variant="h1"
-          sx={{
-            fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem', lg: '5rem' },
-            fontWeight: 100,
-            color: theme.palette.text.primary,
-            mb: 4,
-            lineHeight: 1.2,
-            letterSpacing: '-0.02em',
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}
-        >
-          {t('modelpricePage.heroTitle')}
-          <br />
-          <Box
-            component="span"
-            sx={{
-              fontWeight: 700,
-              background: `linear-gradient(-45deg, ${theme.palette.primary.main}, #8B5CF6, #EC4899)`,
-              backgroundSize: '400% 400%',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              animation: `${gradientShift} 4s ease infinite`
-            }}
-          >
-            {t('modelpricePage.heroSubtitle')}
-          </Box>
-        </Typography>
+        {/* 已删除"简单透明只为价值付费"标题区块 */}
 
         <Typography
           variant="h5"

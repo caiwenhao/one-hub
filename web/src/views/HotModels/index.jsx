@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box } from '@mui/material';
-import HeroSection from './components/HeroSection';
 import FeaturedModels from './components/FeaturedModels';
 import CategorySection from './components/CategorySection';
 
@@ -20,7 +19,6 @@ const HotModelsPage = () => {
         }
       }}
     >
-      <HeroSection />
       <FeaturedModels />
       <CategorySection />
     </Box>

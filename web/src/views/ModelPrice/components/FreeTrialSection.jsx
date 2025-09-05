@@ -45,79 +45,90 @@ const FreeTrialSection = () => {
 
   return (
     <Box
+      component="section"
       sx={{
-        py: { xs: 8, md: 10 },
-        px: { xs: 3, md: 6, lg: 12 }
+        backgroundColor: '#ffffff',
+        py: { xs: 8, md: 16 },
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
-      <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
+      {/* 背景渐变 - 与明星模型荟萃区块保持一致 */}
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(to bottom right, rgba(249, 250, 251, 0.5), rgba(59, 130, 246, 0.03))'
+        }}
+      />
+
+      <Box sx={{ maxWidth: '1200px', mx: 'auto', px: { xs: 3, md: 6, lg: 12 }, position: 'relative', zIndex: 1 }}>
         <Card
           sx={{
             position: 'relative',
             p: { xs: 6, md: 8 },
             borderRadius: '24px',
-            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%)',
-            border: '2px solid',
-            borderColor: 'rgba(34, 197, 94, 0.2)',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 0.9) 100%)',
+            border: '1px solid rgba(0, 0, 0, 0.05)',
             boxShadow: '0 25px 50px rgba(0,0,0,0.1)',
             overflow: 'hidden',
             transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
             '&:hover': {
               transform: 'translateY(-8px) scale(1.02)',
-              boxShadow: '0 32px 64px rgba(0,0,0,0.15)'
+              boxShadow: '0 32px 64px rgba(0,0,0,0.15)',
+              borderColor: 'rgba(66, 153, 225, 0.3)'
             },
             ...(theme.palette.mode === 'dark' && {
-              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)',
-              borderColor: 'rgba(34, 197, 94, 0.3)'
+              background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(31, 31, 31, 0.9) 100%)',
+              borderColor: 'rgba(255, 255, 255, 0.1)'
             })
           }}
         >
-          {/* 背景渐变层 */}
+          {/* 背景渐变层 - 调整为与明星模型荟萃一致的风格 */}
           <Box
             sx={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%)',
+              background: 'linear-gradient(to bottom right, rgba(249, 250, 251, 0.3), rgba(59, 130, 246, 0.02))',
               ...(theme.palette.mode === 'dark' && {
-                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%)'
+                background: 'linear-gradient(to bottom right, rgba(31, 31, 31, 0.3), rgba(59, 130, 246, 0.05))'
               })
             }}
           />
 
           {/* 主要内容 */}
           <Box sx={{ position: 'relative', zIndex: 10, textAlign: 'center' }}>
-            {/* 限时福利标签 */}
+            {/* 限时福利标签 - 调整为与明星模型荟萃一致的风格 */}
             <Box
               sx={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                background: 'linear-gradient(135deg, rgba(66, 153, 225, 0.1), rgba(139, 92, 246, 0.1))',
                 px: 3,
                 py: 1.5,
                 borderRadius: '50px',
                 mb: 3,
-                border: '1px solid rgba(34, 197, 94, 0.2)',
+                border: 'none',
                 ...(theme.palette.mode === 'dark' && {
-                  backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                  borderColor: 'rgba(34, 197, 94, 0.3)'
+                  background: 'linear-gradient(135deg, rgba(66, 153, 225, 0.15), rgba(139, 92, 246, 0.15))'
                 })
               }}
             >
-              <Icon 
-                icon="solar:gift-bold-duotone" 
-                width={24} 
-                height={24} 
-                style={{ 
-                  color: theme.palette.success.main,
+              <Icon
+                icon="solar:gift-bold-duotone"
+                width={20}
+                height={20}
+                style={{
+                  color: '#4299E1', // 使用与明星模型荟萃一致的蓝色
                   marginRight: '12px'
-                }} 
+                }}
               />
               <Typography
                 variant="body1"
                 sx={{
-                  color: theme.palette.success.main,
-                  fontWeight: 700,
-                  fontSize: '1.125rem'
+                  color: '#4299E1', // 使用与明星模型荟萃一致的蓝色
+                  fontWeight: 600,
+                  fontSize: '1rem'
                 }}
               >
                 限时福利
@@ -156,7 +167,10 @@ const FreeTrialSection = () => {
                 sx={{
                   fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
                   fontWeight: 700,
-                  color: theme.palette.success.main
+                  background: 'linear-gradient(45deg, #4299E1 30%, #8B5CF6 90%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
                 }}
               >
                 ¥10.00

@@ -105,29 +105,7 @@ const HeroSection = () => {
             ...animationStyles.fadeIn
           }}
         >
-          {/* 主标题 */}
-          <Typography
-            variant="h1"
-            sx={{
-              fontSize: { xs: '2.5rem', sm: '3.5rem', md: '5rem', lg: '6rem' },
-              fontWeight: 200,
-              color: colors.primary,
-              mb: { xs: 3, md: 4 },
-              lineHeight: 1.1,
-              letterSpacing: '-0.02em',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              px: { xs: 2, md: 0 },
-              '& .gradient-text': {
-                fontWeight: 'bold',
-                ...createGradientText(),
-                ...animationStyles.gradientShift
-              }
-            }}
-          >
-            连接全球
-            <br />
-            <span className="gradient-text">顶尖AI大脑</span>
-          </Typography>
+          {/* 主标题 - 已删除"连接全球顶尖AI大脑"区块 */}
 
           {/* 副标题 */}
           <Typography
