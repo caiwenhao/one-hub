@@ -28,6 +28,7 @@ import { useTheme } from '@mui/material/styles';
 import Label from 'ui-component/Label';
 import ToggleButtonGroup from 'ui-component/ToggleButton';
 import { alpha } from '@mui/material/styles';
+import { getUnitPreference, setUnitPreference, PAGE_KEYS, UNIT_OPTIONS } from 'utils/unitPreferences';
 
 // ----------------------------------------------------------------------
 export default function ModelPrice() {
@@ -43,13 +44,9 @@ export default function ModelPrice() {
   const [userGroupMap, setUserGroupMap] = useState({});
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedOwnedBy, setSelectedOwnedBy] = useState('all');
-  const [unit, setUnit] = useState('K');
+  // 使用偏好存储的单位默认值（M单位）
+  const [unit, setUnit] = useState(() => getUnitPreference(PAGE_KEYS.MODEL_PRICE));
   const [onlyShowAvailable, setOnlyShowAvailable] = useState(false);
-
-  const unitOptions = [
-    { value: 'K', label: 'K' },
-    { value: 'M', label: 'M' }
-  ];
 
   const fetchAvailableModels = useCallback(async () => {
     try {
@@ -151,6 +148,8 @@ export default function ModelPrice() {
   const handleUnitChange = (event, newUnit) => {
     if (newUnit !== null) {
       setUnit(newUnit);
+      // 保存用户单位偏好
+      setUnitPreference(newUnit, PAGE_KEYS.MODEL_PRICE);
     }
   };
 
@@ -246,7 +245,7 @@ export default function ModelPrice() {
             <ToggleButtonGroup
               value={unit}
               onChange={handleUnitChange}
-              options={unitOptions}
+              options={UNIT_OPTIONS}
               aria-label="unit toggle"
               size="small"
               sx={{

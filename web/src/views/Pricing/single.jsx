@@ -29,6 +29,7 @@ import PriceCard from './component/PriceCard';
 import { alpha } from '@mui/material/styles';
 import EditModal from './component/EditModal';
 import ToggleButtonGroup from 'ui-component/ToggleButton';
+import { getUnitPreference, setUnitPreference, PAGE_KEYS, UNIT_OPTIONS } from 'utils/unitPreferences';
 
 const Single = ({ ownedby, prices, reloadData }) => {
   const { t } = useTranslation();
@@ -42,12 +43,8 @@ const Single = ({ ownedby, prices, reloadData }) => {
   const [rowsPerPage, setRowsPerPage] = useState(getPageSize('pricing', 24));
   const [channelFilter, setChannelFilter] = useState('all');
   const [lockFilter, setLockFilter] = useState('all');
-  const [unit, setUnit] = useState('K');
-
-  const unitOptions = [
-    { value: 'K', label: 'K' },
-    { value: 'M', label: 'M' }
-  ];
+  // 使用偏好存储的单位默认值（M单位）
+  const [unit, setUnit] = useState(() => getUnitPreference(PAGE_KEYS.PRICING_SINGLE));
 
   // 删除确认对话框
   const handleDeleteClick = (row) => {
@@ -75,6 +72,8 @@ const Single = ({ ownedby, prices, reloadData }) => {
   const handleUnitChange = (event, newUnit) => {
     if (newUnit !== null) {
       setUnit(newUnit);
+      // 保存用户单位偏好
+      setUnitPreference(newUnit, PAGE_KEYS.PRICING_SINGLE);
     }
   };
 
@@ -279,7 +278,7 @@ const Single = ({ ownedby, prices, reloadData }) => {
               </Select>
             </FormControl>
 
-            <ToggleButtonGroup value={unit} onChange={handleUnitChange} options={unitOptions} aria-label="unit toggle" />
+            <ToggleButtonGroup value={unit} onChange={handleUnitChange} options={UNIT_OPTIONS} aria-label="unit toggle" />
           </Box>
         </Box>
       </Paper>

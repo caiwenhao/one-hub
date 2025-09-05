@@ -27,6 +27,7 @@ import { useTheme } from '@mui/material/styles';
 import Label from 'ui-component/Label';
 import ToggleButtonGroup from 'ui-component/ToggleButton';
 import { alpha } from '@mui/material/styles';
+import { getUnitPreference, setUnitPreference, PAGE_KEYS, UNIT_OPTIONS } from 'utils/unitPreferences';
 
 const UnifiedPricingTable = () => {
   const { t } = useTranslation();
@@ -41,13 +42,9 @@ const UnifiedPricingTable = () => {
   const [userGroupMap, setUserGroupMap] = useState({});
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedOwnedBy, setSelectedOwnedBy] = useState('all');
-  const [unit, setUnit] = useState('K');
+  // 使用偏好存储的单位默认值（M单位）
+  const [unit, setUnit] = useState(() => getUnitPreference(PAGE_KEYS.UNIFIED_PRICING));
   const [onlyShowAvailable, setOnlyShowAvailable] = useState(false);
-
-  const unitOptions = [
-    { value: 'K', label: 'K' },
-    { value: 'M', label: 'M' }
-  ];
 
   const fetchAvailableModels = useCallback(async () => {
     try {
@@ -149,6 +146,8 @@ const UnifiedPricingTable = () => {
   const handleUnitChange = (event, newUnit) => {
     if (newUnit !== null) {
       setUnit(newUnit);
+      // 保存用户单位偏好
+      setUnitPreference(newUnit, PAGE_KEYS.UNIFIED_PRICING);
     }
   };
 
@@ -262,7 +261,7 @@ const UnifiedPricingTable = () => {
               <ToggleButtonGroup
                 value={unit}
                 onChange={handleUnitChange}
-                options={unitOptions}
+                options={UNIT_OPTIONS}
                 aria-label="unit toggle"
                 size="small"
                 sx={{

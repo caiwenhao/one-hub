@@ -36,6 +36,7 @@ import { alpha } from '@mui/material/styles';
 import { getPageSize, savePageSize } from 'constants';
 import EditModal from './component/EditModal';
 import ToggleButtonGroup from 'ui-component/ToggleButton';
+import { getUnitPreference, setUnitPreference, PAGE_KEYS, UNIT_OPTIONS } from 'utils/unitPreferences';
 
 // ----------------------------------------------------------------------
 export default function Multiple({ prices, reloadData, ownedby, noPriceModels }) {
@@ -50,12 +51,8 @@ export default function Multiple({ prices, reloadData, ownedby, noPriceModels })
   const [rowsPerPage, setRowsPerPage] = useState(getPageSize('pricing_multiple', 10));
   const [channelFilter, setChannelFilter] = useState('all');
   const [lockFilter, setLockFilter] = useState('all');
-  const [unit, setUnit] = useState('K');
-
-  const unitOptions = [
-    { value: 'K', label: 'K' },
-    { value: 'M', label: 'M' }
-  ];
+  // 使用偏好存储的单位默认值（M单位）
+  const [unit, setUnit] = useState(() => getUnitPreference(PAGE_KEYS.PRICING_MULTIPLE));
 
   // 处理刷新
   const handleRefresh = async () => {
@@ -93,6 +90,8 @@ export default function Multiple({ prices, reloadData, ownedby, noPriceModels })
   const handleUnitChange = (event, newUnit) => {
     if (newUnit !== null) {
       setUnit(newUnit);
+      // 保存用户单位偏好
+      setUnitPreference(newUnit, PAGE_KEYS.PRICING_MULTIPLE);
     }
   };
 
@@ -295,7 +294,7 @@ export default function Multiple({ prices, reloadData, ownedby, noPriceModels })
               </Select>
             </FormControl>
 
-            <ToggleButtonGroup value={unit} onChange={handleUnitChange} options={unitOptions} aria-label="unit toggle" />
+            <ToggleButtonGroup value={unit} onChange={handleUnitChange} options={UNIT_OPTIONS} aria-label="unit toggle" />
           </Box>
         </Box>
       </Paper>

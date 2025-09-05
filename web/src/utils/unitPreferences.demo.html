@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单位偏好功能演示</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .demo-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .demo-section h2 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+        .unit-toggle {
+            display: inline-flex;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .unit-toggle button {
+            padding: 8px 16px;
+            border: none;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .unit-toggle button.active {
+            background: #1976d2;
+            color: white;
+        }
+        .unit-toggle button:hover:not(.active) {
+            background: #f0f0f0;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #e3f2fd;
+            border-left: 4px solid #1976d2;
+        }
+        .test-results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 单位偏好功能演示</h1>
+    
+    <div class="demo-section">
+        <h2>📊 模型价格页面 (ModelPrice)</h2>
+        <p>当前单位: <span id="modelPrice-current">M</span></p>
+        <div class="unit-toggle">
+            <button onclick="setPageUnit('modelPrice', 'K')" id="modelPrice-K">K</button>
+            <button onclick="setPageUnit('modelPrice', 'M')" id="modelPrice-M" class="active">M</button>
+        </div>
+        <div class="status" id="modelPrice-status">默认使用 M 单位</div>
+    </div>
+
+    <div class="demo-section">
+        <h2>📋 统一价格表 (UnifiedPricing)</h2>
+        <p>当前单位: <span id="unifiedPricing-current">M</span></p>
+        <div class="unit-toggle">
+            <button onclick="setPageUnit('unifiedPricing', 'K')" id="unifiedPricing-K">K</button>
+            <button onclick="setPageUnit('unifiedPricing', 'M')" id="unifiedPricing-M" class="active">M</button>
+        </div>
+        <div class="status" id="unifiedPricing-status">默认使用 M 单位</div>
+    </div>
+
+    <div class="demo-section">
+        <h2>💰 单一价格管理 (PricingSingle)</h2>
+        <p>当前单位: <span id="pricingSingle-current">M</span></p>
+        <div class="unit-toggle">
+            <button onclick="setPageUnit('pricingSingle', 'K')" id="pricingSingle-K">K</button>
+            <button onclick="setPageUnit('pricingSingle', 'M')" id="pricingSingle-M" class="active">M</button>
+        </div>
+        <div class="status" id="pricingSingle-status">默认使用 M 单位</div>
+    </div>
+
+    <div class="demo-section">
+        <h2>📦 批量价格管理 (PricingMultiple)</h2>
+        <p>当前单位: <span id="pricingMultiple-current">M</span></p>
+        <div class="unit-toggle">
+            <button onclick="setPageUnit('pricingMultiple', 'K')" id="pricingMultiple-K">K</button>
+            <button onclick="setPageUnit('pricingMultiple', 'M')" id="pricingMultiple-M" class="active">M</button>
+        </div>
+        <div class="status" id="pricingMultiple-status">默认使用 M 单位</div>
+    </div>
+
+    <div class="demo-section">
+        <h2>🧪 功能测试</h2>
+        <button onclick="runTests()">运行测试</button>
+        <button onclick="resetAllPreferences()">重置所有偏好</button>
+        <button onclick="showAllPreferences()">显示所有偏好</button>
+        <div class="test-results" id="test-results">点击"运行测试"查看结果</div>
+    </div>
+
+    <script>
+        // 模拟单位偏好管理功能
+        const UNIT_PREFERENCE_KEY = 'user_unit_preferences';
+        const DEFAULT_UNIT_CONFIG = {
+            global: 'M',
+            pages: {
+                modelPrice: 'M',
+                unifiedPricing: 'M',
+                pricingSingle: 'M',
+                pricingMultiple: 'M'
+            }
+        };
+
+        function getUnitPreference(pageKey = null) {
+            try {
+                const stored = localStorage.getItem(UNIT_PREFERENCE_KEY);
+                let preferences = stored ? JSON.parse(stored) : DEFAULT_UNIT_CONFIG;
+                
+                if (!preferences.pages) {
+                    preferences = { ...DEFAULT_UNIT_CONFIG };
+                }
+                
+                if (pageKey && preferences.pages[pageKey]) {
+                    return preferences.pages[pageKey];
+                }
+                
+                return preferences.global || DEFAULT_UNIT_CONFIG.global;
+            } catch (error) {
+                console.error('Error reading unit preferences:', error);
+                return DEFAULT_UNIT_CONFIG.global;
+            }
+        }
+
+        function setUnitPreference(unit, pageKey = null) {
+            try {
+                const stored = localStorage.getItem(UNIT_PREFERENCE_KEY);
+                let preferences = stored ? JSON.parse(stored) : DEFAULT_UNIT_CONFIG;
+                
+                if (!preferences.pages) {
+                    preferences = { ...DEFAULT_UNIT_CONFIG };
+                }
+                
+                if (pageKey) {
+                    preferences.pages[pageKey] = unit;
+                } else {
+                    preferences.global = unit;
+                }
+                
+                localStorage.setItem(UNIT_PREFERENCE_KEY, JSON.stringify(preferences));
+            } catch (error) {
+                console.error('Error saving unit preferences:', error);
+            }
+        }
+
+        function setPageUnit(pageKey, unit) {
+            setUnitPreference(unit, pageKey);
+            updateUI(pageKey, unit);
+            document.getElementById(`${pageKey}-status`).textContent = `已切换到 ${unit} 单位`;
+        }
+
+        function updateUI(pageKey, unit) {
+            document.getElementById(`${pageKey}-current`).textContent = unit;
+            
+            // 更新按钮状态
+            document.getElementById(`${pageKey}-K`).classList.toggle('active', unit === 'K');
+            document.getElementById(`${pageKey}-M`).classList.toggle('active', unit === 'M');
+        }
+
+        function resetAllPreferences() {
+            localStorage.setItem(UNIT_PREFERENCE_KEY, JSON.stringify(DEFAULT_UNIT_CONFIG));
+            
+            // 更新所有页面UI
+            ['modelPrice', 'unifiedPricing', 'pricingSingle', 'pricingMultiple'].forEach(pageKey => {
+                updateUI(pageKey, 'M');
+                document.getElementById(`${pageKey}-status`).textContent = '已重置为默认 M 单位';
+            });
+        }
+
+        function showAllPreferences() {
+            const preferences = JSON.parse(localStorage.getItem(UNIT_PREFERENCE_KEY) || '{}');
+            document.getElementById('test-results').innerHTML = 
+                '<strong>当前偏好设置:</strong><br>' + 
+                JSON.stringify(preferences, null, 2);
+        }
+
+        function runTests() {
+            const results = [];
+            
+            // 测试1: 默认值
+            results.push(`✓ 默认全局单位: ${getUnitPreference()}`);
+            
+            // 测试2: 页面特定设置
+            setUnitPreference('K', 'modelPrice');
+            const modelPriceUnit = getUnitPreference('modelPrice');
+            results.push(`✓ 模型价格页面单位: ${modelPriceUnit}`);
+            
+            // 测试3: 其他页面不受影响
+            const unifiedPricingUnit = getUnitPreference('unifiedPricing');
+            results.push(`✓ 统一价格表单位: ${unifiedPricingUnit} (应该保持M)`);
+            
+            // 测试4: 全局设置
+            setUnitPreference('K');
+            const globalUnit = getUnitPreference();
+            results.push(`✓ 全局单位: ${globalUnit}`);
+            
+            document.getElementById('test-results').innerHTML = 
+                '<div class="success">' + results.join('<br>') + '</div>';
+        }
+
+        // 页面加载时初始化
+        window.onload = function() {
+            ['modelPrice', 'unifiedPricing', 'pricingSingle', 'pricingMultiple'].forEach(pageKey => {
+                const unit = getUnitPreference(pageKey);
+                updateUI(pageKey, unit);
+            });
+        };
+    </script>
+</body>
+</html>
