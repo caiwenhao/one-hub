@@ -1,11 +1,12 @@
-import React from 'react';
-import { Box, Typography, Container, Grid, Paper } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, Container, Grid, Paper, Dialog, DialogContent, IconButton } from '@mui/material';
 import { keyframes } from '@mui/system';
 import CodeIcon from '@mui/icons-material/Code';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import WechatIcon from '@mui/icons-material/Chat';
 import BusinessIcon from '@mui/icons-material/Business';
+import CloseIcon from '@mui/icons-material/Close';
 
 // 定义动画
 const pulseGlow = keyframes`
@@ -17,6 +18,79 @@ const pulseGlow = keyframes`
   }
 `;
 
+// 图片预览模态框组件
+const ImagePreviewModal = ({ open, onClose, imageUrl, title }) => {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '16px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }
+      }}
+    >
+      <Box sx={{ position: 'relative' }}>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            zIndex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'rgba(0, 0, 0, 0.7)'
+            }
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+        <DialogContent sx={{ p: 3, textAlign: 'center' }}>
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 3,
+              color: '#1A202C',
+              fontWeight: 600
+            }}
+          >
+            {title}
+          </Typography>
+          <img
+            src={imageUrl}
+            alt={title}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '500px',
+              width: 'auto',
+              height: 'auto',
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
+            }}
+          />
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 2,
+              color: '#718096',
+              fontSize: '0.875rem'
+            }}
+          >
+            扫描二维码或长按保存到相册
+          </Typography>
+        </DialogContent>
+      </Box>
+    </Dialog>
+  );
+};
+
 // 联系卡片组件
 const ContactCard = ({
   title,
@@ -27,16 +101,17 @@ const ContactCard = ({
   contactType = 'email', // 'email', 'phone', 'image'
   icon: Icon,
   gradientColors,
-  bgGradient
+  bgGradient,
+  onImageClick
 }) => {
   const handleContactClick = () => {
     if (contactType === 'email' && email) {
       window.open(`mailto:${email}`, '_blank');
     } else if (contactType === 'phone' && phone) {
       window.open(`tel:${phone}`, '_blank');
-    } else if (contactType === 'image' && imageUrl) {
-      // 对于图片类型，可以打开图片或者复制到剪贴板
-      window.open(imageUrl, '_blank');
+    } else if (contactType === 'image' && imageUrl && onImageClick) {
+      // 对于图片类型，调用图片预览功能
+      onImageClick();
     }
   };
 
@@ -167,8 +242,10 @@ const ContactCard = ({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 2
+              gap: 2,
+              cursor: 'pointer'
             }}
+            onClick={handleContactClick}
           >
             <img
               src={imageUrl}
@@ -177,7 +254,8 @@ const ContactCard = ({
                 width: '120px',
                 height: '120px',
                 objectFit: 'contain',
-                borderRadius: '8px'
+                borderRadius: '8px',
+                transition: 'all 0.3s ease'
               }}
             />
             <Typography
@@ -185,7 +263,11 @@ const ContactCard = ({
                 color: gradientColors.includes('#10B981') ? '#059669' : '#4299E1',
                 fontWeight: 600,
                 fontSize: '0.875rem',
-                textAlign: 'center'
+                textAlign: 'center',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05)'
+                }
               }}
             >
               点击查看大图
@@ -198,6 +280,28 @@ const ContactCard = ({
 };
 
 const ContactChannels = () => {
+  const [previewModal, setPreviewModal] = useState({
+    open: false,
+    imageUrl: '',
+    title: ''
+  });
+
+  const handleImagePreview = (imageUrl, title) => {
+    setPreviewModal({
+      open: true,
+      imageUrl,
+      title
+    });
+  };
+
+  const handleClosePreview = () => {
+    setPreviewModal({
+      open: false,
+      imageUrl: '',
+      title: ''
+    });
+  };
+
   return (
     <Box
       component="section"
@@ -262,11 +366,12 @@ const ContactChannels = () => {
                   和技术资讯，与我们保持密切联系
                 </>
               }
-              imageUrl="https://kp-os.tos-cn-shanghai.volces.com/models/images/gzh.jpg"
+              imageUrl="/gzh.jpg"
               contactType="image"
               icon={WechatIcon}
               gradientColors="linear-gradient(135deg, #10B981, #059669)"
               bgGradient="linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, white 100%)"
+              onImageClick={() => handleImagePreview('/gzh.jpg', '微信公众号二维码')}
             />
           </Grid>
 
@@ -281,15 +386,24 @@ const ContactChannels = () => {
                   一对一服务和技术支持
                 </>
               }
-              imageUrl="https://kp-os.tos-cn-shanghai.volces.com/models/images/qywx.png"
+              imageUrl="/qywx.png"
               contactType="image"
               icon={BusinessIcon}
               gradientColors="linear-gradient(135deg, #8B5CF6, #7C3AED)"
               bgGradient="linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, white 100%)"
+              onImageClick={() => handleImagePreview('/qywx.png', '企业微信二维码')}
             />
           </Grid>
         </Grid>
       </Container>
+
+      {/* 图片预览模态框 */}
+      <ImagePreviewModal
+        open={previewModal.open}
+        onClose={handleClosePreview}
+        imageUrl={previewModal.imageUrl}
+        title={previewModal.title}
+      />
     </Box>
   );
 };

@@ -53,7 +53,7 @@ const HeroSection = () => {
       component="section"
       sx={{
         position: 'relative',
-        background: 'linear-gradient(135deg, #ffffff 0%, rgba(59, 130, 246, 0.03) 50%, #ffffff 100%)',
+        backgroundColor: '#ffffff',
         pt: { xs: 8, md: 12 },
         pb: { xs: 8, md: 10 },
         px: { xs: 3, md: 6, lg: 12 },
@@ -65,7 +65,7 @@ const HeroSection = () => {
           content: '""',
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(135deg, rgba(66, 153, 225, 0.08) 0%, rgba(147, 51, 234, 0.05) 50%, rgba(34, 197, 94, 0.08) 100%)',
+          background: 'linear-gradient(to bottom right, rgba(249, 250, 251, 0.5), rgba(59, 130, 246, 0.03))',
           zIndex: 0
         }
       }}

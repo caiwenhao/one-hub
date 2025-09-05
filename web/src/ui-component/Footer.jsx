@@ -1,6 +1,6 @@
 // material-ui
 import React from 'react';
-import { Box, Container, Typography, Grid, Link as MuiLink } from '@mui/material';
+import { Box, Container, Typography, Grid } from '@mui/material';
 import { useSelector } from 'react-redux';
 
 // ==============================|| SITE-WIDE DESIGN FOOTER (方案B) ||============================== //
@@ -49,7 +49,7 @@ const DesignFooter = () => {
               {[
                 { title: '导航', links: [ { label: '热门模型', href: '/models' }, { label: '价格方案', href: '/price' }, { label: '开发者中心', href: '/developer' } ] },
                 { title: '支持', links: [ { label: '联系我们', href: '/contact' }, { label: '常见问题', href: '/about' }, { label: '服务状态', href: '#' } ] },
-                { title: '联系', links: [ { label: 'sales@kapon.ai', href: 'mailto:sales@kapon.ai' }, { label: 'support@kapon.ai', href: 'mailto:support@kapon.ai' } ] }
+                { title: '联系', links: [ { label: 'sales@kapon.ai', href: null }, { label: 'support@kapon.ai', href: null } ] }
               ].map((section) => (
                 <Grid key={section.title} item xs={12} sm={4}>
                   <Typography variant="h6" sx={{ color: '#1A202C', fontWeight: 'bold', mb: 3, fontSize: '1.125rem' }}>
@@ -57,7 +57,18 @@ const DesignFooter = () => {
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {section.links.map((l) => (
-                      <Typography key={l.label} onClick={() => navigateTo(l.href)} sx={{ color: '#718096', fontSize: '1rem', fontWeight: 300, cursor: 'pointer', transition: 'all 0.3s ease', '&:hover': { color: '#4299E1', transform: 'translateX(4px)' } }}>
+                      <Typography
+                        key={l.label}
+                        onClick={l.href ? () => navigateTo(l.href) : undefined}
+                        sx={{
+                          color: '#718096',
+                          fontSize: '1rem',
+                          fontWeight: 300,
+                          cursor: l.href ? 'pointer' : 'default',
+                          transition: l.href ? 'all 0.3s ease' : 'none',
+                          '&:hover': l.href ? { color: '#4299E1', transform: 'translateX(4px)' } : {}
+                        }}
+                      >
                         {l.label}
                       </Typography>
                     ))}
