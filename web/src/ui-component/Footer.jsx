@@ -26,12 +26,14 @@ const DesignFooter = () => {
             <Box>
               {/* Logo */}
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, cursor: 'pointer' }} onClick={() => navigateTo('/') }>
-                <Box sx={{ width: 48, height: 48, borderRadius: '16px', background: gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: '1.25rem', mr: 2, boxShadow: '0 4px 15px rgba(66,153,225,0.3)' }}>
-                  K
-                </Box>
-                <Typography variant="h5" sx={{ color: '#1A202C', fontWeight: 'bold', fontSize: '1.5rem', letterSpacing: '-0.5px', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                  Kapon AI
-                </Typography>
+                <img
+                  src="/logo.png"
+                  alt="Logo"
+                  style={{
+                    height: '48px',
+                    width: 'auto'
+                  }}
+                />
               </Box>
               {/* 标语 */}
               <Typography variant="body1" sx={{ color: '#718096', lineHeight: 1.6, fontSize: '1.125rem', fontWeight: 300, mb: 4 }}>

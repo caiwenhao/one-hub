@@ -144,49 +144,29 @@ const Header = () => {
         <Container maxWidth="xl" sx={{ maxWidth: '1200px' }}>
           <Toolbar sx={{ py: 2.5, justifyContent: 'space-between' }}>
             {/* Logo */}
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                cursor: 'pointer' 
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                cursor: 'pointer'
               }}
               onClick={() => navigate('/')}
             >
-              <Box
-                sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '16px',
-                  background: gradients.primary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: '1.2rem',
-                  mr: 2,
-                  boxShadow: '0 4px 15px rgba(66, 153, 225, 0.3)',
-                  ...animationStyles.pulseGlow,
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'scale(1.05)'
-                  }
+              <img
+                src="/logo.png"
+                alt="Logo"
+                style={{
+                  height: '44px',
+                  width: 'auto',
+                  transition: 'all 0.3s ease'
                 }}
-              >
-                K
-              </Box>
-              <Typography
-                variant="h6"
-                sx={{
-                  color: colors.primary,
-                  fontWeight: 'bold',
-                  fontSize: '1.25rem',
-                  letterSpacing: '-0.5px',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.05)';
                 }}
-              >
-                Kapon AI
-              </Typography>
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                }}
+              />
             </Box>
 
             {/* Desktop Navigation */}
