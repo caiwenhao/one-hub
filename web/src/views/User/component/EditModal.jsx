@@ -29,7 +29,7 @@ import { useTranslation } from 'react-i18next';
 
 const validationSchema = Yup.object().shape({
   is_edit: Yup.boolean(),
-  username: Yup.string().required('userPage.usernameRequired'),
+  username: Yup.string().max(50).required('userPage.usernameRequired'),
   display_name: Yup.string(),
   password: Yup.string().when('is_edit', {
     is: false,

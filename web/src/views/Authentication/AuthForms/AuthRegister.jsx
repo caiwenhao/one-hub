@@ -124,7 +124,7 @@ const RegisterForm = ({ ...others }) => {
           submit: null
         }}
         validationSchema={Yup.object().shape({
-          username: Yup.string().max(255).required(t('registerForm.usernameRequired')),
+          username: Yup.string().max(50).required(t('registerForm.usernameRequired')),
           password: Yup.string().max(255).required(t('registerForm.passwordRequired')),
           confirmPassword: Yup.string()
             .required(t('registerForm.confirmPasswordRequired'))
