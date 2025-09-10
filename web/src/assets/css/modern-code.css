@@ -1,0 +1,251 @@
+/* Modern Code Highlighting Theme for Kapon AI Developer Center */
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1.5em !important;
+  background: #1a202c !important;
+  border-radius: 0 !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  color: #e2e8f0 !important;
+  margin: 0 !important;
+}
+
+/* Keywords */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section,
+.hljs-link {
+  color: #4299e1;
+  font-weight: 600;
+}
+
+/* Strings */
+.hljs-string,
+.hljs-template-string {
+  color: #34d399;
+}
+
+/* Numbers */
+.hljs-number,
+.hljs-literal {
+  color: #a855f7;
+}
+
+/* Comments */
+.hljs-comment,
+.hljs-quote {
+  color: #718096;
+  font-style: italic;
+}
+
+/* Functions and methods */
+.hljs-function,
+.hljs-title,
+.hljs-built_in {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+/* Variables and attributes */
+.hljs-variable,
+.hljs-attr,
+.hljs-name {
+  color: #ec4899;
+}
+
+/* Types and classes */
+.hljs-type,
+.hljs-class {
+  color: #06b6d4;
+  font-weight: 600;
+}
+
+/* Operators */
+.hljs-operator,
+.hljs-punctuation {
+  color: #e2e8f0;
+}
+
+/* Meta and preprocessor */
+.hljs-meta,
+.hljs-meta-keyword {
+  color: #8b5cf6;
+}
+
+/* Symbols and bullets */
+.hljs-symbol,
+.hljs-bullet {
+  color: #f97316;
+}
+
+/* Additions and deletions */
+.hljs-addition {
+  color: #22c55e;
+  background-color: rgba(34, 197, 94, 0.1);
+}
+
+.hljs-deletion {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Emphasis */
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
+/* Python specific */
+.hljs-doctag {
+  color: #34d399;
+}
+
+/* JavaScript specific */
+.hljs-property {
+  color: #ec4899;
+}
+
+/* Bash/Shell specific */
+.hljs-params {
+  color: #f59e0b;
+}
+
+/* JSON specific */
+.hljs-attr {
+  color: #4299e1;
+}
+
+/* Template variables */
+.hljs-template-variable,
+.hljs-template-tag {
+  color: #a855f7;
+}
+
+/* Additional language-specific styles */
+.hljs-regexp {
+  color: #f97316;
+}
+
+.hljs-subst {
+  color: #e2e8f0;
+}
+
+.hljs-tag {
+  color: #4299e1;
+}
+
+.hljs-tag .hljs-name {
+  color: #ec4899;
+}
+
+.hljs-tag .hljs-attr {
+  color: #f59e0b;
+}
+
+/* Shell/Bash specific */
+.hljs-built_in {
+  color: #34d399;
+}
+
+.hljs-variable {
+  color: #a855f7;
+}
+
+/* JavaScript specific enhancements */
+.hljs-function .hljs-keyword {
+  color: #4299e1;
+}
+
+.hljs-function .hljs-title {
+  color: #f59e0b;
+}
+
+.hljs-params {
+  color: #ec4899;
+}
+
+/* Python specific enhancements */
+.hljs-decorator,
+.hljs-meta {
+  color: #8b5cf6;
+}
+
+/* Ensure proper contrast */
+.hljs-subst,
+.hljs-formula {
+  color: #e2e8f0;
+}
+
+/* Code block container styling */
+.code-block {
+  position: relative;
+  margin: 0;
+  border-radius: 0;
+  overflow: hidden;
+  background: #1a202c;
+}
+
+.code-block pre {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+.code-block code {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+}
+
+.code-block__button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(66, 153, 225, 0.9);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.code-block__button:hover {
+  background: rgba(66, 153, 225, 1);
+  transform: translateY(-1px);
+}
+
+.code-block__button:active {
+  transform: translateY(0);
+}
+
+/* Scrollbar styling for code blocks */
+.hljs::-webkit-scrollbar {
+  height: 8px;
+}
+
+.hljs::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.hljs::-webkit-scrollbar-thumb {
+  background: rgba(66, 153, 225, 0.6);
+  border-radius: 4px;
+}
+
+.hljs::-webkit-scrollbar-thumb:hover {
+  background: rgba(66, 153, 225, 0.8);
+}

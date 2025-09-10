@@ -11,7 +11,9 @@ import {
   Tabs,
   useTheme,
   useMediaQuery,
-  IconButton
+  IconButton,
+  Chip,
+  Stack
 } from '@mui/material';
 import { styled, keyframes } from '@mui/system';
 import {
@@ -19,8 +21,12 @@ import {
   Favorite as HeartIcon,
   Headset as HeadsetIcon,
   Code as CodeIcon,
-  AccessTime as ClockIcon
+  AccessTime as ClockIcon,
+  CheckCircle as CheckIcon,
+  PlayArrow as PlayIcon,
+  ContentCopy as CopyIcon
 } from '@mui/icons-material';
+import CodeBlock from 'ui-component/CodeBlock';
 
 // 动画定义
 const float = keyframes`
@@ -81,43 +87,61 @@ const HoverLiftCard = styled(Card)(({ theme }) => ({
   }
 }));
 
-const StepCard = styled(Card)(({ theme }) => ({
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+const StepCard = styled(Card)(({ theme, isActive }) => ({
+  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   borderRadius: '24px',
-  border: '1px solid rgba(229, 231, 235, 0.5)',
+  border: isActive ? '2px solid #4299E1' : '1px solid rgba(229, 231, 235, 0.5)',
   position: 'relative',
   overflow: 'hidden',
+  background: isActive ? 'linear-gradient(135deg, rgba(66, 153, 225, 0.05) 0%, rgba(255, 255, 255, 1) 100%)' : 'white',
   '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: '0 15px 35px rgba(0,0,0,0.1)'
+    transform: 'translateY(-8px) scale(1.02)',
+    boxShadow: '0 20px 40px rgba(66, 153, 225, 0.15)',
+    border: '2px solid #4299E1'
+  },
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '4px',
+    background: isActive ? 'linear-gradient(90deg, #4299E1, #34D399)' : 'transparent',
+    transition: 'all 0.3s ease'
   }
 }));
 
-const StepNumber = styled(Box)(({ theme }) => ({
-  background: 'linear-gradient(135deg, #4299E1, #3182CE)',
-  width: '60px',
-  height: '60px',
+const StepNumber = styled(Box)(({ theme, isActive }) => ({
+  background: isActive 
+    ? 'linear-gradient(135deg, #4299E1, #34D399)' 
+    : 'linear-gradient(135deg, #E2E8F0, #CBD5E0)',
+  width: '80px',
+  height: '80px',
   borderRadius: '50%',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: 'white',
+  color: isActive ? 'white' : '#718096',
   fontWeight: 'bold',
-  fontSize: '24px',
-  marginBottom: '20px',
-  margin: '0 auto 20px auto'
+  fontSize: '28px',
+  marginBottom: '24px',
+  margin: '0 auto 24px auto',
+  boxShadow: isActive ? '0 8px 25px rgba(66, 153, 225, 0.3)' : '0 4px 15px rgba(0,0,0,0.1)',
+  transition: 'all 0.3s ease',
+  position: 'relative',
+  '&::after': isActive ? {
+    content: '""',
+    position: 'absolute',
+    inset: '-4px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #4299E1, #34D399)',
+    zIndex: -1,
+    opacity: 0.3,
+    animation: `${pulseGlow} 2s ease-in-out infinite`
+  } : {}
 }));
 
-const CodeBlock = styled(Box)(({ theme }) => ({
-  background: '#1a202c',
-  borderRadius: '12px',
-  padding: '24px',
-  fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
-  fontSize: '14px',
-  lineHeight: 1.6,
-  overflowX: 'auto',
-  color: '#e2e8f0'
-}));
+
 
 const CodeTab = styled(Tab)(({ theme }) => ({
   transition: 'all 0.3s ease',
@@ -145,7 +169,7 @@ const DeveloperCenter = () => {
 # 配置 Kapon AI
 client = openai.OpenAI(
     api_key="kp-xxxxxxxxxxxxxxxx",
-    base_url="https://api.kapon.ai/v1"
+    base_url="https://models.kapon.cloud/v1"
 )
 
 # 发起聊天请求
@@ -162,7 +186,7 @@ print(response.choices[0].message.content)`,
 // 配置 Kapon AI
 const client = new OpenAI({
     apiKey: 'kp-xxxxxxxxxxxxxxxx',
-    baseURL: 'https://api.kapon.ai/v1'
+    baseURL: 'https://models.kapon.cloud/v1'
 });
 
 // 发起聊天请求
@@ -178,7 +202,7 @@ async function main() {
 }
 
 main();`,
-    2: `curl -X POST "https://api.kapon.ai/v1/chat/completions" \\
+    2: `curl -X POST "https://models.kapon.cloud/v1/chat/completions" \\
      -H "Content-Type: application/json" \\
      -H "Authorization: Bearer kp-xxxxxxxxxxxxxxxx" \\
      -d '{
@@ -345,16 +369,47 @@ main();`,
       </Box>
 
       {/* Quick Start Guide */}
-      <Box sx={{ bgcolor: 'white', py: { xs: 8, md: 10 }, px: { xs: 3, md: 6, lg: 12 } }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
+      <Box sx={{ 
+        bgcolor: 'white', 
+        py: { xs: 8, md: 12 }, 
+        px: { xs: 3, md: 6, lg: 12 },
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* 背景装饰 */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '200px',
+          background: 'linear-gradient(135deg, rgba(66, 153, 225, 0.03) 0%, rgba(52, 211, 153, 0.03) 100%)',
+          borderRadius: '0 0 50% 50%',
+          transform: 'scale(1.5)'
+        }} />
+        
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+          <Box sx={{ textAlign: 'center', mb: 10 }}>
+            <Chip
+              label="快速上手"
+              sx={{
+                mb: 3,
+                px: 2,
+                py: 1,
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #4299E1, #34D399)',
+                color: 'white',
+                '& .MuiChip-label': { px: 2 }
+              }}
+            />
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: '2rem', md: '3rem' },
+                fontSize: { xs: '2.5rem', md: '3.5rem' },
                 fontWeight: 200,
                 color: '#1A202C',
-                mb: 3,
+                mb: 4,
                 letterSpacing: '-0.02em',
                 textShadow: '0 2px 4px rgba(0,0,0,0.1)'
               }}
@@ -377,87 +432,195 @@ main();`,
               variant="h6"
               sx={{
                 color: '#718096',
-                maxWidth: '500px',
+                maxWidth: '600px',
                 mx: 'auto',
-                fontWeight: 300
+                fontWeight: 300,
+                lineHeight: 1.6
               }}
             >
               三个简单步骤，即可完成从传统API到Kapon AI的无缝切换
+              <br />
+              <Box component="span" sx={{ color: '#4299E1', fontWeight: 500 }}>
+                平均集成时间仅需3分钟
+              </Box>
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
+          <Grid container spacing={6} sx={{ mb: 8 }}>
             {[
               {
                 step: 1,
                 title: '获取API Key',
                 description: '注册并登录您的Kapon AI账户，在控制台中生成专属API密钥',
-                code: 'API_KEY = "kp-xxxxxxxxxxxxxxxx"'
+                code: 'API_KEY = "kp-xxxxxxxxxxxxxxxx"',
+                icon: <CodeIcon />,
+                color: '#4299E1',
+                isActive: true
               },
               {
                 step: 2,
                 title: '更换Base URL',
                 description: '将您原有代码中的API端点替换为Kapon AI地址',
-                code: 'base_url = "https://api.kapon.ai/v1"'
+                code: 'base_url = "https://models.kapon.cloud/v1"',
+                icon: <PlayIcon />,
+                color: '#34D399'
               },
               {
                 step: 3,
                 title: '开始调用',
                 description: '运行您的代码，享受稳定高效的AI服务体验',
                 code: '✓ 连接成功，开始使用',
+                icon: <CheckIcon />,
+                color: '#22c55e',
                 isSuccess: true
               }
-            ].map((item) => (
+            ].map((item, index) => (
               <Grid item xs={12} md={4} key={item.step}>
-                <StepCard sx={{ p: 4, textAlign: 'center', height: '100%' }}>
-                  <CardContent>
-                    <StepNumber className="glow-effect">
+                <StepCard 
+                  isActive={item.isActive}
+                  sx={{ 
+                    p: 5, 
+                    textAlign: 'center', 
+                    height: '100%',
+                    position: 'relative'
+                  }}
+                >
+                  <CardContent sx={{ p: 0 }}>
+                    <StepNumber isActive={item.isActive}>
                       {item.step}
                     </StepNumber>
-                    <Typography
-                      variant="h5"
-                      sx={{
-                        fontWeight: 700,
-                        color: '#1A202C',
-                        mb: 2
-                      }}
-                    >
-                      {item.title}
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        color: '#718096',
-                        mb: 3,
-                        lineHeight: 1.6
-                      }}
-                    >
-                      {item.description}
-                    </Typography>
-                    <Box
-                      sx={{
-                        bgcolor: '#f7fafc',
-                        p: 2,
-                        borderRadius: '12px',
-                        textAlign: 'left'
-                      }}
-                    >
+                    
+                    <Stack spacing={3} alignItems="center">
                       <Typography
-                        component="code"
+                        variant="h5"
                         sx={{
-                          fontSize: '0.875rem',
-                          color: item.isSuccess ? '#22c55e' : '#4299E1',
-                          fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace'
+                          fontWeight: 700,
+                          color: '#1A202C',
+                          fontSize: '1.5rem'
                         }}
                       >
-                        {item.code}
+                        {item.title}
                       </Typography>
-                    </Box>
+                      
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          color: '#718096',
+                          lineHeight: 1.7,
+                          fontSize: '1rem'
+                        }}
+                      >
+                        {item.description}
+                      </Typography>
+                      
+                      <Box
+                        sx={{
+                          bgcolor: item.isSuccess ? '#f0fdf4' : '#f8fafc',
+                          border: item.isSuccess ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                          p: 3,
+                          borderRadius: '16px',
+                          textAlign: 'left',
+                          width: '100%',
+                          position: 'relative'
+                        }}
+                      >
+                        <Typography
+                          component="code"
+                          sx={{
+                            fontSize: '0.9rem',
+                            color: item.isSuccess ? '#22c55e' : '#4299E1',
+                            fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
+                            fontWeight: 600,
+                            display: 'block',
+                            wordBreak: 'break-all'
+                          }}
+                        >
+                          {item.code}
+                        </Typography>
+                        
+                        {!item.isSuccess && (
+                          <IconButton
+                            size="small"
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 8,
+                              color: '#718096',
+                              '&:hover': { color: '#4299E1' }
+                            }}
+                            onClick={() => navigator.clipboard.writeText(item.code)}
+                          >
+                            <CopyIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </Stack>
                   </CardContent>
+                  
+                  {/* 连接线 */}
+                  {index < 2 && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        right: { xs: 'auto', md: '-24px' },
+                        bottom: { xs: '-24px', md: 'auto' },
+                        left: { xs: '50%', md: 'auto' },
+                        width: { xs: '2px', md: '48px' },
+                        height: { xs: '48px', md: '2px' },
+                        background: 'linear-gradient(90deg, #4299E1, #34D399)',
+                        transform: { xs: 'translateX(-50%)', md: 'translateY(-50%)' },
+                        display: { xs: 'none', md: 'block' },
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          right: '-6px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: 0,
+                          height: 0,
+                          borderLeft: '6px solid #34D399',
+                          borderTop: '4px solid transparent',
+                          borderBottom: '4px solid transparent'
+                        }
+                      }}
+                    />
+                  )}
                 </StepCard>
               </Grid>
             ))}
           </Grid>
+          
+          {/* 底部CTA */}
+          <Box sx={{ textAlign: 'center' }}>
+            <Button
+              variant="contained"
+              size="large"
+              component="a"
+              href="/panel/token"
+              startIcon={<PlayIcon />}
+              sx={{
+                px: 6,
+                py: 2.5,
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                borderRadius: '30px',
+                background: 'linear-gradient(-45deg, #4299E1, #34D399)',
+                backgroundSize: '400% 400%',
+                animation: `${gradientShift} 4s ease infinite`,
+                textTransform: 'none',
+                textDecoration: 'none',
+                boxShadow: '0 8px 25px rgba(66, 153, 225, 0.3)',
+                '&:hover': {
+                  transform: 'translateY(-2px) scale(1.05)',
+                  boxShadow: '0 12px 35px rgba(66, 153, 225, 0.4)',
+                  transition: 'all 0.3s ease'
+                }
+              }}
+            >
+              立即开始集成
+            </Button>
+          </Box>
         </Container>
       </Box>
 
@@ -581,13 +744,31 @@ main();`,
       </Box>
 
       {/* Code Samples */}
-      <Box sx={{ bgcolor: 'white', py: { xs: 8, md: 10 }, px: { xs: 3, md: 6, lg: 12 } }}>
+      <Box sx={{ 
+        bgcolor: 'white', 
+        py: { xs: 8, md: 12 }, 
+        px: { xs: 3, md: 6, lg: 12 },
+        position: 'relative'
+      }}>
         <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Chip
+              label="代码示例"
+              sx={{
+                mb: 3,
+                px: 2,
+                py: 1,
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #A855F7, #EC4899)',
+                color: 'white',
+                '& .MuiChip-label': { px: 2 }
+              }}
+            />
             <Typography
               variant="h2"
               sx={{
-                fontSize: { xs: '2rem', md: '2.5rem' },
+                fontSize: { xs: '2.5rem', md: '3rem' },
                 fontWeight: 700,
                 color: '#1A202C',
                 mb: 3,
@@ -600,10 +781,17 @@ main();`,
               variant="h6"
               sx={{
                 color: '#718096',
-                fontWeight: 300
+                fontWeight: 300,
+                maxWidth: '600px',
+                mx: 'auto',
+                lineHeight: 1.6
               }}
             >
               复制粘贴即可使用的代码片段，支持多种编程语言
+              <br />
+              <Box component="span" sx={{ color: '#A855F7', fontWeight: 500 }}>
+                语法高亮，一键复制
+              </Box>
             </Typography>
           </Box>
 
@@ -613,79 +801,139 @@ main();`,
               borderRadius: '24px',
               boxShadow: '0 25px 50px rgba(0,0,0,0.1)',
               border: '1px solid rgba(229, 231, 235, 0.5)',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              position: 'relative'
             }}
           >
-            <Box sx={{ borderBottom: '1px solid rgba(229, 231, 235, 1)' }}>
+            {/* 顶部装饰条 */}
+            <Box sx={{
+              height: '4px',
+              background: 'linear-gradient(90deg, #4299E1, #A855F7, #EC4899, #34D399)',
+              backgroundSize: '400% 400%',
+              animation: `${gradientShift} 6s ease infinite`
+            }} />
+            
+            <Box sx={{ 
+              borderBottom: '1px solid rgba(229, 231, 235, 1)',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)'
+            }}>
               <Tabs
                 value={codeTab}
                 onChange={handleCodeTabChange}
                 sx={{
                   '& .MuiTabs-indicator': {
                     display: 'none'
-                  }
+                  },
+                  px: 2,
+                  pt: 1
                 }}
               >
                 <CodeTab
-                  icon={<CodeIcon sx={{ mr: 1 }} />}
+                  icon={<Box sx={{ 
+                    fontSize: '1.2rem', 
+                    mr: 1,
+                    color: codeTab === 0 ? 'white' : '#3776ab'
+                  }}>🐍</Box>}
                   iconPosition="start"
                   label="Python"
-                  sx={{ px: 3, py: 2 }}
+                  sx={{ 
+                    px: 3, 
+                    py: 2,
+                    mx: 0.5,
+                    borderRadius: '12px 12px 0 0',
+                    fontWeight: 600
+                  }}
                 />
                 <CodeTab
-                  icon={<CodeIcon sx={{ mr: 1 }} />}
+                  icon={<Box sx={{ 
+                    fontSize: '1.2rem', 
+                    mr: 1,
+                    color: codeTab === 1 ? 'white' : '#339933'
+                  }}>📗</Box>}
                   iconPosition="start"
                   label="Node.js"
-                  sx={{ px: 3, py: 2 }}
+                  sx={{ 
+                    px: 3, 
+                    py: 2,
+                    mx: 0.5,
+                    borderRadius: '12px 12px 0 0',
+                    fontWeight: 600
+                  }}
                 />
                 <CodeTab
-                  icon={<CodeIcon sx={{ mr: 1 }} />}
+                  icon={<Box sx={{ 
+                    fontSize: '1.2rem', 
+                    mr: 1,
+                    color: codeTab === 2 ? 'white' : '#f89820'
+                  }}>⚡</Box>}
                   iconPosition="start"
                   label="cURL"
-                  sx={{ px: 3, py: 2 }}
+                  sx={{ 
+                    px: 3, 
+                    py: 2,
+                    mx: 0.5,
+                    borderRadius: '12px 12px 0 0',
+                    fontWeight: 600
+                  }}
                 />
               </Tabs>
             </Box>
 
-            <Box sx={{ p: 0 }}>
-              <CodeBlock>
-                <Typography
-                  component="pre"
-                  sx={{
-                    margin: 0,
-                    fontFamily: 'inherit',
-                    fontSize: 'inherit',
-                    lineHeight: 'inherit',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word'
-                  }}
-                >
-                  {codeExamples[codeTab]}
-                </Typography>
-              </CodeBlock>
+            <Box sx={{ p: 0, position: 'relative' }}>
+              <CodeBlock 
+                language={['python', 'javascript', 'bash'][codeTab]}
+                code={codeExamples[codeTab]}
+              />
             </Box>
           </Box>
 
-          <Box sx={{ textAlign: 'center', mt: 4 }}>
-            <Button
-              variant="contained"
-              sx={{
-                px: 4,
-                py: 1.5,
-                borderRadius: '25px',
-                background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
-                backgroundSize: '400% 400%',
-                animation: `${gradientShift} 4s ease infinite`,
-                fontWeight: 600,
-                textTransform: 'none',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                  transition: 'all 0.3s ease'
-                }
-              }}
-            >
-              查看更多示例 →
-            </Button>
+          <Box sx={{ textAlign: 'center', mt: 6 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} justifyContent="center" alignItems="center">
+              <Button
+                variant="contained"
+                startIcon={<BookIcon />}
+                sx={{
+                  px: 5,
+                  py: 2,
+                  borderRadius: '25px',
+                  background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
+                  backgroundSize: '400% 400%',
+                  animation: `${gradientShift} 4s ease infinite`,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: '0 8px 25px rgba(66, 153, 225, 0.3)',
+                  '&:hover': {
+                    transform: 'translateY(-2px) scale(1.05)',
+                    boxShadow: '0 12px 35px rgba(66, 153, 225, 0.4)',
+                    transition: 'all 0.3s ease'
+                  }
+                }}
+              >
+                查看完整文档
+              </Button>
+              
+              <Button
+                variant="outlined"
+                startIcon={<CodeIcon />}
+                sx={{
+                  px: 4,
+                  py: 2,
+                  borderRadius: '25px',
+                  borderColor: '#A855F7',
+                  color: '#A855F7',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: '#A855F7',
+                    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                    transform: 'translateY(-2px)',
+                    transition: 'all 0.3s ease'
+                  }
+                }}
+              >
+                更多示例
+              </Button>
+            </Stack>
           </Box>
         </Container>
       </Box>
@@ -714,10 +962,17 @@ main();`,
               variant="h6"
               sx={{
                 color: '#718096',
-                fontWeight: 300
+                fontWeight: 300,
+                maxWidth: '600px',
+                mx: 'auto',
+                lineHeight: 1.6
               }}
             >
-              为不同开发环境提供原生支持，让集成更加便捷
+              使用官方 OpenAI SDK，只需更换 Base URL 即可无缝接入
+              <br />
+              <Box component="span" sx={{ color: '#4299E1', fontWeight: 500 }}>
+                兼容所有 OpenAI 接口标准
+              </Box>
             </Typography>
           </Box>
 
@@ -726,31 +981,35 @@ main();`,
               {
                 icon: '🐍',
                 title: 'Python SDK',
-                command: 'pip install kapon-ai',
-                color: '#3776ab'
+                command: 'pip install openai',
+                color: '#3776ab',
+                description: '使用官方 OpenAI Python SDK'
               },
               {
                 icon: '📗',
                 title: 'Node.js SDK',
-                command: 'npm install kapon-ai',
-                color: '#339933'
+                command: 'npm install openai',
+                color: '#339933',
+                description: '使用官方 OpenAI Node.js SDK'
               },
               {
-                icon: '☕',
-                title: 'Java SDK',
-                command: 'maven install kapon-ai',
-                color: '#f89820'
+                icon: '💎',
+                title: 'Ruby SDK',
+                command: 'gem install openai',
+                color: '#cc342d',
+                description: '使用官方 OpenAI Ruby SDK'
               },
               {
                 icon: '🔷',
                 title: 'Go SDK',
-                command: 'go get kapon-ai',
-                color: '#00add8'
+                command: 'go get -u github.com/openai/openai-go@v2.1.1',
+                color: '#00add8',
+                description: '使用官方 OpenAI Go SDK'
               }
             ].map((sdk, index) => (
               <Grid item xs={6} md={3} key={index}>
                 <HoverLiftCard sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                  <CardContent>
+                  <CardContent sx={{ p: 0 }}>
                     <Typography
                       sx={{
                         fontSize: '3rem',
@@ -773,12 +1032,34 @@ main();`,
                       variant="body2"
                       sx={{
                         color: '#718096',
-                        fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
-                        fontSize: '0.75rem'
+                        mb: 2,
+                        fontSize: '0.875rem'
                       }}
                     >
-                      {sdk.command}
+                      {sdk.description}
                     </Typography>
+                    <Box
+                      sx={{
+                        bgcolor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        p: 2,
+                        textAlign: 'left'
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: sdk.color,
+                          fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
+                          fontSize: '0.75rem',
+                          wordBreak: 'break-all',
+                          fontWeight: 600
+                        }}
+                      >
+                        {sdk.command}
+                      </Typography>
+                    </Box>
                   </CardContent>
                 </HoverLiftCard>
               </Grid>

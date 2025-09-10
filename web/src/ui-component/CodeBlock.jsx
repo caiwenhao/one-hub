@@ -4,38 +4,37 @@ import React, { useEffect, useRef, useState } from 'react';
 import hljs from './highlight';
 import { copy } from 'utils/common';
 
-import 'assets/css/dracula.css';
+import 'assets/css/modern-code.css';
 
 export default function CodeBlock({ language, code }) {
   const preRef = useRef(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (preRef.current) {
+    if (preRef.current && language) {
+      // 清除之前的高亮
+      preRef.current.removeAttribute('data-highlighted');
+      preRef.current.className = `language-${language}`;
       hljs.highlightElement(preRef.current);
     }
-  }, [code]);
+  }, [code, language]);
 
   return (
-    <div className="code-block" style={{ position: 'relative', marginTop: 8 }}>
-      <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-        <code id={language} ref={preRef} className={language}>
+    <div className="code-block" style={{ position: 'relative', margin: 0 }}>
+      <pre className="hljs" style={{ margin: 0, padding: '1.5em', borderRadius: 0 }}>
+        <code ref={preRef} className={`language-${language}`}>
           {code}
         </code>
       </pre>
       <button
-        id={`${language}copy_btn`}
-        style={{ position: 'absolute', top: 4, right: 4, lineHeight: '14px' }}
         className="code-block__button"
-        data-clipboard-target={`#${language}`}
         onClick={() => {
-          copy(code, `#${language}`);
+          copy(code);
           setCopied(true);
           setTimeout(() => {
             setCopied(false);
           }, 1500);
         }}
-        // disabled={!preRef.current}
       >
         {copied ? '已复制' : '复制'}
       </button>
