@@ -1,25 +1,8 @@
 import React from 'react';
 import { Box, Typography, Container, Grid, Paper, Button } from '@mui/material';
-import { keyframes } from '@mui/system';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import FavoriteIcon from '@mui/icons-material/Favorite';
-
-// 定义动画
-const pulseGlow = keyframes`
-  0%, 100% { 
-    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3); 
-  }
-  50% { 
-    box-shadow: 0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3); 
-  }
-`;
-
-const gradientShift = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`;
 
 // 资源卡片组件
 const ResourceCard = ({ 
@@ -64,8 +47,7 @@ const ResourceCard = ({
           color: 'white',
           fontSize: '1.5rem', // text-2xl
           mx: 'auto',
-          mb: 3, // mb-6
-          animation: `${pulseGlow} 3s ease-in-out infinite`
+          mb: 3 // mb-6
         }}
       >
         <Icon sx={{ fontSize: '1.5rem' }} />
@@ -160,7 +142,7 @@ const HelpResources = () => {
               fontWeight: 700, // font-bold
               color: '#1A202C', // text-primary
               mb: 3,
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              textShadow: 'none'
             }}
           >
             更多帮助资源

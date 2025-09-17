@@ -4,24 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '@iconify/react';
 
 // 动画定义
-const shimmer = keyframes`
-  0% { 
-    transform: translateX(-100%); 
-  }
-  100% { 
-    transform: translateX(100%); 
-  }
-`;
-
-const pulseGlow = keyframes`
-  0%, 100% { 
-    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3); 
-  }
-  50% { 
-    box-shadow: 0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3); 
-  }
-`;
-
 const gradientShift = keyframes`
   0% { 
     background-position: 0% 50%; 
@@ -143,7 +125,7 @@ const FreeTrialSection = () => {
                 fontWeight: 700,
                 color: theme.palette.text.primary,
                 mb: 3,
-                textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                textShadow: 'none'
               }}
             >
               {t('modelpricePage.freeTrialTitle')}
@@ -201,23 +183,12 @@ const FreeTrialSection = () => {
                   fontWeight: 700,
                   fontSize: '1.125rem',
                   textTransform: 'none',
-                  animation: `${gradientShift} 4s ease infinite, ${pulseGlow} 3s ease-in-out infinite`,
+                  animation: `${gradientShift} 4s ease infinite`,
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   overflow: 'hidden',
                   '&:hover': {
                     transform: 'scale(1.05)',
-                    boxShadow: '0 8px 25px rgba(66, 153, 225, 0.4)'
-                  },
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                    transform: 'translateX(-100%)',
-                    animation: `${shimmer} 2s infinite`
+                    boxShadow: 'none'
                   }
                 }}
               >

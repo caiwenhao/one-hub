@@ -47,7 +47,6 @@ const HeroSection = () => {
             height: '12px',
             backgroundColor: 'rgba(66, 153, 225, 0.3)',
             borderRadius: '50%',
-            ...animationStyles.pulseGlow,
             '@keyframes float': {
               '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
               '50%': { transform: 'translateY(-20px) rotate(180deg)' }
@@ -64,7 +63,6 @@ const HeroSection = () => {
             height: '8px',
             backgroundColor: 'rgba(139, 92, 246, 0.4)',
             borderRadius: '50%',
-            ...animationStyles.pulseGlow,
             animation: 'float 6s ease-in-out infinite 0.3s'
           }}
         />
@@ -77,7 +75,6 @@ const HeroSection = () => {
             height: '10px',
             backgroundColor: 'rgba(236, 72, 153, 0.35)',
             borderRadius: '50%',
-            ...animationStyles.pulseGlow,
             animation: 'float 6s ease-in-out infinite 0.7s'
           }}
         />
@@ -90,7 +87,6 @@ const HeroSection = () => {
             height: '6px',
             backgroundColor: 'rgba(245, 158, 11, 0.4)',
             borderRadius: '50%',
-            ...animationStyles.pulseGlow,
             animation: 'float 6s ease-in-out infinite 0.5s'
           }}
         />
@@ -118,7 +114,7 @@ const HeroSection = () => {
               mx: 'auto',
               lineHeight: 1.6,
               fontWeight: 300,
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              textShadow: 'none',
               px: { xs: 3, md: 0 }
             }}
           >

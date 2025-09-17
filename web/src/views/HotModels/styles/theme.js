@@ -59,18 +59,6 @@ export const animationStyles = {
     }
   },
   
-  pulseGlow: {
-    '@keyframes pulseGlow': {
-      '0%, 100%': {
-        boxShadow: '0 0 20px rgba(66, 153, 225, 0.3)'
-      },
-      '50%': {
-        boxShadow: '0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3)'
-      }
-    },
-    animation: 'pulseGlow 3s ease-in-out infinite'
-  },
-  
   gradientShift: {
     '@keyframes gradientShift': {
       '0%': { backgroundPosition: '0% 50%' },
@@ -79,26 +67,6 @@ export const animationStyles = {
     },
     backgroundSize: '400% 400%',
     animation: 'gradientShift 4s ease infinite'
-  },
-  
-  shimmer: {
-    '@keyframes shimmer': {
-      '0%': { transform: 'translateX(-100%)' },
-      '100%': { transform: 'translateX(100%)' }
-    },
-    position: 'relative',
-    overflow: 'hidden',
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-      transform: 'translateX(-100%)',
-      animation: 'shimmer 2s infinite'
-    }
   }
 };
 

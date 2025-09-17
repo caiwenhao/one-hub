@@ -12,15 +12,6 @@ const float = keyframes`
   }
 `;
 
-const pulseGlow = keyframes`
-  0%, 100% { 
-    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3); 
-  }
-  50% { 
-    box-shadow: 0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3); 
-  }
-`;
-
 const gradientShift = keyframes`
   0% { 
     background-position: 0% 50%; 
@@ -76,7 +67,7 @@ const HeroSection = () => {
           height: '12px',
           backgroundColor: 'rgba(66, 153, 225, 0.3)',
           borderRadius: '50%',
-          animation: `${float} 6s ease-in-out infinite, ${pulseGlow} 3s ease-in-out infinite`,
+          animation: `${float} 6s ease-in-out infinite`,
           display: { xs: 'none', md: 'block' }
         }}
       />
@@ -89,7 +80,7 @@ const HeroSection = () => {
           height: '8px',
           backgroundColor: 'rgba(147, 51, 234, 0.4)',
           borderRadius: '50%',
-          animation: `${float} 6s ease-in-out infinite 1.2s, ${pulseGlow} 3s ease-in-out infinite 0.3s`,
+          animation: `${float} 6s ease-in-out infinite 1.2s`,
           display: { xs: 'none', md: 'block' }
         }}
       />
@@ -102,7 +93,7 @@ const HeroSection = () => {
           height: '10px',
           backgroundColor: 'rgba(236, 72, 153, 0.35)',
           borderRadius: '50%',
-          animation: `${float} 6s ease-in-out infinite 2.8s, ${pulseGlow} 3s ease-in-out infinite 0.7s`,
+          animation: `${float} 6s ease-in-out infinite 2.8s`,
           display: { xs: 'none', md: 'block' }
         }}
       />
@@ -115,7 +106,7 @@ const HeroSection = () => {
           height: '6px',
           backgroundColor: 'rgba(245, 158, 11, 0.4)',
           borderRadius: '50%',
-          animation: `${float} 6s ease-in-out infinite 2s, ${pulseGlow} 3s ease-in-out infinite 0.5s`,
+          animation: `${float} 6s ease-in-out infinite 2s`,
           display: { xs: 'none', md: 'block' }
         }}
       />
@@ -142,7 +133,7 @@ const HeroSection = () => {
             mx: 'auto',
             lineHeight: 1.6,
             fontWeight: 300,
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            textShadow: 'none'
           }}
         >
           {t('modelpricePage.heroDescription')}

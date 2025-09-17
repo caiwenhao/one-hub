@@ -65,7 +65,7 @@ const FeaturedModels = () => {
               mb: 2,
               lineHeight: 1.1,
               letterSpacing: '-0.02em',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              textShadow: 'none',
               '& .gradient-text': {
                 fontWeight: 'bold',
                 ...createGradientText('linear-gradient(45deg, #4299E1 30%, #8B5CF6 90%)')

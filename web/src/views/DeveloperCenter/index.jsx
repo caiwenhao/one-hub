@@ -34,11 +34,6 @@ const float = keyframes`
   50% { transform: translateY(-20px) rotate(180deg); }
 `;
 
-const pulseGlow = keyframes`
-  0%, 100% { box-shadow: 0 0 20px rgba(66, 153, 225, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3); }
-`;
-
 const gradientShift = keyframes`
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -60,21 +55,14 @@ const AnimatedGradientBox = styled(Box)(({ theme }) => ({
   width: '44px',
   height: '44px',
   marginRight: '16px',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-  '&.glow-effect': {
-    animation: `${gradientShift} 4s ease infinite, ${pulseGlow} 3s ease-in-out infinite`
-  }
+  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
 }));
 
 const FloatingElement = styled(Box)(({ delay = 0 }) => ({
   position: 'absolute',
   borderRadius: '50%',
   animation: `${float} 6s ease-in-out infinite`,
-  animationDelay: `${delay}ms`,
-  '&.glow-effect': {
-    animation: `${float} 6s ease-in-out infinite, ${pulseGlow} 3s ease-in-out infinite`,
-    animationDelay: `${delay}ms`
-  }
+  animationDelay: `${delay}ms`
 }));
 
 const HoverLiftCard = styled(Card)(({ theme }) => ({
@@ -128,17 +116,7 @@ const StepNumber = styled(Box)(({ theme, isActive }) => ({
   margin: '0 auto 24px auto',
   boxShadow: isActive ? '0 8px 25px rgba(66, 153, 225, 0.3)' : '0 4px 15px rgba(0,0,0,0.1)',
   transition: 'all 0.3s ease',
-  position: 'relative',
-  '&::after': isActive ? {
-    content: '""',
-    position: 'absolute',
-    inset: '-4px',
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #4299E1, #34D399)',
-    zIndex: -1,
-    opacity: 0.3,
-    animation: `${pulseGlow} 2s ease-in-out infinite`
-  } : {}
+  position: 'relative'
 }));
 
 
@@ -237,7 +215,6 @@ main();`,
         
         {/* 浮动装饰点 */}
         <FloatingElement
-          className="glow-effect"
           delay={0}
           sx={{
             top: '80px',
@@ -248,7 +225,6 @@ main();`,
           }}
         />
         <FloatingElement
-          className="glow-effect"
           delay={300}
           sx={{
             top: '160px',
@@ -259,7 +235,6 @@ main();`,
           }}
         />
         <FloatingElement
-          className="glow-effect"
           delay={700}
           sx={{
             bottom: '128px',
@@ -270,7 +245,6 @@ main();`,
           }}
         />
         <FloatingElement
-          className="glow-effect"
           delay={500}
           sx={{
             top: '240px',
@@ -337,19 +311,19 @@ main();`,
                 size="large"
                 component="a"
                 href="/panel/token"
-                sx={{
-                  px: 4,
-                  py: 2,
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
-                  borderRadius: '25px',
-                  background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
-                  backgroundSize: '400% 400%',
-                  animation: `${gradientShift} 4s ease infinite, ${pulseGlow} 3s ease-in-out infinite`,
-                  textTransform: 'none',
-                  textDecoration: 'none',
-                  '&:hover': {
-                    transform: 'scale(1.05)',
+              sx={{
+                px: 4,
+                py: 2,
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                borderRadius: '25px',
+                background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
+                backgroundSize: '400% 400%',
+                animation: `${gradientShift} 4s ease infinite`,
+                textTransform: 'none',
+                textDecoration: 'none',
+                '&:hover': {
+                  transform: 'scale(1.05)',
                     transition: 'all 0.3s ease'
                   }
                 }}
@@ -678,7 +652,6 @@ main();`,
                 <HoverLiftCard sx={{ p: 4, textAlign: 'center', height: '100%' }}>
                   <CardContent>
                     <Box
-                      className="glow-effect"
                       sx={{
                         width: '64px',
                         height: '64px',

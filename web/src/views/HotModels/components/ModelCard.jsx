@@ -98,8 +98,7 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
               px: 2,
               py: 1,
               borderRadius: '20px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              ...(model.tag.type === 'hot' && animationStyles.pulseGlow)
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
             }}
           />
         </Box>
@@ -123,8 +122,7 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
               fontWeight: 'bold',
               fontSize: { xs: '0.875rem', sm: '1rem', md: '1.25rem' },
               transition: 'transform 0.3s ease',
-              boxShadow: `0 8px 32px ${model.iconColor}40`,
-              ...animationStyles.shimmer
+              boxShadow: '0 8px 16px rgba(15, 23, 42, 0.12)'
             }}
           >
             {model.icon}
@@ -142,7 +140,7 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
             color: colors.primary,
             mb: { xs: 1.5, md: 2 },
             mt: isFeatured ? { xs: 1, md: 2 } : 0,
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            textShadow: 'none',
             lineHeight: 1.2,
             letterSpacing: isFeatured ? '-0.5px' : '0'
           }}
@@ -222,7 +220,7 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
                     '&:hover': {
                       backgroundColor: `${model.iconColor}30`,
                       transform: 'translateY(-1px)',
-                      boxShadow: `0 4px 12px ${model.iconColor}25`
+                      boxShadow: 'none'
                     }
                   }}
                 />

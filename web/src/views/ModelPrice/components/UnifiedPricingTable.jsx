@@ -188,7 +188,7 @@ const UnifiedPricingTable = () => {
               fontWeight: 700,
               color: theme.palette.text.primary,
               mb: 3,
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              textShadow: 'none'
             }}
           >
             {t('modelpricePage.detailedPricing')}

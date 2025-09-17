@@ -1,22 +1,11 @@
 import React, { useState } from 'react';
 import { Box, Typography, Container, Grid, Paper, Dialog, DialogContent, IconButton } from '@mui/material';
-import { keyframes } from '@mui/system';
 import CodeIcon from '@mui/icons-material/Code';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import WechatIcon from '@mui/icons-material/Chat';
 import BusinessIcon from '@mui/icons-material/Business';
 import CloseIcon from '@mui/icons-material/Close';
-
-// 定义动画
-const pulseGlow = keyframes`
-  0%, 100% { 
-    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3); 
-  }
-  50% { 
-    box-shadow: 0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3); 
-  }
-`;
 
 // 图片预览模态框组件
 const ImagePreviewModal = ({ open, onClose, imageUrl, title }) => {
@@ -147,8 +136,7 @@ const ContactCard = ({
           color: 'white',
           fontSize: '32px',
           mb: 3, // mb-6
-          mx: 'auto',
-          animation: `${pulseGlow} 3s ease-in-out infinite`
+          mx: 'auto'
         }}
       >
         <Icon sx={{ fontSize: '32px' }} />

@@ -57,7 +57,7 @@ const CategorySection = () => {
               mb: 4,
               lineHeight: 1.1,
               letterSpacing: '-0.02em',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              textShadow: 'none',
               '& .gradient-text': {
                 fontWeight: 'bold',
                 ...createGradientText('linear-gradient(45deg, #4299E1 30%, #8B5CF6 90%)')
@@ -99,12 +99,11 @@ const CategorySection = () => {
                     ? {
                         background: gradients.primary,
                         color: 'white',
-                        boxShadow: '0 8px 32px rgba(66, 153, 225, 0.3)',
-                        ...animationStyles.pulseGlow,
+                        boxShadow: 'none',
                         '&:hover': {
                           background: gradients.primary,
                           transform: 'translateY(-2px)',
-                          boxShadow: '0 12px 40px rgba(66, 153, 225, 0.4)'
+                          boxShadow: 'none'
                         }
                       }
                     : {
@@ -113,7 +112,7 @@ const CategorySection = () => {
                         '&:hover': {
                           backgroundColor: '#E2E8F0',
                           transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                          boxShadow: 'none'
                         }
                       })
                 }}

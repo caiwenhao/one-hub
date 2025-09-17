@@ -12,15 +12,6 @@ const float = keyframes`
   }
 `;
 
-const pulseGlow = keyframes`
-  0%, 100% { 
-    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3); 
-  }
-  50% { 
-    box-shadow: 0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3); 
-  }
-`;
-
 const gradientShift = keyframes`
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -40,7 +31,7 @@ const FloatingElement = ({ size, color, top, left, right, bottom, delay = 0 }) =
       left,
       right,
       bottom,
-      animation: `${float} 6s ease-in-out infinite, ${pulseGlow} 3s ease-in-out infinite`,
+      animation: `${float} 6s ease-in-out infinite`,
       animationDelay: `${delay}ms`,
       zIndex: 1
     }}
@@ -119,7 +110,7 @@ const HeroSection = () => {
             mb: 4,
             lineHeight: 1.1, // leading-tight
             letterSpacing: '-0.025em', // tracking-tight
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)' // text-shadow
+            textShadow: 'none'
           }}
         >
           我们随时
@@ -149,7 +140,7 @@ const HeroSection = () => {
             mx: 'auto',
             lineHeight: 1.6, // leading-relaxed
             fontWeight: 300, // font-light
-            textShadow: '0 2px 4px rgba(0,0,0,0.1)' // text-shadow
+            textShadow: 'none'
           }}
         >
           无论您是寻求企业合作、需要技术支持，还是有任何疑问

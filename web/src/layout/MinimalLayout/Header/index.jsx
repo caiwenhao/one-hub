@@ -339,29 +339,14 @@ const Header = () => {
                     fontWeight: 500, // font-medium
                     textTransform: 'none',
                     borderRadius: '25px', // rounded-full
-                    background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)', // animated-gradient
-                    backgroundSize: '400% 400%',
+                    background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)', // gradient fill
                     color: 'white', // text-white
                     border: 'none',
                     boxShadow: 'none',
-                    animation: 'gradient-shift 4s ease infinite, pulse-glow 3s ease-in-out infinite', // animated-gradient + glow-effect
-                    '@keyframes gradient-shift': {
-                      '0%': { backgroundPosition: '0% 50%' },
-                      '50%': { backgroundPosition: '100% 50%' },
-                      '100%': { backgroundPosition: '0% 50%' }
-                    },
-                    '@keyframes pulse-glow': {
-                      '0%, 100%': {
-                        boxShadow: '0 0 20px rgba(66, 153, 225, 0.3)'
-                      },
-                      '50%': {
-                        boxShadow: '0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3)'
-                      }
-                    },
+                    transition: 'all 0.2s ease',
                     '&:hover': {
                       background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
-                      transform: 'scale(1.05)', // hover:scale-105
-                      transition: 'all 0.3s ease'
+                      transform: 'translateY(-1px)'
                     }
                   }}
                 >

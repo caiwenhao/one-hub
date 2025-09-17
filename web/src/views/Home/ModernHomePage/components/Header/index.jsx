@@ -16,7 +16,6 @@ import {
 } from '@mui/material';
 import { Menu as MenuIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { animationStyles } from '../../styles/animations';
 import { gradients, colors } from '../../styles/gradients';
 import { createGlassEffect } from '../../styles/theme';
 
@@ -110,10 +109,11 @@ const Header = () => {
             sx={{
               borderRadius: '25px',
               background: gradients.primary,
-              ...animationStyles.pulseGlow,
+              boxShadow: 'none',
+              transition: 'transform 0.2s ease',
               '&:hover': {
                 background: gradients.primary,
-                transform: 'scale(1.02)'
+                transform: 'translateY(-1px)'
               }
             }}
           >
@@ -253,12 +253,11 @@ const Header = () => {
                     py: 1.25,
                     background: gradients.primary,
                     fontWeight: 500,
-                    boxShadow: '0 4px 15px rgba(66, 153, 225, 0.3)',
-                    ...animationStyles.pulseGlow,
+                    boxShadow: 'none',
+                    transition: 'transform 0.2s ease',
                     '&:hover': {
                       background: gradients.primary,
-                      transform: 'translateY(-2px) scale(1.02)',
-                      boxShadow: '0 8px 25px rgba(66, 153, 225, 0.4)'
+                      transform: 'translateY(-2px)'
                     }
                   }}
                 >

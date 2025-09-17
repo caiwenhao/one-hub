@@ -10,16 +10,6 @@ export const float = keyframes`
   }
 `;
 
-// 发光脉冲动画
-export const pulseGlow = keyframes`
-  0%, 100% { 
-    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3); 
-  }
-  50% { 
-    box-shadow: 0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3); 
-  }
-`;
-
 // 渐变移动动画
 export const gradientShift = keyframes`
   0% { 
@@ -30,16 +20,6 @@ export const gradientShift = keyframes`
   }
   100% { 
     background-position: 0% 50%; 
-  }
-`;
-
-// 闪光动画
-export const shimmer = keyframes`
-  0% { 
-    transform: translateX(-100%); 
-  }
-  100% { 
-    transform: translateX(100%); 
   }
 `;
 
@@ -210,33 +190,11 @@ export const createAnimationStyles = (theme) => ({
     animation: `${float} 6s ease-in-out infinite`
   },
   
-  // 发光效果样式
-  glowEffect: {
-    animation: `${pulseGlow} 3s ease-in-out infinite`
-  },
-  
   // 渐变动画样式
   animatedGradient: {
     background: `linear-gradient(-45deg, ${theme.palette.primary.main}, #3182CE, #2B6CB0, #2A69AC)`,
     backgroundSize: '400% 400%',
     animation: `${gradientShift} 4s ease infinite`
-  },
-  
-  // 闪光效果样式
-  shimmerEffect: {
-    position: 'relative',
-    overflow: 'hidden',
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-      transform: 'translateX(-100%)',
-      animation: `${shimmer} 2s infinite`
-    }
   },
   
   // 玻璃效果样式
@@ -264,11 +222,6 @@ export const createAnimationStyles = (theme) => ({
       transform: 'translateY(-12px) scale(1.03)',
       boxShadow: '0 25px 50px rgba(0,0,0,0.15)'
     }
-  },
-  
-  // 文字阴影效果
-  textShadow: {
-    textShadow: '0 2px 4px rgba(0,0,0,0.1)'
   }
 });
 
