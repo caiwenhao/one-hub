@@ -499,6 +499,43 @@ func GetDefaultPrice() []*Price {
 		})
 	}
 
+	// Vidu 默认价格配置
+	var DefaultViduPrice = map[string]float64{
+		"vidu-img2video-vidu1.5-4s":        50,
+		"vidu-img2video-vidu1.5-8s":        100,
+		"vidu-img2video-vidu2.0-4s":        60,
+		"vidu-img2video-vidu2.0-8s":        120,
+		"vidu-img2video-viduq1-4s":         40,
+		"vidu-img2video-viduq1-8s":         80,
+		"vidu-img2video-viduq1-classic-4s": 30,
+		"vidu-img2video-viduq1-classic-8s": 60,
+		"vidu-text2video-vidu1.5-4s":       80,
+		"vidu-text2video-vidu1.5-8s":       160,
+		"vidu-text2video-vidu2.0-4s":       100,
+		"vidu-text2video-vidu2.0-8s":       200,
+		"vidu-text2video-viduq1-4s":        60,
+		"vidu-text2video-viduq1-8s":        120,
+		"vidu-text2video-viduq1-classic-4s": 50,
+		"vidu-text2video-viduq1-classic-8s": 100,
+		"vidu-reference2video-vidu1.5-4s":       80,
+		"vidu-reference2video-vidu1.5-8s":       160,
+		"vidu-reference2video-vidu2.0-4s":       100,
+		"vidu-reference2video-vidu2.0-8s":       200,
+		"vidu-start-end2video-vidu1.5-4s":       90,
+		"vidu-start-end2video-vidu1.5-8s":       180,
+		"vidu-start-end2video-vidu2.0-4s":       110,
+		"vidu-start-end2video-vidu2.0-8s":       220,
+	}
+	for model, viduPrice := range DefaultViduPrice {
+		prices = append(prices, &Price{
+			Model:       model,
+			Type:        TimesPriceType,
+			ChannelType: config.ChannelTypeVidu,
+			Input:       viduPrice,
+			Output:      viduPrice,
+		})
+	}
+
 	return prices
 }
 

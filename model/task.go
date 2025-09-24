@@ -10,6 +10,7 @@ import (
 const (
 	TaskPlatformSuno  = "suno"
 	TaskPlatformKling = "kling"
+	TaskPlatformVidu  = "vidu"
 )
 
 type TaskStatus string
@@ -58,6 +59,15 @@ func GetTaskActionByTaskIds(platform string, taskIds []string) (task []*Task, er
 	err = DB.Select("id,action,task_id").Where("platform = ? and task_id in (?)", platform, taskIds).Find(&task).Error
 
 	return
+}
+
+func GetByUserAndTaskId(userId int, taskId string) *Task {
+	var task Task
+	err := DB.Where("user_id = ? and task_id = ?", userId, taskId).First(&task).Error
+	if err != nil {
+		return nil
+	}
+	return &task
 }
 
 func GetTaskByTaskId(platform string, userId int, taskId string) (task *Task, err error) {

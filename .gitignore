@@ -17,3 +17,7 @@ dist
 test.yaml
 one-api
 _output
+
+# Go cache directories
+.gocache
+.gocache-mod

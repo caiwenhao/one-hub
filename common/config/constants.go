@@ -304,6 +304,7 @@ const (
 	ChannelTypeAzureDatabricks = 54
 	ChannelTypeAzureV1         = 55
 	ChannelTypeXAI             = 56
+	ChannelTypeVidu            = 57
 )
 
 const (
@@ -324,6 +325,7 @@ const (
 	RelayModeChatRealtime
 	RelayModeKling
 	RelayModeResponses
+	RelayModeVidu
 )
 
 type ContextKey string

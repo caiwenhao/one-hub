@@ -7,6 +7,7 @@ import (
 	"one-api/relay/task"
 	"one-api/relay/task/kling"
 	"one-api/relay/task/suno"
+	"one-api/relay/task/vidu"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,6 +22,7 @@ func SetRelayRouter(router *gin.Engine) {
 	setGeminiRouter(router)
 	setRecraftRouter(router)
 	setKlingRouter(router)
+	setViduRouter(router)
 }
 
 func setOpenAIRouter(router *gin.Engine) {
@@ -148,5 +150,17 @@ func setKlingRouter(router *gin.Engine) {
 	relayKlingRouter.Use(middleware.DynamicRedisRateLimiter())
 	{
 		relayKlingRouter.POST("/v1/:class/:action", task.RelayTaskSubmit)
+	}
+}
+
+func setViduRouter(router *gin.Engine) {
+	relayViduRouter := router.Group("/vidu")
+	relayViduRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute())
+	relayViduRouter.GET("/ent/v2/task/:task_id", vidu.RelayTaskFetch)
+	relayViduRouter.GET("/ent/v2/tasks", vidu.RelayTaskFetchs)
+
+	relayViduRouter.Use(middleware.DynamicRedisRateLimiter())
+	{
+		relayViduRouter.POST("/ent/v2/:action", task.RelayTaskSubmit)
 	}
 }
