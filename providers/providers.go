@@ -22,6 +22,7 @@ import (
 	"one-api/providers/groq"
 	"one-api/providers/hunyuan"
 	"one-api/providers/jina"
+	"one-api/providers/kling"
 	"one-api/providers/lingyi"
 	"one-api/providers/midjourney"
 	"one-api/providers/minimax"
@@ -89,6 +90,7 @@ func init() {
 		config.ChannelTypeGithub:          github.GithubProviderFactory{},
 		config.ChannelTypeRecraft:         recraftAI.RecraftProviderFactory{},
 		config.ChannelTypeReplicate:       replicate.ReplicateProviderFactory{},
+		config.ChannelTypeKling:           kling.KlingProviderFactory{},
 		config.ChannelTypeOpenRouter:      openrouter.OpenRouterProviderFactory{},
 		config.ChannelTypeAzureDatabricks: azuredatabricks.AzureDatabricksProviderFactory{},
 		config.ChannelTypeAzureV1:         azure_v1.AzureV1ProviderFactory{},
