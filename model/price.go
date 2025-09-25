@@ -536,6 +536,97 @@ func GetDefaultPrice() []*Price {
 		})
 	}
 
+	// 可灵AI 默认价格配置 (按次计费)
+	var DefaultKlingPrice = map[string]float64{
+		// 视频生成模型
+		"kling-video_kling-v1_std_5":        5,     // V1 标准模式 5秒，单价 5 元
+		"kling-video_kling-v1_std_10":       10,    // V1 标准模式 10秒，单价 10 元
+		"kling-video_kling-v1_pro_5":        15,    // V1 专家模式 5秒，单价 15 元
+		"kling-video_kling-v1_pro_10":       30,    // V1 专家模式 10秒，单价 30 元
+		"kling-video_kling-v1.5_std_5":      5,     // V1.5 标准模式 5秒，单价 5 元
+		"kling-video_kling-v1.5_std_10":     10,    // V1.5 标准模式 10秒，单价 10 元
+		"kling-video_kling-v1.5_pro_5":      15,    // V1.5 专家模式 5秒，单价 15 元
+		"kling-video_kling-v1.5_pro_10":     30,    // V1.5 专家模式 10秒，单价 30 元
+		"kling-video_kling-v1-6_std_5":      10,    // V1.6 标准模式 5秒，单价 10 元
+		"kling-video_kling-v1-6_std_10":     20,    // V1.6 标准模式 10秒，单价 20 元
+		"kling-video_kling-v1-6_pro_5":      30,    // V1.6 专家模式 5秒，单价 30 元
+		"kling-video_kling-v1-6_pro_10":     60,    // V1.6 专家模式 10秒，单价 60 元
+		"kling-video_kling-v2-master_std_5":  15,   // V2-Master 标准模式 5秒，单价 15 元
+		"kling-video_kling-v2-master_std_10": 30,   // V2-Master 标准模式 10秒，单价 30 元
+		"kling-video_kling-v2-master_pro_5":  45,   // V2-Master 专家模式 5秒，单价 45 元
+		"kling-video_kling-v2-master_pro_10": 90,   // V2-Master 专家模式 10秒，单价 90 元
+		"kling-video_kling-v2-1-master_std_5":  15,   // V2.1-Master 标准模式 5秒，单价 15 元
+		"kling-video_kling-v2-1-master_std_10": 30,   // V2.1-Master 标准模式 10秒，单价 30 元
+		"kling-video_kling-v2-1-master_pro_5":  45,   // V2.1-Master 专家模式 5秒，单价 45 元
+		"kling-video_kling-v2-1-master_pro_10": 90,   // V2.1-Master 专家模式 10秒，单价 90 元
+
+		// 图像生成模型
+		"kling-image_kling-v1_std":          5,     // 图像生成 V1 标准模式，单价 5 元
+		"kling-image_kling-v1_pro":          15,    // 图像生成 V1 专家模式，单价 15 元
+		"kling-image_kling-v1.5_std":        5,     // 图像生成 V1.5 标准模式，单价 5 元
+		"kling-image_kling-v1.5_pro":        15,    // 图像生成 V1.5 专家模式，单价 15 元
+		"kling-image_kling-v1-6_std":        10,    // 图像生成 V1.6 标准模式，单价 10 元
+		"kling-image_kling-v1-6_pro":        30,    // 图像生成 V1.6 专家模式，单价 30 元
+		"kling-image_kling-v2-master_std":   15,    // 图像生成 V2-Master 标准模式，单价 15 元
+		"kling-image_kling-v2-master_pro":   45,    // 图像生成 V2-Master 专家模式，单价 45 元
+		"kling-image_kling-v2-1-master_std": 15,    // 图像生成 V2.1-Master 标准模式，单价 15 元
+		"kling-image_kling-v2-1-master_pro": 45,    // 图像生成 V2.1-Master 专家模式，单价 45 元
+		
+		// 新增的图像生成模型（按照官方接口命名）
+		"kling-image_kling-v1":			  5,     // 图像生成 V1，单价 5 元
+		"kling-image_kling-v1-5":			  5,     // 图像生成 V1.5，单价 5 元
+		"kling-image_kling-v2":			  10,    // 图像生成 V2，单价 10 元
+		"kling-image_kling-v2-new":		  15,    // 图像生成 V2-New，单价 15 元
+		"kling-image_kling-v2-1":			  15,    // 图像生成 V2.1，单价 15 元
+		
+		// 多图参考生图模型
+		"kling-multi-image2image_kling-v2":     30,    // 多图参考生图 V2，单价 30 元
+
+		// 虚拟试穿模型
+		"kling-try-on_kling-v1_std":         5,     // 虚拟试穿 V1 标准模式，单价 5 元
+		"kling-try-on_kling-v1_pro":         15,    // 虚拟试穿 V1 专家模式，单价 15 元
+		"kling-try-on_kling-v1.5_std":       5,     // 虚拟试穿 V1.5 标准模式，单价 5 元
+		"kling-try-on_kling-v1.5_pro":       15,    // 虚拟试穿 V1.5 专家模式，单价 15 元
+		"kling-try-on_kling-v1-6_std":       10,    // 虚拟试穿 V1.6 标准模式，单价 10 元
+		"kling-try-on_kling-v1-6_pro":       30,    // 虚拟试穿 V1.6 专家模式，单价 30 元
+
+		// 为了与现有实现兼容，也添加一些简化的模型名称
+		"kling-v1":              5,     // 兼容现有实现，默认标准模式 5秒
+		"kling-v1.5":            5,     // 兼容现有实现，默认标准模式 5秒
+		"kling-v1-6":            10,    // 兼容现有实现，默认标准模式 5秒
+		"kling-v2-master":       15,    // 兼容现有实现，默认标准模式 5秒
+		"kling-v2-1-master":     15,    // 兼容现有实现，默认标准模式 5秒
+		
+		// 多图参考生视频模型
+		"kling-multi-image2video_kling-v1-6_std_5":  30,    // 多图参考生视频 V1.6 标准模式 5秒，单价 30 元
+		"kling-multi-image2video_kling-v1-6_std_10": 60,    // 多图参考生视频 V1.6 标准模式 10秒，单价 60 元
+		"kling-multi-image2video_kling-v1-6_pro_5":  90,    // 多图参考生视频 V1.6 专家模式 5秒，单价 90 元
+		"kling-multi-image2video_kling-v1-6_pro_10": 180,   // 多图参考生视频 V1.6 专家模式 10秒，单价 180 元
+		
+		// 多模态视频编辑模型
+		"kling-multi-elements_kling-v1-6_std_5":     50,    // 多模态视频编辑 V1.6 标准模式 5秒，单价 50 元
+		"kling-multi-elements_kling-v1-6_std_10":    100,   // 多模态视频编辑 V1.6 标准模式 10秒，单价 100 元
+		"kling-multi-elements_kling-v1-6_pro_5":     150,   // 多模态视频编辑 V1.6 专家模式 5秒，单价 150 元
+		"kling-multi-elements_kling-v1-6_pro_10":    300,   // 多模态视频编辑 V1.6 专家模式 10秒，单价 300 元
+		
+		// 多模态视频编辑辅助功能（每次操作收费）
+		"kling-init-selection":      5,     // 初始化待编辑视频，单价 5 元
+		"kling-add-selection":       2,     // 增加视频选区，单价 2 元
+		"kling-delete-selection":    2,     // 删减视频选区，单价 2 元
+		"kling-clear-selection":     1,     // 清除视频选区，单价 1 元
+		"kling-preview-selection":   3,     // 预览已选区视频，单价 3 元
+	}
+
+	for model, klingPrice := range DefaultKlingPrice {
+		prices = append(prices, &Price{
+			Model:       model,
+			Type:        TimesPriceType,
+			ChannelType: config.ChannelTypeKling,
+			Input:       klingPrice,
+			Output:      klingPrice,
+		})
+	}
+
 	return prices
 }
 

@@ -2,10 +2,10 @@ package router
 
 import (
 	"one-api/middleware"
+	"one-api/providers/kling"
 	"one-api/relay"
 	"one-api/relay/midjourney"
 	"one-api/relay/task"
-	"one-api/relay/task/kling"
 	"one-api/relay/task/suno"
 	"one-api/relay/task/vidu"
 
@@ -142,14 +142,52 @@ func setRecraftRouter(router *gin.Engine) {
 }
 
 func setKlingRouter(router *gin.Engine) {
-	relayKlingRouter := router.Group("/kling")
-	relayKlingRouter.Use(middleware.RelayKlingPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute())
-	relayKlingRouter.GET("/v1/videos/text2video/:id", kling.GetFetchByID)
-	relayKlingRouter.GET("/v1/videos/image2video/:id", kling.GetFetchByID)
+	// 新增官方API兼容路由
+	setOfficialKlingRouter(router)
+}
 
-	relayKlingRouter.Use(middleware.DynamicRedisRateLimiter())
+// setOfficialKlingRouter 设置完全兼容官方API的路由
+func setOfficialKlingRouter(router *gin.Engine) {
+	// 官方API兼容路由组 - 使用 /kling/v1 前缀
+	officialKlingRouter := router.Group("/kling/v1")
+	officialKlingRouter.Use(middleware.RelayKlingPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
 	{
-		relayKlingRouter.POST("/v1/:class/:action", task.RelayTaskSubmit)
+		// 文生视频
+		officialKlingRouter.POST("/videos/text2video", kling.CreateOfficialText2Video)
+		officialKlingRouter.GET("/videos/text2video/:id", kling.GetOfficialTask)
+		officialKlingRouter.GET("/videos/text2video", kling.ListOfficialTasks)
+		
+		// 图生视频
+		officialKlingRouter.POST("/videos/image2video", kling.CreateOfficialImage2Video)
+		officialKlingRouter.GET("/videos/image2video/:id", kling.GetOfficialTask)
+		officialKlingRouter.GET("/videos/image2video", kling.ListOfficialTasks)
+		
+		// 多图参考生视频
+		officialKlingRouter.POST("/videos/multi-image2video", kling.CreateOfficialMultiImage2Video)
+		officialKlingRouter.GET("/videos/multi-image2video/:id", kling.GetOfficialMultiImage2VideoTask)
+		officialKlingRouter.GET("/videos/multi-image2video", kling.ListOfficialMultiImage2VideoTasks)
+		
+		// 图像生成
+		officialKlingRouter.POST("/images/generations", kling.CreateOfficialImage)
+		officialKlingRouter.GET("/images/generations/:id", kling.GetOfficialImageTask)
+		officialKlingRouter.GET("/images/generations", kling.ListOfficialImageTasks)
+		
+		// 多图参考生图
+		officialKlingRouter.POST("/images/multi-image2image", kling.CreateOfficialMultiImage2Image)
+		officialKlingRouter.GET("/images/multi-image2image/:id", kling.GetOfficialMultiImage2ImageTask)
+		officialKlingRouter.GET("/images/multi-image2image", kling.ListOfficialMultiImage2ImageTasks)
+		
+		// 多模态视频编辑 - 选区管理
+		officialKlingRouter.POST("/videos/multi-elements/init-selection", kling.InitSelection)
+		officialKlingRouter.POST("/videos/multi-elements/add-selection", kling.AddSelection)
+		officialKlingRouter.POST("/videos/multi-elements/delete-selection", kling.DeleteSelection)
+		officialKlingRouter.POST("/videos/multi-elements/clear-selection", kling.ClearSelection)
+		officialKlingRouter.POST("/videos/multi-elements/preview-selection", kling.PreviewSelection)
+		
+		// 多模态视频编辑 - 任务管理
+		officialKlingRouter.POST("/videos/multi-elements", kling.CreateMultiElementsTask)
+		officialKlingRouter.GET("/videos/multi-elements/:id", kling.GetMultiElementsTask)
+		officialKlingRouter.GET("/videos/multi-elements", kling.ListMultiElementsTasks)
 	}
 }
 
