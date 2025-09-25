@@ -33,7 +33,7 @@ func TestActionValidateImg2VideoDefaults(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if task.OriginalModel != "vidu-img2video-vidu1.5-4s-360p" {
+	if task.OriginalModel != "vidu-img2video-vidu1.5-360p-4s" {
 		t.Fatalf("unexpected original model: %s", task.OriginalModel)
 	}
 }

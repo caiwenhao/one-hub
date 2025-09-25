@@ -143,6 +143,16 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
         setFieldValue(key, newInput[key]);
       });
     }
+
+    if (typeValue === 57) {
+      const hasModels = Array.isArray(values.models) ? values.models.length > 0 : !!values.models;
+      if (!hasModels) {
+        const defaultModels = basicModels(typeValue);
+        if (defaultModels.length > 0) {
+          setFieldValue('models', defaultModels);
+        }
+      }
+    }
   };
 
   const basicModels = (channelType) => {

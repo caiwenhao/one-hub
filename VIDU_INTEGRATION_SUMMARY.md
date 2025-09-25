@@ -173,5 +173,5 @@ curl -X GET "https://your-domain.com/vidu/ent/v2/task/{task_id}" \
 - `vidu-q1-classic` → `viduq1-classic`
 
 说明：
-- 计费所用的 `OriginalModel` 保持原始写法不变（例如 `vidu-text2video-vidu1.5-8s`），确保与定价模型键一致。
+- 计费所用的 `OriginalModel` 采用新命名规则 `vidu-<action>-<model>-<resolution>-<duration>s[-style]`（例如 `vidu-text2video-vidu1.5-720p-8s`），与默认定价模型键保持一致。
 - 若传入其他未知模型名，系统将原样透传，避免阻断新模型接入。

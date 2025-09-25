@@ -253,15 +253,16 @@ func getDefaultResolution(model string, duration int) string {
 }
 
 // 构造详细的模型名称用于计费
+// 命名规则：vidu-<action>-<model>-<resolution>-<duration>s[-style]
+// 例如：vidu-text2video-vidu1.5-720p-4s 或 vidu-text2video-vidu1.5-720p-4s-anime
 func buildDetailedModelName(action, model string, duration int, resolution, style string) string {
-	baseName := fmt.Sprintf("vidu-%s-%s-%ds-%s", action, model, duration, resolution)
+	baseName := fmt.Sprintf("vidu-%s-%s-%s-%ds", action, model, resolution, duration)
 
-	// 如果是文生视频且有风格参数，加上风格
+	// 如果是文生视频且风格非 default，则追加风格后缀
 	if action == viduProvider.ViduActionText2Video && style != "" && style != "general" {
 		baseName = fmt.Sprintf("%s-%s", baseName, style)
 	}
 
-	// 先尝试详细格式，如果不存在则退回简化格式
 	return baseName
 }
 

@@ -148,6 +148,32 @@ func ListClaudeModelsByToken(c *gin.Context) {
 	})
 }
 
+func inferOwnedBy(modelName string, channelType int) *string {
+	// 优先使用价格表中的 channelType
+	if channelType != config.ChannelTypeUnknown {
+		return getModelOwnedBy(channelType)
+	}
+	// 否则根据模型命名进行供应商推断，避免显示“未知”
+	lower := strings.ToLower(modelName)
+	if strings.HasPrefix(lower, "kling") || strings.Contains(lower, "kling-") || strings.Contains(lower, "kling_") {
+		name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeKling)
+		if name == model.UnknownOwnedBy || name == "" {
+			fallback := "Kling"
+			return &fallback
+		}
+		return &name
+	}
+	if strings.HasPrefix(lower, "vidu") || strings.HasPrefix(lower, "viduq") || strings.Contains(lower, "vidu-") || strings.Contains(lower, "vidu_") {
+		name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeVidu)
+		if name == model.UnknownOwnedBy || name == "" {
+			fallback := "Vidu"
+			return &fallback
+		}
+		return &name
+	}
+	return getModelOwnedBy(channelType)
+}
+
 func ListModelsForAdmin(c *gin.Context) {
 	prices := model.PricingInstance.GetAllPrices()
 	var openAIModels []OpenAIModels
@@ -156,7 +182,7 @@ func ListModelsForAdmin(c *gin.Context) {
 			Id:      modelId,
 			Object:  "model",
 			Created: 1677649963,
-			OwnedBy: getModelOwnedBy(price.ChannelType),
+			OwnedBy: inferOwnedBy(modelId, price.ChannelType),
 		})
 	}
 	// 根据 OwnedBy 排序
@@ -210,7 +236,7 @@ func getOpenAIModelWithName(modelName string) *OpenAIModels {
 		Id:      modelName,
 		Object:  "model",
 		Created: 1677649963,
-		OwnedBy: getModelOwnedBy(price.ChannelType),
+		OwnedBy: inferOwnedBy(modelName, price.ChannelType),
 	}
 }
 
@@ -273,7 +299,7 @@ func getAvailableModels(groupName string) map[string]*AvailableModelResponse {
 			price := model.PricingInstance.GetPrice(modelName)
 			availableModels[modelName] = &AvailableModelResponse{
 				Groups:  groups,
-				OwnedBy: *getModelOwnedBy(price.ChannelType),
+				OwnedBy: *inferOwnedBy(modelName, price.ChannelType),
 				Price:   price,
 			}
 		}

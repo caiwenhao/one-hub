@@ -533,6 +533,19 @@ const typeConfig = {
     },
     modelGroup: 'Kling'
   },
+  57: {
+    inputLabel: {
+      provider_models_list: '从Vidu获取模型列表'
+    },
+    prompt: {
+      base_url: '官方默认地址为 https://api.vidu.cn，若使用自建中转可在此覆盖',
+      key: '请输入 Vidu 平台的 Token，通常为 Token xxxxx'
+    },
+    input: {
+      test_model: 'vidu-img2video-vidu1.5-4s-360p'
+    },
+    modelGroup: 'Vidu'
+  },
   54: {
     inputLabel: {
       base_url: 'Azure Databricks Endpoint',

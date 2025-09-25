@@ -112,6 +112,14 @@ func (p *Pricing) GetPrice(modelName string) *Price {
 		return price
 	}
 
+	// 兼容旧版 Vidu 命名（vidu-<action>-<model>-<duration>s-<resolution>）
+	if normalized, changed := normalizeLegacyViduModelName(modelName); changed {
+		if price, ok := p.Prices[normalized]; ok {
+			return price
+		}
+		modelName = normalized
+	}
+
 	matchModel := utils.GetModelsWithMatch(&p.Match, modelName)
 	if price, ok := p.Prices[matchModel]; ok {
 		return price
@@ -123,6 +131,40 @@ func (p *Pricing) GetPrice(modelName string) *Price {
 		Input:       DefaultPrice,
 		Output:      DefaultPrice,
 	}
+}
+
+func normalizeLegacyViduModelName(modelName string) (string, bool) {
+	// 旧格式：vidu-<action>-<model>-<duration>s-<resolution>(-style)
+	// 新格式：vidu-<action>-<model>-<resolution>-<duration>s(-style)
+	if !strings.HasPrefix(modelName, "vidu-") {
+		return "", false
+	}
+
+	segments := strings.Split(modelName, "-")
+	if len(segments) < 5 {
+		return "", false
+	}
+
+	durationSeg := segments[3]
+	resolutionSeg := segments[4]
+
+	if !strings.HasSuffix(durationSeg, "s") {
+		return "", false
+	}
+
+	resolutionSeg = strings.ToLower(resolutionSeg)
+	if !(strings.HasSuffix(resolutionSeg, "p")) {
+		return "", false
+	}
+
+	segments[3], segments[4] = resolutionSeg, durationSeg
+
+	newName := strings.Join(segments, "-")
+	if newName == modelName {
+		return "", false
+	}
+
+	return newName, true
 }
 
 func (p *Pricing) GetAllPrices() map[string]*Price {
@@ -332,31 +374,56 @@ func GetPriceByPriceService() ([]*Price, error) {
 func (p *Pricing) SyncPriceWithOverwrite(pricing []*Price) error {
 	tx := DB.Begin()
 	logger.SysLog(fmt.Sprintf("系统内已有价格配置 %d 个(包含locked价格)", len(p.Prices)))
-	err := DeleteAllPricesNotLock(tx)
-	if err != nil {
+	if err := DeleteAllPricesNotLock(tx); err != nil {
 		tx.Rollback()
 		return err
 	}
-	var newPrices []*Price
-	// 覆盖所有
 
+	defaultPricing := GetDefaultPrice()
+	defaultPriceMap := make(map[string]*Price, len(defaultPricing))
+	for _, defaultPrice := range defaultPricing {
+		defaultPriceMap[defaultPrice.Model] = defaultPrice
+	}
+
+	incomingModels := make(map[string]struct{}, len(pricing))
 	for _, price := range pricing {
-		// 取出系统存在并且非lock的价格到new price
-		if _, ok := p.Prices[price.Model]; !ok {
-			newPrices = append(newPrices, price)
-		} else {
-			if !p.Prices[price.Model].Locked {
-				newPrices = append(newPrices, price)
+		incomingModels[price.Model] = struct{}{}
+		if price.ChannelType == config.ChannelTypeUnknown {
+			if defaultPrice, ok := defaultPriceMap[price.Model]; ok {
+				price.ChannelType = defaultPrice.ChannelType
+				if price.Type == "" {
+					price.Type = defaultPrice.Type
+				}
+				if price.Type == TimesPriceType && price.Output == 0 {
+					price.Output = price.Input
+				}
 			}
 		}
 	}
-	if len(newPrices) == 0 {
-		return nil
+
+	for _, defaultPrice := range defaultPricing {
+		if _, ok := incomingModels[defaultPrice.Model]; ok {
+			continue
+		}
+		clone := *defaultPrice
+		pricing = append(pricing, &clone)
 	}
 
-	err = InsertPrices(tx, newPrices)
+	var newPrices []*Price
+	for _, price := range pricing {
+		if existing, ok := p.Prices[price.Model]; !ok {
+			newPrices = append(newPrices, price)
+		} else if !existing.Locked {
+			newPrices = append(newPrices, price)
+		}
+	}
 
-	if err != nil {
+	if len(newPrices) == 0 {
+		tx.Commit()
+		return p.Init()
+	}
+
+	if err := InsertPrices(tx, newPrices); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -402,31 +469,52 @@ func (p *Pricing) SyncPriceOnlyUpdate(pricing []*Price) error {
 	return p.Init()
 }
 
-// SyncPriceWithoutOverwrite 只插入系统没有的数据
+// SyncPriceWithoutOverwrite 只插入系统没有的数据，并修正历史缺失的渠道类型
 func (p *Pricing) SyncPriceWithoutOverwrite(pricing []*Price) error {
 	var newPrices []*Price
+	type channelTypeUpdate struct {
+		Model       string
+		ChannelType int
+	}
+	var channelTypeUpdates []channelTypeUpdate
+
 	logger.SysLog(fmt.Sprintf("系统内已有价格配置 %d 个", len(p.Prices)))
 	for _, price := range pricing {
-		// 将系统内不存在的价格加入new prices
-		if _, ok := p.Prices[price.Model]; !ok {
+		if existing, ok := p.Prices[price.Model]; !ok {
+			// 系统内不存在的模型直接新增
 			newPrices = append(newPrices, price)
+		} else if existing.ChannelType == config.ChannelTypeUnknown && price.ChannelType != config.ChannelTypeUnknown {
+			// 针对旧数据没有渠道类型的情况做一次补齐
+			channelTypeUpdates = append(channelTypeUpdates, channelTypeUpdate{Model: price.Model, ChannelType: price.ChannelType})
 		}
 	}
 
-	if len(newPrices) == 0 {
+	if len(newPrices) == 0 && len(channelTypeUpdates) == 0 {
 		return nil
 	}
 
 	tx := DB.Begin()
-	err := InsertPrices(tx, newPrices)
 
-	if err != nil {
-		tx.Rollback()
-		return err
+	if len(newPrices) > 0 {
+		if err := InsertPrices(tx, newPrices); err != nil {
+			tx.Rollback()
+			return err
+		}
+		logger.SysLog(fmt.Sprintf("本次新增 %d 个价格配置", len(newPrices)))
+	}
+
+	if len(channelTypeUpdates) > 0 {
+		for _, item := range channelTypeUpdates {
+			if err := tx.Model(&Price{}).Where("model = ?", item.Model).Update("channel_type", item.ChannelType).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+		logger.SysLog(fmt.Sprintf("本次修正渠道类型 %d 个模型", len(channelTypeUpdates)))
 	}
 
 	tx.Commit()
-	logger.SysLog(fmt.Sprintf("本次新增 %d 个价格配置", len(newPrices)))
+
 	return p.Init()
 }
 
