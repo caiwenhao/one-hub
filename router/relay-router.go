@@ -194,11 +194,18 @@ func setOfficialKlingRouter(router *gin.Engine) {
 func setViduRouter(router *gin.Engine) {
 	relayViduRouter := router.Group("/vidu")
 	relayViduRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute())
+	
+	// 查询接口
 	relayViduRouter.GET("/ent/v2/task/:task_id", vidu.RelayTaskFetch)
 	relayViduRouter.GET("/ent/v2/tasks", vidu.RelayTaskFetchs)
+	relayViduRouter.GET("/ent/v2/tasks/:task_id/creations", vidu.RelayTaskFetch) // 官方查询接口
+
+	// 取消任务接口
+	relayViduRouter.POST("/ent/v2/tasks/:task_id/cancel", vidu.RelayTaskCancel)
 
 	relayViduRouter.Use(middleware.DynamicRedisRateLimiter())
 	{
+		// 任务提交接口
 		relayViduRouter.POST("/ent/v2/:action", task.RelayTaskSubmit)
 	}
 }

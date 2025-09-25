@@ -499,122 +499,246 @@ func GetDefaultPrice() []*Price {
 		})
 	}
 
-	// Vidu 默认价格配置
-	var DefaultViduPrice = map[string]float64{
-		"vidu-img2video-vidu1.5-4s":        50,
-		"vidu-img2video-vidu1.5-8s":        100,
-		"vidu-img2video-vidu2.0-4s":        60,
-		"vidu-img2video-vidu2.0-8s":        120,
-		"vidu-img2video-viduq1-4s":         40,
-		"vidu-img2video-viduq1-8s":         80,
-		"vidu-img2video-viduq1-classic-4s": 30,
-		"vidu-img2video-viduq1-classic-8s": 60,
-		"vidu-text2video-vidu1.5-4s":       80,
-		"vidu-text2video-vidu1.5-8s":       160,
-		"vidu-text2video-vidu2.0-4s":       100,
-		"vidu-text2video-vidu2.0-8s":       200,
-		"vidu-text2video-viduq1-4s":        60,
-		"vidu-text2video-viduq1-8s":        120,
-		"vidu-text2video-viduq1-classic-4s": 50,
-		"vidu-text2video-viduq1-classic-8s": 100,
-		"vidu-reference2video-vidu1.5-4s":       80,
-		"vidu-reference2video-vidu1.5-8s":       160,
-		"vidu-reference2video-vidu2.0-4s":       100,
-		"vidu-reference2video-vidu2.0-8s":       200,
-		"vidu-start-end2video-vidu1.5-4s":       90,
-		"vidu-start-end2video-vidu1.5-8s":       180,
-		"vidu-start-end2video-vidu2.0-4s":       110,
-		"vidu-start-end2video-vidu2.0-8s":       220,
+	const viduCreditToYuan = 0.3125
+
+	// Vidu 默认价格配置（值为积分，后续换算成人民币）
+	var defaultViduCredits = map[string]float64{
+		// === 新模型 viduq2-pro ===
+		// 图生视频 - viduq2-pro
+		"vidu-img2video-viduq2-pro-2s-720p":  3,
+		"vidu-img2video-viduq2-pro-2s-1080p": 8,
+		"vidu-img2video-viduq2-pro-3s-720p":  4,
+		"vidu-img2video-viduq2-pro-3s-1080p": 10,
+		"vidu-img2video-viduq2-pro-4s-720p":  5,
+		"vidu-img2video-viduq2-pro-4s-1080p": 12,
+		"vidu-img2video-viduq2-pro-5s-720p":  6,
+		"vidu-img2video-viduq2-pro-5s-1080p": 14,
+		"vidu-img2video-viduq2-pro-6s-720p":  7,
+		"vidu-img2video-viduq2-pro-6s-1080p": 16,
+		"vidu-img2video-viduq2-pro-7s-720p":  8,
+		"vidu-img2video-viduq2-pro-7s-1080p": 18,
+		"vidu-img2video-viduq2-pro-8s-720p":  9,
+		"vidu-img2video-viduq2-pro-8s-1080p": 20,
+		// 首尾帧 - viduq2-pro
+		"vidu-start-end2video-viduq2-pro-2s-720p":  3,
+		"vidu-start-end2video-viduq2-pro-2s-1080p": 8,
+		"vidu-start-end2video-viduq2-pro-3s-720p":  4,
+		"vidu-start-end2video-viduq2-pro-3s-1080p": 10,
+		"vidu-start-end2video-viduq2-pro-4s-720p":  5,
+		"vidu-start-end2video-viduq2-pro-4s-1080p": 12,
+		"vidu-start-end2video-viduq2-pro-5s-720p":  6,
+		"vidu-start-end2video-viduq2-pro-5s-1080p": 14,
+		"vidu-start-end2video-viduq2-pro-6s-720p":  7,
+		"vidu-start-end2video-viduq2-pro-6s-1080p": 16,
+		"vidu-start-end2video-viduq2-pro-7s-720p":  8,
+		"vidu-start-end2video-viduq2-pro-7s-1080p": 18,
+		"vidu-start-end2video-viduq2-pro-8s-720p":  9,
+		"vidu-start-end2video-viduq2-pro-8s-1080p": 20,
+
+		// === 新模型 viduq2-turbo ===
+		// 图生视频 - viduq2-turbo
+		"vidu-img2video-viduq2-turbo-2s-720p":  1,
+		"vidu-img2video-viduq2-turbo-2s-1080p": 5,
+		"vidu-img2video-viduq2-turbo-3s-720p":  2,
+		"vidu-img2video-viduq2-turbo-3s-1080p": 6,
+		"vidu-img2video-viduq2-turbo-4s-720p":  3,
+		"vidu-img2video-viduq2-turbo-4s-1080p": 7,
+		"vidu-img2video-viduq2-turbo-5s-720p":  4,
+		"vidu-img2video-viduq2-turbo-5s-1080p": 8,
+		"vidu-img2video-viduq2-turbo-6s-720p":  5,
+		"vidu-img2video-viduq2-turbo-6s-1080p": 9,
+		"vidu-img2video-viduq2-turbo-7s-720p":  6,
+		"vidu-img2video-viduq2-turbo-7s-1080p": 10,
+		"vidu-img2video-viduq2-turbo-8s-720p":  7,
+		"vidu-img2video-viduq2-turbo-8s-1080p": 11,
+		// 首尾帧 - viduq2-turbo
+		"vidu-start-end2video-viduq2-turbo-2s-720p":  1,
+		"vidu-start-end2video-viduq2-turbo-2s-1080p": 5,
+		"vidu-start-end2video-viduq2-turbo-3s-720p":  2,
+		"vidu-start-end2video-viduq2-turbo-3s-1080p": 6,
+		"vidu-start-end2video-viduq2-turbo-4s-720p":  3,
+		"vidu-start-end2video-viduq2-turbo-4s-1080p": 7,
+		"vidu-start-end2video-viduq2-turbo-5s-720p":  4,
+		"vidu-start-end2video-viduq2-turbo-5s-1080p": 8,
+		"vidu-start-end2video-viduq2-turbo-6s-720p":  5,
+		"vidu-start-end2video-viduq2-turbo-6s-1080p": 9,
+		"vidu-start-end2video-viduq2-turbo-7s-720p":  6,
+		"vidu-start-end2video-viduq2-turbo-7s-1080p": 10,
+		"vidu-start-end2video-viduq2-turbo-8s-720p":  7,
+		"vidu-start-end2video-viduq2-turbo-8s-1080p": 11,
+
+		// === 模型 viduq1 ===
+		// 图生视频 - viduq1
+		"vidu-img2video-viduq1-5s-1080p": 8,
+		// 参考生视频 - viduq1
+		"vidu-reference2video-viduq1-5s-1080p": 8,
+		// 首尾帧 - viduq1
+		"vidu-start-end2video-viduq1-5s-1080p": 8,
+		// 文生视频 - viduq1
+		"vidu-text2video-viduq1-5s-1080p": 8,
+		// 参考生图 - viduq1
+		"vidu-reference2image-viduq1": 2,
+
+		// === 模型 viduq1-classic ===
+		// 图生视频 - viduq1-classic
+		"vidu-img2video-viduq1-classic-5s-1080p": 8,
+		// 首尾帧 - viduq1-classic
+		"vidu-start-end2video-viduq1-classic-5s-1080p": 8,
+
+		// === 模型 vidu2.0 ===
+		// 图生视频 - vidu2.0
+		"vidu-img2video-vidu2.0-4s-360p":  2,
+		"vidu-img2video-vidu2.0-4s-720p":  4,
+		"vidu-img2video-vidu2.0-4s-1080p": 10,
+		"vidu-img2video-vidu2.0-8s-720p":  10,
+		// 参考生视频 - vidu2.0
+		"vidu-reference2video-vidu2.0-4s-360p":  8,
+		"vidu-reference2video-vidu2.0-4s-720p":  8,
+		"vidu-reference2video-vidu2.0-4s-1080p": 20,
+		"vidu-reference2video-vidu2.0-8s-720p":  20,
+		// 首尾帧 - vidu2.0
+		"vidu-start-end2video-vidu2.0-4s-360p":  2,
+		"vidu-start-end2video-vidu2.0-4s-720p":  4,
+		"vidu-start-end2video-vidu2.0-4s-1080p": 10,
+		"vidu-start-end2video-vidu2.0-8s-720p":  10,
+
+		// === 模型 vidu1.5 ===
+		// 图生视频 - vidu1.5
+		"vidu-img2video-vidu1.5-4s-360p":  4,
+		"vidu-img2video-vidu1.5-4s-720p":  10,
+		"vidu-img2video-vidu1.5-4s-1080p": 20,
+		"vidu-img2video-vidu1.5-8s-720p":  20,
+		// 参考生视频 - vidu1.5
+		"vidu-reference2video-vidu1.5-4s-360p":  8,
+		"vidu-reference2video-vidu1.5-4s-720p":  20,
+		"vidu-reference2video-vidu1.5-4s-1080p": 40,
+		"vidu-reference2video-vidu1.5-8s-720p":  40,
+		// 首尾帧 - vidu1.5
+		"vidu-start-end2video-vidu1.5-4s-360p":  4,
+		"vidu-start-end2video-vidu1.5-4s-720p":  10,
+		"vidu-start-end2video-vidu1.5-4s-1080p": 20,
+		"vidu-start-end2video-vidu1.5-8s-720p":  20,
+		// 文生视频 - vidu1.5 通用风格
+		"vidu-text2video-vidu1.5-4s-360p-general":  4,
+		"vidu-text2video-vidu1.5-4s-720p-general":  10,
+		"vidu-text2video-vidu1.5-4s-1080p-general": 20,
+		"vidu-text2video-vidu1.5-8s-720p-general":  20,
+		// 文生视频 - vidu1.5 动漫风格
+		"vidu-text2video-vidu1.5-4s-360p-anime":  4,
+		"vidu-text2video-vidu1.5-4s-720p-anime":  10,
+		"vidu-text2video-vidu1.5-4s-1080p-anime": 20,
+		"vidu-text2video-vidu1.5-8s-720p-anime":  20,
+
+		// === 兼容性价格配置（向后兼容） ===
+		// 简化版本（不含分辨率）
+		"vidu-img2video-viduq2-pro-5s":           6,
+		"vidu-img2video-viduq2-turbo-5s":         4,
+		"vidu-img2video-viduq1-5s":               8,
+		"vidu-img2video-viduq1-classic-5s":       8,
+		"vidu-img2video-vidu2.0-4s":              4,
+		"vidu-img2video-vidu1.5-4s":              10,
+		"vidu-text2video-viduq1-5s":              8,
+		"vidu-text2video-vidu1.5-4s":             10,
+		"vidu-reference2video-viduq1-5s":         8,
+		"vidu-reference2video-vidu2.0-4s":        8,
+		"vidu-reference2video-vidu1.5-4s":        20,
+		"vidu-start-end2video-viduq2-pro-5s":     6,
+		"vidu-start-end2video-viduq2-turbo-5s":   4,
+		"vidu-start-end2video-viduq1-5s":         8,
+		"vidu-start-end2video-viduq1-classic-5s": 8,
+		"vidu-start-end2video-vidu2.0-4s":        4,
+		"vidu-start-end2video-vidu1.5-4s":        10,
 	}
-	for model, viduPrice := range DefaultViduPrice {
+	for model, credits := range defaultViduCredits {
+		price := credits * viduCreditToYuan
 		prices = append(prices, &Price{
 			Model:       model,
 			Type:        TimesPriceType,
 			ChannelType: config.ChannelTypeVidu,
-			Input:       viduPrice,
-			Output:      viduPrice,
+			Input:       price,
+			Output:      price,
 		})
 	}
 
 	// 可灵AI 默认价格配置 (按次计费)
 	var DefaultKlingPrice = map[string]float64{
 		// 视频生成模型
-		"kling-video_kling-v1_std_5":        5,     // V1 标准模式 5秒，单价 5 元
-		"kling-video_kling-v1_std_10":       10,    // V1 标准模式 10秒，单价 10 元
-		"kling-video_kling-v1_pro_5":        15,    // V1 专家模式 5秒，单价 15 元
-		"kling-video_kling-v1_pro_10":       30,    // V1 专家模式 10秒，单价 30 元
-		"kling-video_kling-v1.5_std_5":      5,     // V1.5 标准模式 5秒，单价 5 元
-		"kling-video_kling-v1.5_std_10":     10,    // V1.5 标准模式 10秒，单价 10 元
-		"kling-video_kling-v1.5_pro_5":      15,    // V1.5 专家模式 5秒，单价 15 元
-		"kling-video_kling-v1.5_pro_10":     30,    // V1.5 专家模式 10秒，单价 30 元
-		"kling-video_kling-v1-6_std_5":      10,    // V1.6 标准模式 5秒，单价 10 元
-		"kling-video_kling-v1-6_std_10":     20,    // V1.6 标准模式 10秒，单价 20 元
-		"kling-video_kling-v1-6_pro_5":      30,    // V1.6 专家模式 5秒，单价 30 元
-		"kling-video_kling-v1-6_pro_10":     60,    // V1.6 专家模式 10秒，单价 60 元
-		"kling-video_kling-v2-master_std_5":  15,   // V2-Master 标准模式 5秒，单价 15 元
-		"kling-video_kling-v2-master_std_10": 30,   // V2-Master 标准模式 10秒，单价 30 元
-		"kling-video_kling-v2-master_pro_5":  45,   // V2-Master 专家模式 5秒，单价 45 元
-		"kling-video_kling-v2-master_pro_10": 90,   // V2-Master 专家模式 10秒，单价 90 元
-		"kling-video_kling-v2-1-master_std_5":  15,   // V2.1-Master 标准模式 5秒，单价 15 元
-		"kling-video_kling-v2-1-master_std_10": 30,   // V2.1-Master 标准模式 10秒，单价 30 元
-		"kling-video_kling-v2-1-master_pro_5":  45,   // V2.1-Master 专家模式 5秒，单价 45 元
-		"kling-video_kling-v2-1-master_pro_10": 90,   // V2.1-Master 专家模式 10秒，单价 90 元
+		"kling-video_kling-v1_std_5":           5,  // V1 标准模式 5秒，单价 5 元
+		"kling-video_kling-v1_std_10":          10, // V1 标准模式 10秒，单价 10 元
+		"kling-video_kling-v1_pro_5":           15, // V1 专家模式 5秒，单价 15 元
+		"kling-video_kling-v1_pro_10":          30, // V1 专家模式 10秒，单价 30 元
+		"kling-video_kling-v1.5_std_5":         5,  // V1.5 标准模式 5秒，单价 5 元
+		"kling-video_kling-v1.5_std_10":        10, // V1.5 标准模式 10秒，单价 10 元
+		"kling-video_kling-v1.5_pro_5":         15, // V1.5 专家模式 5秒，单价 15 元
+		"kling-video_kling-v1.5_pro_10":        30, // V1.5 专家模式 10秒，单价 30 元
+		"kling-video_kling-v1-6_std_5":         10, // V1.6 标准模式 5秒，单价 10 元
+		"kling-video_kling-v1-6_std_10":        20, // V1.6 标准模式 10秒，单价 20 元
+		"kling-video_kling-v1-6_pro_5":         30, // V1.6 专家模式 5秒，单价 30 元
+		"kling-video_kling-v1-6_pro_10":        60, // V1.6 专家模式 10秒，单价 60 元
+		"kling-video_kling-v2-master_std_5":    15, // V2-Master 标准模式 5秒，单价 15 元
+		"kling-video_kling-v2-master_std_10":   30, // V2-Master 标准模式 10秒，单价 30 元
+		"kling-video_kling-v2-master_pro_5":    45, // V2-Master 专家模式 5秒，单价 45 元
+		"kling-video_kling-v2-master_pro_10":   90, // V2-Master 专家模式 10秒，单价 90 元
+		"kling-video_kling-v2-1-master_std_5":  15, // V2.1-Master 标准模式 5秒，单价 15 元
+		"kling-video_kling-v2-1-master_std_10": 30, // V2.1-Master 标准模式 10秒，单价 30 元
+		"kling-video_kling-v2-1-master_pro_5":  45, // V2.1-Master 专家模式 5秒，单价 45 元
+		"kling-video_kling-v2-1-master_pro_10": 90, // V2.1-Master 专家模式 10秒，单价 90 元
 
 		// 图像生成模型
-		"kling-image_kling-v1_std":          5,     // 图像生成 V1 标准模式，单价 5 元
-		"kling-image_kling-v1_pro":          15,    // 图像生成 V1 专家模式，单价 15 元
-		"kling-image_kling-v1.5_std":        5,     // 图像生成 V1.5 标准模式，单价 5 元
-		"kling-image_kling-v1.5_pro":        15,    // 图像生成 V1.5 专家模式，单价 15 元
-		"kling-image_kling-v1-6_std":        10,    // 图像生成 V1.6 标准模式，单价 10 元
-		"kling-image_kling-v1-6_pro":        30,    // 图像生成 V1.6 专家模式，单价 30 元
-		"kling-image_kling-v2-master_std":   15,    // 图像生成 V2-Master 标准模式，单价 15 元
-		"kling-image_kling-v2-master_pro":   45,    // 图像生成 V2-Master 专家模式，单价 45 元
-		"kling-image_kling-v2-1-master_std": 15,    // 图像生成 V2.1-Master 标准模式，单价 15 元
-		"kling-image_kling-v2-1-master_pro": 45,    // 图像生成 V2.1-Master 专家模式，单价 45 元
-		
+		"kling-image_kling-v1_std":          5,  // 图像生成 V1 标准模式，单价 5 元
+		"kling-image_kling-v1_pro":          15, // 图像生成 V1 专家模式，单价 15 元
+		"kling-image_kling-v1.5_std":        5,  // 图像生成 V1.5 标准模式，单价 5 元
+		"kling-image_kling-v1.5_pro":        15, // 图像生成 V1.5 专家模式，单价 15 元
+		"kling-image_kling-v1-6_std":        10, // 图像生成 V1.6 标准模式，单价 10 元
+		"kling-image_kling-v1-6_pro":        30, // 图像生成 V1.6 专家模式，单价 30 元
+		"kling-image_kling-v2-master_std":   15, // 图像生成 V2-Master 标准模式，单价 15 元
+		"kling-image_kling-v2-master_pro":   45, // 图像生成 V2-Master 专家模式，单价 45 元
+		"kling-image_kling-v2-1-master_std": 15, // 图像生成 V2.1-Master 标准模式，单价 15 元
+		"kling-image_kling-v2-1-master_pro": 45, // 图像生成 V2.1-Master 专家模式，单价 45 元
+
 		// 新增的图像生成模型（按照官方接口命名）
-		"kling-image_kling-v1":			  5,     // 图像生成 V1，单价 5 元
-		"kling-image_kling-v1-5":			  5,     // 图像生成 V1.5，单价 5 元
-		"kling-image_kling-v2":			  10,    // 图像生成 V2，单价 10 元
-		"kling-image_kling-v2-new":		  15,    // 图像生成 V2-New，单价 15 元
-		"kling-image_kling-v2-1":			  15,    // 图像生成 V2.1，单价 15 元
-		
+		"kling-image_kling-v1":     5,  // 图像生成 V1，单价 5 元
+		"kling-image_kling-v1-5":   5,  // 图像生成 V1.5，单价 5 元
+		"kling-image_kling-v2":     10, // 图像生成 V2，单价 10 元
+		"kling-image_kling-v2-new": 15, // 图像生成 V2-New，单价 15 元
+		"kling-image_kling-v2-1":   15, // 图像生成 V2.1，单价 15 元
+
 		// 多图参考生图模型
-		"kling-multi-image2image_kling-v2":     30,    // 多图参考生图 V2，单价 30 元
+		"kling-multi-image2image_kling-v2": 30, // 多图参考生图 V2，单价 30 元
 
 		// 虚拟试穿模型
-		"kling-try-on_kling-v1_std":         5,     // 虚拟试穿 V1 标准模式，单价 5 元
-		"kling-try-on_kling-v1_pro":         15,    // 虚拟试穿 V1 专家模式，单价 15 元
-		"kling-try-on_kling-v1.5_std":       5,     // 虚拟试穿 V1.5 标准模式，单价 5 元
-		"kling-try-on_kling-v1.5_pro":       15,    // 虚拟试穿 V1.5 专家模式，单价 15 元
-		"kling-try-on_kling-v1-6_std":       10,    // 虚拟试穿 V1.6 标准模式，单价 10 元
-		"kling-try-on_kling-v1-6_pro":       30,    // 虚拟试穿 V1.6 专家模式，单价 30 元
+		"kling-try-on_kling-v1_std":   5,  // 虚拟试穿 V1 标准模式，单价 5 元
+		"kling-try-on_kling-v1_pro":   15, // 虚拟试穿 V1 专家模式，单价 15 元
+		"kling-try-on_kling-v1.5_std": 5,  // 虚拟试穿 V1.5 标准模式，单价 5 元
+		"kling-try-on_kling-v1.5_pro": 15, // 虚拟试穿 V1.5 专家模式，单价 15 元
+		"kling-try-on_kling-v1-6_std": 10, // 虚拟试穿 V1.6 标准模式，单价 10 元
+		"kling-try-on_kling-v1-6_pro": 30, // 虚拟试穿 V1.6 专家模式，单价 30 元
 
 		// 为了与现有实现兼容，也添加一些简化的模型名称
-		"kling-v1":              5,     // 兼容现有实现，默认标准模式 5秒
-		"kling-v1.5":            5,     // 兼容现有实现，默认标准模式 5秒
-		"kling-v1-6":            10,    // 兼容现有实现，默认标准模式 5秒
-		"kling-v2-master":       15,    // 兼容现有实现，默认标准模式 5秒
-		"kling-v2-1-master":     15,    // 兼容现有实现，默认标准模式 5秒
-		
+		"kling-v1":          5,  // 兼容现有实现，默认标准模式 5秒
+		"kling-v1.5":        5,  // 兼容现有实现，默认标准模式 5秒
+		"kling-v1-6":        10, // 兼容现有实现，默认标准模式 5秒
+		"kling-v2-master":   15, // 兼容现有实现，默认标准模式 5秒
+		"kling-v2-1-master": 15, // 兼容现有实现，默认标准模式 5秒
+
 		// 多图参考生视频模型
-		"kling-multi-image2video_kling-v1-6_std_5":  30,    // 多图参考生视频 V1.6 标准模式 5秒，单价 30 元
-		"kling-multi-image2video_kling-v1-6_std_10": 60,    // 多图参考生视频 V1.6 标准模式 10秒，单价 60 元
-		"kling-multi-image2video_kling-v1-6_pro_5":  90,    // 多图参考生视频 V1.6 专家模式 5秒，单价 90 元
-		"kling-multi-image2video_kling-v1-6_pro_10": 180,   // 多图参考生视频 V1.6 专家模式 10秒，单价 180 元
-		
+		"kling-multi-image2video_kling-v1-6_std_5":  30,  // 多图参考生视频 V1.6 标准模式 5秒，单价 30 元
+		"kling-multi-image2video_kling-v1-6_std_10": 60,  // 多图参考生视频 V1.6 标准模式 10秒，单价 60 元
+		"kling-multi-image2video_kling-v1-6_pro_5":  90,  // 多图参考生视频 V1.6 专家模式 5秒，单价 90 元
+		"kling-multi-image2video_kling-v1-6_pro_10": 180, // 多图参考生视频 V1.6 专家模式 10秒，单价 180 元
+
 		// 多模态视频编辑模型
-		"kling-multi-elements_kling-v1-6_std_5":     50,    // 多模态视频编辑 V1.6 标准模式 5秒，单价 50 元
-		"kling-multi-elements_kling-v1-6_std_10":    100,   // 多模态视频编辑 V1.6 标准模式 10秒，单价 100 元
-		"kling-multi-elements_kling-v1-6_pro_5":     150,   // 多模态视频编辑 V1.6 专家模式 5秒，单价 150 元
-		"kling-multi-elements_kling-v1-6_pro_10":    300,   // 多模态视频编辑 V1.6 专家模式 10秒，单价 300 元
-		
+		"kling-multi-elements_kling-v1-6_std_5":  50,  // 多模态视频编辑 V1.6 标准模式 5秒，单价 50 元
+		"kling-multi-elements_kling-v1-6_std_10": 100, // 多模态视频编辑 V1.6 标准模式 10秒，单价 100 元
+		"kling-multi-elements_kling-v1-6_pro_5":  150, // 多模态视频编辑 V1.6 专家模式 5秒，单价 150 元
+		"kling-multi-elements_kling-v1-6_pro_10": 300, // 多模态视频编辑 V1.6 专家模式 10秒，单价 300 元
+
 		// 多模态视频编辑辅助功能（每次操作收费）
-		"kling-init-selection":      5,     // 初始化待编辑视频，单价 5 元
-		"kling-add-selection":       2,     // 增加视频选区，单价 2 元
-		"kling-delete-selection":    2,     // 删减视频选区，单价 2 元
-		"kling-clear-selection":     1,     // 清除视频选区，单价 1 元
-		"kling-preview-selection":   3,     // 预览已选区视频，单价 3 元
+		"kling-init-selection":    5, // 初始化待编辑视频，单价 5 元
+		"kling-add-selection":     2, // 增加视频选区，单价 2 元
+		"kling-delete-selection":  2, // 删减视频选区，单价 2 元
+		"kling-clear-selection":   1, // 清除视频选区，单价 1 元
+		"kling-preview-selection": 3, // 预览已选区视频，单价 3 元
 	}
 
 	for model, klingPrice := range DefaultKlingPrice {

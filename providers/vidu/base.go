@@ -22,14 +22,15 @@ func (f ViduProviderFactory) Create(channel *model.Channel) base.ProviderInterfa
 			Channel:   channel,
 			Requester: requester.NewHTTPRequester(*channel.Proxy, RequestErrorHandle),
 		},
-		SubmitPath: "/ent/v2/%s",              // POST
+		SubmitPath: "/ent/v2/%s",                  // POST
 		QueryPath:  "/ent/v2/tasks/%s/creations", // GET
+		CancelPath: "/ent/v2/tasks/%s/cancel",    // POST
 	}
 }
 
 func getConfig() base.ProviderConfig {
 	return base.ProviderConfig{
-		BaseURL: "https://api.vidu.com",
+		BaseURL: "https://api.vidu.cn",
 	}
 }
 
@@ -37,42 +38,42 @@ type ViduProvider struct {
 	base.BaseProvider
 	SubmitPath string
 	QueryPath  string
+	CancelPath string
 }
 
 func (p *ViduProvider) GetRequestHeaders() (headers map[string]string) {
     headers = make(map[string]string)
     p.CommonRequestHeaders(headers)
     if p.Channel.Key != "" {
-        // 认证头可配置：当 Channel.Other 包含 "auth=bearer"（不区分大小写）时，使用 Bearer；否则默认 Token
-        authType := "token"
-        if strings.Contains(strings.ToLower(p.Channel.Other), "auth=bearer") {
-            authType = "bearer"
-        }
-        if authType == "bearer" {
-            headers["Authorization"] = fmt.Sprintf("Bearer %s", p.Channel.Key)
-        } else {
-            headers["Authorization"] = fmt.Sprintf("Token %s", p.Channel.Key)
-        }
+        headers["Authorization"] = fmt.Sprintf("Token %s", p.Channel.Key)
     }
     headers["Content-Type"] = "application/json"
     return headers
 }
 
-// 提交任务
-func (p *ViduProvider) Submit(action string, request *ViduTaskRequest) (*ViduResponse[*ViduTaskData], *types.OpenAIError) {
+// 提交任务 - 对齐官方文档
+func (p *ViduProvider) Submit(action string, request interface{}) (*ViduResponse, *types.OpenAIError) {
     url := p.GetFullRequestURL(fmt.Sprintf(p.SubmitPath, action), "")
     headers := p.GetRequestHeaders()
 
-    // 为与官方接口对齐：将模型名规范化为官方API支持的格式（不影响计费所用的 OriginalModel）
-    // 根据官方文档，支持的模型格式：viduq1, vidu1.5（保持原格式）
-    // 同时支持连字符格式的向后兼容：vidu-1.5 -> vidu1.5
-    // 若非上述别名，则保持原样，避免阻断新模型接入。
-    reqBody := *request
-    if reqBody.Model != "" {
-        reqBody.Model = normalizeModelName(reqBody.Model)
+    // 根据不同action类型处理请求
+    var reqBody interface{}
+    switch action {
+    case ViduActionReference2Image:
+        reqBody = request
+    default:
+        // 处理通用任务请求
+        if taskReq, ok := request.(*ViduTaskRequest); ok {
+            // 规范化模型名称
+            normalizedReq := *taskReq
+            normalizedReq.Model = normalizeModelName(taskReq.Model)
+            reqBody = &normalizedReq
+        } else {
+            reqBody = request
+        }
     }
 
-    req, err := p.Requester.NewRequest(http.MethodPost, url, p.Requester.WithBody(&reqBody), p.Requester.WithHeader(headers))
+    req, err := p.Requester.NewRequest(http.MethodPost, url, p.Requester.WithBody(reqBody), p.Requester.WithHeader(headers))
     if err != nil {
         return nil, &types.OpenAIError{
             Message: fmt.Sprintf("create request failed: %s", err.Error()),
@@ -80,7 +81,7 @@ func (p *ViduProvider) Submit(action string, request *ViduTaskRequest) (*ViduRes
         }
     }
 
-	var response ViduResponse[*ViduTaskData]
+	var response ViduResponse
 	_, errWithCode := p.Requester.SendRequest(req, &response, false)
 	if errWithCode != nil {
 		return nil, &errWithCode.OpenAIError
@@ -89,32 +90,7 @@ func (p *ViduProvider) Submit(action string, request *ViduTaskRequest) (*ViduRes
 	return &response, nil
 }
 
-// 查询任务状态（旧版本接口，保持向后兼容）
-func (p *ViduProvider) Query(taskId string) (*ViduResponse[*ViduTaskData], *types.OpenAIError) {
-	// 先尝试新的官方查询接口
-	queryResp, err := p.QueryCreations(taskId)
-	if err != nil {
-		return nil, err
-	}
-
-	// 将新格式转换为旧格式以保持兼容性
-	response := &ViduResponse[*ViduTaskData]{
-		TaskID:  taskId,
-		Status:  queryResp.State,
-		Message: queryResp.ErrCode,
-		Credits: queryResp.Credits,
-		Data: &ViduTaskData{
-			TaskID:  taskId,
-			Status:  queryResp.State,
-			Credits: queryResp.Credits,
-			Videos:  convertCreationsToVideos(queryResp.Creations),
-		},
-	}
-
-	return response, nil
-}
-
-// 查询任务状态（新的官方接口）
+// 查询任务状态
 func (p *ViduProvider) QueryCreations(taskId string) (*ViduQueryResponse, *types.OpenAIError) {
 	url := p.GetFullRequestURL(fmt.Sprintf(p.QueryPath, taskId), "")
 	headers := p.GetRequestHeaders()
@@ -136,16 +112,33 @@ func (p *ViduProvider) QueryCreations(taskId string) (*ViduQueryResponse, *types
 	return &response, nil
 }
 
-// 辅助函数：将 Creations 转换为 ViduVideoResult 格式
-func convertCreationsToVideos(creations []ViduCreation) []ViduVideoResult {
-	videos := make([]ViduVideoResult, len(creations))
-	for i, creation := range creations {
-		videos[i] = ViduVideoResult{
-			ID:  creation.ID,
-			URL: creation.URL,
+// 参考生图接口
+func (p *ViduProvider) SubmitReference2Image(request *ViduReference2ImageRequest) (*ViduResponse, *types.OpenAIError) {
+	return p.Submit(ViduActionReference2Image, request)
+}
+
+// 取消任务
+func (p *ViduProvider) CancelTask(taskId string) (*ViduResponse, *types.OpenAIError) {
+	url := p.GetFullRequestURL(fmt.Sprintf(p.CancelPath, taskId), "")
+	headers := p.GetRequestHeaders()
+
+	cancelReq := ViduCancelRequest{ID: taskId}
+	req, err := p.Requester.NewRequest(http.MethodPost, url, p.Requester.WithBody(&cancelReq), p.Requester.WithHeader(headers))
+	if err != nil {
+		return nil, &types.OpenAIError{
+			Message: fmt.Sprintf("create request failed: %s", err.Error()),
+			Type:    "vidu_request_error",
 		}
 	}
-	return videos
+
+	// 取消成功返回空响应，失败返回错误
+	var response ViduResponse
+	_, errWithCode := p.Requester.SendRequest(req, &response, false)
+	if errWithCode != nil {
+		return nil, &errWithCode.OpenAIError
+	}
+
+	return &response, nil
 }
 
 // 请求错误处理
@@ -161,42 +154,50 @@ func RequestErrorHandle(resp *http.Response) *types.OpenAIError {
 
 // 错误处理
 func ErrorHandle(err *ViduErrorResponse) *types.OpenAIError {
-    if err.Error.Code == "" {
+    if err.Code == 0 {
         return nil
     }
 
 	return &types.OpenAIError{
-		Code:    err.Error.Code,
-		Message: err.Error.Message,
+		Code:    fmt.Sprintf("%d", err.Code),
+		Message: err.Message,
 		Type:    "vidu_error",
     }
 }
 
-// 将模型名规范化为官方API支持的格式。
-// 根据官方文档，支持的模型格式为：viduq1, vidu1.5, vidu2.0, viduq1-classic
-// 保持与官方API文档一致的模型名称格式。
+// 模型名称规范化 - 对齐官方文档支持的模型
 func normalizeModelName(model string) string {
     m := strings.TrimSpace(strings.ToLower(model))
     switch m {
-    case "vidu1.5":
-        return "vidu1.5"  // 官方文档确认支持此格式
-    case "vidu2.0":
-        return "vidu2.0"  // 保持原格式
+    // 新模型
+    case "viduq2-pro":
+        return ViduModelQ2Pro
+    case "viduq2-turbo":
+        return ViduModelQ2Turbo
+    // 原有模型
     case "viduq1":
-        return "viduq1"   // 官方文档确认支持此格式
+        return ViduModelQ1
     case "viduq1-classic":
-        return "viduq1-classic"  // 保持原格式
-    // 支持连字符格式的向后兼容
+        return ViduModelQ1Classic
+    case "vidu2.0":
+        return ViduModel20
+    case "vidu1.5":
+        return ViduModel15
+    // 向后兼容的别名
     case "vidu-1.5":
-        return "vidu1.5"
+        return ViduModel15
     case "vidu-2.0":
-        return "vidu2.0"
+        return ViduModel20
     case "vidu-q1":
-        return "viduq1"
+        return ViduModelQ1
     case "vidu-q1-classic":
-        return "viduq1-classic"
+        return ViduModelQ1Classic
+    case "vidu-q2-pro":
+        return ViduModelQ2Pro
+    case "vidu-q2-turbo":
+        return ViduModelQ2Turbo
     default:
         // 其他输入保持原样，避免阻断新模型接入
-        return m
+        return model
     }
 }
