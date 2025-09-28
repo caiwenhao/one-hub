@@ -227,7 +227,9 @@ const CTASection = () => {
               }}
             >
               <Box
+                component="span"
                 sx={{
+                  display: 'inline-block',
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
@@ -249,7 +251,9 @@ const CTASection = () => {
               }}
             >
               <Box
+                component="span"
                 sx={{
+                  display: 'inline-block',
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
@@ -271,7 +275,9 @@ const CTASection = () => {
               }}
             >
               <Box
+                component="span"
                 sx={{
+                  display: 'inline-block',
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
