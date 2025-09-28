@@ -8,6 +8,7 @@ import (
 	"one-api/relay/task"
 	"one-api/relay/task/suno"
 	"one-api/relay/task/vidu"
+	"one-api/relay/task/volcark"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +24,7 @@ func SetRelayRouter(router *gin.Engine) {
 	setRecraftRouter(router)
 	setKlingRouter(router)
 	setViduRouter(router)
+	setVolcArkRouter(router)
 }
 
 func setOpenAIRouter(router *gin.Engine) {
@@ -156,34 +158,34 @@ func setOfficialKlingRouter(router *gin.Engine) {
 		officialKlingRouter.POST("/videos/text2video", kling.CreateOfficialText2Video)
 		officialKlingRouter.GET("/videos/text2video/:id", kling.GetOfficialTask)
 		officialKlingRouter.GET("/videos/text2video", kling.ListOfficialTasks)
-		
+
 		// 图生视频
 		officialKlingRouter.POST("/videos/image2video", kling.CreateOfficialImage2Video)
 		officialKlingRouter.GET("/videos/image2video/:id", kling.GetOfficialTask)
 		officialKlingRouter.GET("/videos/image2video", kling.ListOfficialTasks)
-		
+
 		// 多图参考生视频
 		officialKlingRouter.POST("/videos/multi-image2video", kling.CreateOfficialMultiImage2Video)
 		officialKlingRouter.GET("/videos/multi-image2video/:id", kling.GetOfficialMultiImage2VideoTask)
 		officialKlingRouter.GET("/videos/multi-image2video", kling.ListOfficialMultiImage2VideoTasks)
-		
+
 		// 图像生成
 		officialKlingRouter.POST("/images/generations", kling.CreateOfficialImage)
 		officialKlingRouter.GET("/images/generations/:id", kling.GetOfficialImageTask)
 		officialKlingRouter.GET("/images/generations", kling.ListOfficialImageTasks)
-		
+
 		// 多图参考生图
 		officialKlingRouter.POST("/images/multi-image2image", kling.CreateOfficialMultiImage2Image)
 		officialKlingRouter.GET("/images/multi-image2image/:id", kling.GetOfficialMultiImage2ImageTask)
 		officialKlingRouter.GET("/images/multi-image2image", kling.ListOfficialMultiImage2ImageTasks)
-		
+
 		// 多模态视频编辑 - 选区管理
 		officialKlingRouter.POST("/videos/multi-elements/init-selection", kling.InitSelection)
 		officialKlingRouter.POST("/videos/multi-elements/add-selection", kling.AddSelection)
 		officialKlingRouter.POST("/videos/multi-elements/delete-selection", kling.DeleteSelection)
 		officialKlingRouter.POST("/videos/multi-elements/clear-selection", kling.ClearSelection)
 		officialKlingRouter.POST("/videos/multi-elements/preview-selection", kling.PreviewSelection)
-		
+
 		// 多模态视频编辑 - 任务管理
 		officialKlingRouter.POST("/videos/multi-elements", kling.CreateMultiElementsTask)
 		officialKlingRouter.GET("/videos/multi-elements/:id", kling.GetMultiElementsTask)
@@ -194,7 +196,7 @@ func setOfficialKlingRouter(router *gin.Engine) {
 func setViduRouter(router *gin.Engine) {
 	relayViduRouter := router.Group("/vidu")
 	relayViduRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute())
-	
+
 	// 查询接口
 	relayViduRouter.GET("/ent/v2/task/:task_id", vidu.RelayTaskFetch)
 	relayViduRouter.GET("/ent/v2/tasks", vidu.RelayTaskFetchs)
@@ -207,5 +209,21 @@ func setViduRouter(router *gin.Engine) {
 	{
 		// 任务提交接口
 		relayViduRouter.POST("/ent/v2/:action", task.RelayTaskSubmit)
+	}
+}
+
+func setVolcArkRouter(router *gin.Engine) {
+	relayVolcRouter := router.Group("/volcark")
+	relayVolcRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute())
+	{
+		relayVolcRouter.GET("/api/v3/contents/generations/tasks/:task_id", volcark.RelayTaskFetch)
+		relayVolcRouter.GET("/api/v3/contents/generations/tasks", volcark.RelayTaskList)
+		relayVolcRouter.DELETE("/api/v3/contents/generations/tasks/:task_id", volcark.RelayTaskCancel)
+		relayVolcRouter.POST("/api/v3/images/generations", relay.Relay)
+	}
+
+	relayVolcRouter.Use(middleware.DynamicRedisRateLimiter())
+	{
+		relayVolcRouter.POST("/api/v3/contents/generations/tasks", task.RelayTaskSubmit)
 	}
 }

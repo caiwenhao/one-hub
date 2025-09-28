@@ -278,6 +278,13 @@ export const CHANNEL_OPTIONS = {
     color: 'warning',
     url: 'https://vidu.ai'
   },
+  58: {
+    key: 58,
+    text: '火山方舟 Volc Ark',
+    value: 58,
+    color: 'primary',
+    url: 'https://www.volcengine.com/product/ark'
+  },
   8: {
     key: 8,
     text: '自定义渠道',

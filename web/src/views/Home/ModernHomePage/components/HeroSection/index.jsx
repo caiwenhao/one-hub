@@ -163,6 +163,7 @@ const HeroSection = () => {
             }}
           >
             <Typography
+              component="div"
               variant="body2"
               sx={{
                 color: colors.secondary,
@@ -185,6 +186,7 @@ const HeroSection = () => {
               99.9% 服务可用性
             </Typography>
             <Typography
+              component="div"
               variant="body2"
               sx={{
                 color: colors.secondary,
@@ -207,6 +209,7 @@ const HeroSection = () => {
               10K+ 开发者信赖
             </Typography>
             <Typography
+              component="div"
               variant="body2"
               sx={{
                 color: colors.secondary,

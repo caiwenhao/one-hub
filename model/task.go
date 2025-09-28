@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	TaskPlatformSuno  = "suno"
-	TaskPlatformKling = "kling"
-	TaskPlatformVidu  = "vidu"
+	TaskPlatformSuno    = "suno"
+	TaskPlatformKling   = "kling"
+	TaskPlatformVidu    = "vidu"
+	TaskPlatformVolcArk = "volcark"
 )
 
 type TaskStatus string

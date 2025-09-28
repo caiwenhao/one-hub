@@ -190,6 +190,30 @@ const typeConfig = {
     },
     modelGroup: 'Ali'
   },
+  58: {
+    inputLabel: {
+      provider_models_list: '从火山方舟获取模型列表'
+    },
+    input: {
+      base_url: 'https://ark.cn-beijing.volces.com',
+      models: [
+        'deepseek-v3.1',
+        'deepseek-v3',
+        'deepseek-r1',
+        'doubao-seed-translation',
+        'doubao-1.5-pro-32k',
+        'doubao-seendance-1-0-pro',
+        'doubao-seedream-4.0',
+        'doubao-embedding-vision'
+      ],
+      test_model: 'deepseek-v3.1'
+    },
+    prompt: {
+      key: '请输入火山方舟 API Key',
+      base_url: '默认官方地址为 https://ark.cn-beijing.volces.com，可根据需要替换为自定义中转地址'
+    },
+    modelGroup: 'Volc Ark'
+  },
   18: {
     inputLabel: {
       other: '版本号'

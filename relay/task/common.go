@@ -8,6 +8,7 @@ import (
 	"one-api/relay/task/kling"
 	"one-api/relay/task/suno"
 	"one-api/relay/task/vidu"
+	"one-api/relay/task/volcark"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,6 +27,10 @@ func GetTaskAdaptor(relayType int, c *gin.Context) (base.TaskInterface, error) {
 		return &vidu.ViduTask{
 			TaskBase: getTaskBase(c, model.TaskPlatformVidu),
 		}, nil
+	case config.RelayModeVolcArkVideo:
+		return &volcark.VolcArkTask{
+			TaskBase: getTaskBase(c, model.TaskPlatformVolcArk),
+		}, nil
 	default:
 		return nil, errors.New("adaptor not found")
 	}
@@ -41,6 +46,8 @@ func GetTaskAdaptorByPlatform(platform string) (base.TaskInterface, error) {
 		relayType = config.RelayModeKling
 	case model.TaskPlatformVidu:
 		relayType = config.RelayModeVidu
+	case model.TaskPlatformVolcArk:
+		relayType = config.RelayModeVolcArkVideo
 	}
 
 	return GetTaskAdaptor(relayType, nil)

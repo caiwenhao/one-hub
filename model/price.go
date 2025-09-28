@@ -246,9 +246,12 @@ func GetDefaultPrice() []*Price {
 		// 	$0.00002 / 1K tokens
 		"text-embedding-3-small": {[]float64{0.01, 0.01}, config.ChannelTypeOpenAI},
 		// 	$0.00013 / 1K tokens
-		"text-embedding-3-large": {[]float64{0.065, 0.065}, config.ChannelTypeOpenAI},
-		"text-moderation-stable": {[]float64{0.1, 0.1}, config.ChannelTypeOpenAI},
-		"text-moderation-latest": {[]float64{0.1, 0.1}, config.ChannelTypeOpenAI},
+		"text-embedding-3-large":  {[]float64{0.065, 0.065}, config.ChannelTypeOpenAI},
+		"doubao-embedding":        {[]float64{0.035714286, 0.035714286}, config.ChannelTypeVolcArk},
+		"doubao-embedding-large":  {[]float64{0.05, 0.05}, config.ChannelTypeVolcArk},
+		"doubao-embedding-vision": {[]float64{0.05, 0.05}, config.ChannelTypeVolcArk},
+		"text-moderation-stable":  {[]float64{0.1, 0.1}, config.ChannelTypeOpenAI},
+		"text-moderation-latest":  {[]float64{0.1, 0.1}, config.ChannelTypeOpenAI},
 		// $0.016 - $0.020 / image
 		"dall-e-2": {[]float64{8, 8}, config.ChannelTypeOpenAI},
 		// $0.040 - $0.120 / image
@@ -355,6 +358,41 @@ func GetDefaultPrice() []*Price {
 		"deepseek-coder": {[]float64{0.75, 0.75}, config.ChannelTypeDeepseek}, // 暂定 $0.0015 / 1K tokens
 		"deepseek-chat":  {[]float64{0.75, 0.75}, config.ChannelTypeDeepseek}, // 暂定 $0.0015 / 1K tokens
 
+		// 火山方舟默认模型（按 Ark 官方 RMB/百万 token 折算）
+		"deepseek-v3":                         {[]float64{0.142857143, 0.571428571}, config.ChannelTypeVolcArk},
+		"deepseek-v3.1":                       {[]float64{0.285714286, 0.857142857}, config.ChannelTypeVolcArk},
+		"deepseek-v3-1-terminus":              {[]float64{0.285714286, 0.857142857}, config.ChannelTypeVolcArk},
+		"deepseek-v3-1-250821":                {[]float64{0.285714286, 0.857142857}, config.ChannelTypeVolcArk},
+		"doubao-seed-1.6":                     {[]float64{0.171428571, 1.714285714}, config.ChannelTypeVolcArk},
+		"doubao-seed-1-6-250615":              {[]float64{0.171428571, 1.714285714}, config.ChannelTypeVolcArk},
+		"doubao-seed-1.6-vision":              {[]float64{0.171428571, 1.714285714}, config.ChannelTypeVolcArk},
+		"doubao-seed-1-6-vision-250815":       {[]float64{0.171428571, 1.714285714}, config.ChannelTypeVolcArk},
+		"doubao-seed-1.6-flash":               {[]float64{0.042857143, 0.428571429}, config.ChannelTypeVolcArk},
+		"doubao-seed-1-6-flash-250828":        {[]float64{0.042857143, 0.428571429}, config.ChannelTypeVolcArk},
+		"doubao-seed-1.6-thinking":            {[]float64{0.171428571, 1.714285714}, config.ChannelTypeVolcArk},
+		"doubao-seed-1-6-thinking-250715":     {[]float64{0.171428571, 1.714285714}, config.ChannelTypeVolcArk},
+		"doubao-1.5-thinking-pro":             {[]float64{0.285714286, 1.142857143}, config.ChannelTypeVolcArk},
+		"doubao-1.5-thinking-vision-pro":      {[]float64{0.214285714, 0.642857143}, config.ChannelTypeVolcArk},
+		"doubao-1-5-ui-tars":                  {[]float64{0.25, 0.857142857}, config.ChannelTypeVolcArk},
+		"doubao-1-5-ui-tars-250428":           {[]float64{0.25, 0.857142857}, config.ChannelTypeVolcArk},
+		"deepseek-r1":                         {[]float64{0.285714286, 1.142857143}, config.ChannelTypeVolcArk},
+		"doubao-seed-translation":             {[]float64{0.085714286, 0.257142857}, config.ChannelTypeVolcArk},
+		"doubao-seed-translation-250915":      {[]float64{0.085714286, 0.257142857}, config.ChannelTypeVolcArk},
+		"doubao-1.5-pro-32k":                  {[]float64{0.057142857, 0.142857143}, config.ChannelTypeVolcArk},
+		"doubao-1-5-pro-32k-character-250715": {[]float64{0.057142857, 0.142857143}, config.ChannelTypeVolcArk},
+		"doubao-1.5-pro-256k":                 {[]float64{0.357142857, 0.642857143}, config.ChannelTypeVolcArk},
+		"doubao-1.5-lite-32k":                 {[]float64{0.021428571, 0.042857143}, config.ChannelTypeVolcArk},
+		"doubao-pro-32k":                      {[]float64{0.057142857, 0.142857143}, config.ChannelTypeVolcArk},
+		"doubao-lite-32k":                     {[]float64{0.021428571, 0.042857143}, config.ChannelTypeVolcArk},
+		"kimi-k2":                             {[]float64{0.285714286, 1.142857143}, config.ChannelTypeVolcArk},
+		"kimi-k2-250905":                      {[]float64{0.285714286, 1.142857143}, config.ChannelTypeVolcArk},
+		"doubao-1.5-vision-pro":               {[]float64{0.214285714, 0.642857143}, config.ChannelTypeVolcArk},
+		"doubao-1.5-vision-lite":              {[]float64{0.107142857, 0.321428571}, config.ChannelTypeVolcArk},
+		"doubao-seedance-1-0-pro":             {[]float64{1.071428571, 1.071428571}, config.ChannelTypeVolcArk},
+		"doubao-seedance-1-0-lite":            {[]float64{0.714285714, 0.714285714}, config.ChannelTypeVolcArk},
+		"doubao-seaweed":                      {[]float64{2.142857143, 2.142857143}, config.ChannelTypeVolcArk},
+		"wan2.1-14b":                          {[]float64{3.571428571, 3.571428571}, config.ChannelTypeVolcArk},
+
 		"moonshot-v1-8k":   {[]float64{0.8572, 0.8572}, config.ChannelTypeMoonshot}, // ¥0.012 / 1K tokens
 		"moonshot-v1-32k":  {[]float64{1.7143, 1.7143}, config.ChannelTypeMoonshot}, // ¥0.024 / 1K tokens
 		"moonshot-v1-128k": {[]float64{4.2857, 4.2857}, config.ChannelTypeMoonshot}, // ¥0.06 / 1K tokens
@@ -409,16 +447,115 @@ func GetDefaultPrice() []*Price {
 		"hunyuan-pro":           {[]float64{2.1429, 7.1429}, config.ChannelTypeHunyuan},
 	}
 
+	arkExtraRatios := map[string]map[string]float64{
+		"deepseek-v3": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.0085,
+		},
+		"deepseek-v3.1": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.00425,
+		},
+		"deepseek-v3-1-terminus": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.00425,
+		},
+		"deepseek-v3-1-250821": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.00425,
+		},
+		"deepseek-r1": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.00425,
+		},
+		"doubao-seed-1.6": {
+			config.UsageExtraCache:       0.066666667,
+			config.UsageExtraCachedWrite: 0.007083333,
+		},
+		"doubao-seed-1-6-250615": {
+			config.UsageExtraCache:       0.066666667,
+			config.UsageExtraCachedWrite: 0.007083333,
+		},
+		"doubao-seed-1.6-vision": {
+			config.UsageExtraCache:       0.066666667,
+			config.UsageExtraCachedWrite: 0.007083333,
+		},
+		"doubao-seed-1-6-vision-250815": {
+			config.UsageExtraCache:       0.066666667,
+			config.UsageExtraCachedWrite: 0.007083333,
+		},
+		"doubao-seed-1.6-thinking": {
+			config.UsageExtraCache:       0.066666667,
+			config.UsageExtraCachedWrite: 0.007083333,
+		},
+		"doubao-seed-1-6-thinking-250715": {
+			config.UsageExtraCache:       0.066666667,
+			config.UsageExtraCachedWrite: 0.007083333,
+		},
+		"doubao-seed-1.6-flash": {
+			config.UsageExtraCache:       0.05,
+			config.UsageExtraCachedWrite: 0.028333333,
+		},
+		"doubao-seed-1-6-flash-250828": {
+			config.UsageExtraCache:       0.05,
+			config.UsageExtraCachedWrite: 0.028333333,
+		},
+		"doubao-1-5-ui-tars": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.02125,
+		},
+		"doubao-1-5-ui-tars-250428": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.02125,
+		},
+		"doubao-1.5-pro-32k": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.02125,
+		},
+		"doubao-1-5-pro-32k-character-250715": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.02125,
+		},
+		"doubao-1.5-lite-32k": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.056666667,
+		},
+		"doubao-pro-32k": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.02125,
+		},
+		"doubao-lite-32k": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.056666667,
+		},
+		"kimi-k2": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.00425,
+		},
+		"kimi-k2-250905": {
+			config.UsageExtraCache:       0.2,
+			config.UsageExtraCachedWrite: 0.00425,
+		},
+		"doubao-embedding-vision": {
+			config.UsageExtraInputImageTokens: 2.571428571,
+		},
+	}
+
 	var prices []*Price
 
 	for model, modelType := range ModelTypes {
-		prices = append(prices, &Price{
+		price := &Price{
 			Model:       model,
 			Type:        TokensPriceType,
 			ChannelType: modelType.Type,
 			Input:       modelType.Ratio[0],
 			Output:      modelType.Ratio[1],
-		})
+		}
+		if ratios, ok := arkExtraRatios[model]; ok {
+			jsonData := datatypes.NewJSONType(ratios)
+			price.ExtraRatios = &jsonData
+		}
+		prices = append(prices, price)
 	}
 
 	var DefaultMJPrice = map[string]float64{
@@ -646,6 +783,23 @@ func GetDefaultPrice() []*Price {
 			Model:       model,
 			Type:        TimesPriceType,
 			ChannelType: config.ChannelTypeVidu,
+			Input:       base,
+			Output:      base,
+		})
+	}
+
+	var defaultVolcArkImagePrice = map[string]float64{
+		"doubao-seedream-4.0":     0.2,
+		"doubao-seedream-3.0-t2i": 0.259,
+		"doubao-seededit-3.0-i2i": 0.3,
+	}
+
+	for model, pricePerImage := range defaultVolcArkImagePrice {
+		base := pricePerImage / RMBRate
+		prices = append(prices, &Price{
+			Model:       model,
+			Type:        TimesPriceType,
+			ChannelType: config.ChannelTypeVolcArk,
 			Input:       base,
 			Output:      base,
 		})

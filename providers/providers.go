@@ -40,6 +40,7 @@ import (
 	"one-api/providers/tencent"
 	"one-api/providers/vertexai"
 	"one-api/providers/vidu"
+	"one-api/providers/volcark"
 	"one-api/providers/xAI"
 	"one-api/providers/xunfei"
 	"one-api/providers/zhipu"
@@ -96,6 +97,7 @@ func init() {
 		config.ChannelTypeAzureDatabricks: azuredatabricks.AzureDatabricksProviderFactory{},
 		config.ChannelTypeAzureV1:         azure_v1.AzureV1ProviderFactory{},
 		config.ChannelTypeXAI:             xAI.XAIProviderFactory{},
+		config.ChannelTypeVolcArk:         volcark.VolcArkProviderFactory{},
 		config.ChannelTypeVidu:            vidu.ViduProviderFactory{},
 	}
 }

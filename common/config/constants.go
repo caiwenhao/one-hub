@@ -305,6 +305,7 @@ const (
 	ChannelTypeAzureV1         = 55
 	ChannelTypeXAI             = 56
 	ChannelTypeVidu            = 57
+	ChannelTypeVolcArk         = 58
 )
 
 const (
@@ -325,6 +326,7 @@ const (
 	RelayModeChatRealtime
 	RelayModeKling
 	RelayModeResponses
+	RelayModeVolcArkVideo
 	RelayModeVidu
 )
 
