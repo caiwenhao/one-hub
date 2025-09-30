@@ -41,7 +41,12 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
 
   // 根据variant决定使用哪种样式
   const isFeatured = variant === 'featured';
-  const cardHeight = isFeatured ? { xs: '480px', md: '520px' } : { xs: '420px', md: '450px' };
+  const isCategory = variant === 'category';
+  const cardHeight = isFeatured
+    ? { xs: '500px', md: '540px' }
+    : isCategory
+    ? { xs: '420px', md: '440px' }
+    : { xs: '420px', md: '450px' };
 
 
 
@@ -50,8 +55,11 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
       onClick={handleCardClick}
       sx={{
         height: cardHeight,
-        background: gradients.card,
-        border: '1px solid rgba(0, 0, 0, 0.05)',
+        // 分类卡片使用更接近设计稿的蓝灰边与浅蓝底色
+        background: isCategory
+          ? 'linear-gradient(180deg, #ffffff 0%, #f6faff 100%)'
+          : gradients.card,
+        border: isCategory ? '1px solid #E5EEF9' : '1px solid rgba(0, 0, 0, 0.05)',
         borderRadius: '24px',
         p: { xs: 2.5, md: 3 },
         position: 'relative',
@@ -61,10 +69,25 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
         flexDirection: 'column',
         ...animationStyles.hoverLift,
         transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        // 顶部左侧淡淡的径向高光，贴合截图效果
+        ...(isCategory && {
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: -40,
+            left: -40,
+            width: 200,
+            height: 200,
+            background: `radial-gradient(closest-side, ${model.iconColor}15, transparent 70%)`,
+            pointerEvents: 'none'
+          }
+        }),
         '&:hover': {
-          borderColor: 'rgba(66, 153, 225, 0.3)',
+          borderColor: isCategory ? '#d7e6fb' : 'rgba(66, 153, 225, 0.3)',
           transform: 'translateY(-8px) scale(1.02)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
+          boxShadow: isCategory
+            ? '0 18px 40px rgba(66,153,225,0.12)'
+            : '0 20px 40px rgba(0,0,0,0.12)',
           '& .model-overlay': {
             opacity: 1
           },
@@ -110,22 +133,43 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
           <Box
             className="model-icon"
             sx={{
-              width: { xs: 56, sm: 64, md: 80 },
-              height: { xs: 56, sm: 64, md: 80 },
+              width: isCategory ? { xs: 56, sm: 64, md: 72 } : { xs: 56, sm: 64, md: 80 },
+              height: isCategory ? { xs: 56, sm: 64, md: 72 } : { xs: 56, sm: 64, md: 80 },
               background: `linear-gradient(135deg, ${model.iconColor}, ${model.iconColor}dd)`,
-              borderRadius: { xs: '16px', md: '24px' },
+              borderRadius: { xs: '16px', md: '20px' },
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              mb: { xs: 2, md: 3 },
+              mb: isCategory ? { xs: 1.5, md: 2 } : { xs: 2, md: 3 },
               color: 'white',
-              fontWeight: 'bold',
-              fontSize: { xs: '0.875rem', sm: '1rem', md: '1.25rem' },
+              fontWeight: 800,
+              fontSize: isCategory ? { xs: '1rem', sm: '1.125rem', md: '1.25rem' } : { xs: '0.875rem', sm: '1rem', md: '1.125rem' },
               transition: 'transform 0.3s ease',
-              boxShadow: '0 8px 16px rgba(15, 23, 42, 0.12)'
+              boxShadow: isCategory
+                ? '0 12px 24px rgba(59,130,246,0.18)'
+                : '0 8px 16px rgba(15, 23, 42, 0.12)',
+              // 轻微上移，模拟浮出效果
+              position: isCategory ? 'relative' : 'static',
+              top: isCategory ? -6 : 0
             }}
           >
-            {model.icon}
+            {/* 使用缩写字母（优先 abbr；否则根据 provider/name 生成） */}
+            {(() => {
+              const text = (() => {
+                if (model.abbr) return String(model.abbr).toUpperCase().slice(0, 2);
+                const base = (model.provider || model.name || '').trim();
+                if (!base) return '?';
+                // 提取字母数字词，优先两字符；多词取首字母组合
+                const parts = base.split(/[^A-Za-z0-9]+/).filter(Boolean);
+                if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+                return parts.map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+              })();
+              return (
+                <Typography component="span" sx={{ lineHeight: 1, letterSpacing: '0.5px' }}>
+                  {text}
+                </Typography>
+              );
+            })()}
           </Box>
         )}
 
@@ -134,7 +178,7 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
           variant={isFeatured ? "h5" : "h6"}
           sx={{
             fontSize: isFeatured
-              ? { xs: '1.25rem', sm: '1.375rem', md: '1.625rem' }
+              ? { xs: '1.5rem', sm: '1.75rem', md: '2rem' }
               : { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
             fontWeight: isFeatured ? 800 : 'bold',
             color: colors.primary,
@@ -159,7 +203,7 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
               ? { xs: '0.9rem', md: '0.95rem' }
               : { xs: '0.8125rem', md: '0.875rem' },
             fontWeight: 400,
-            textAlign: isFeatured ? 'justify' : 'left',
+            textAlign: 'left',
             minHeight: isFeatured ? { xs: '120px', md: '140px' } : 'auto',
             display: isFeatured ? 'block' : '-webkit-box',
             WebkitLineClamp: isFeatured ? 'none' : { xs: 3, md: 4 },
@@ -256,18 +300,18 @@ const ModelCard = ({ model, variant = 'default', showPerformance = false }) => {
           <Typography
             variant="body2"
             sx={{
-              color: colors.accent,
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              transition: 'color 0.3s ease',
-              '&:hover': {
-                color: colors.purple
-              }
-            }}
-          >
-            查看详情 →
-          </Typography>
-        </Box>
+            color: colors.accent,
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            transition: 'color 0.3s ease',
+            '&:hover': {
+              color: colors.purple
+            }
+          }}
+        >
+          查看详情 →
+        </Typography>
+      </Box>
       </Box>
     </Card>
   );

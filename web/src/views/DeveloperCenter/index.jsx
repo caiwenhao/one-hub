@@ -11,7 +11,6 @@ import {
   Tabs,
   useTheme,
   useMediaQuery,
-  IconButton,
   Chip,
   Stack
 } from '@mui/material';
@@ -23,8 +22,7 @@ import {
   Code as CodeIcon,
   AccessTime as ClockIcon,
   CheckCircle as CheckIcon,
-  PlayArrow as PlayIcon,
-  ContentCopy as CopyIcon
+  PlayArrow as PlayIcon
 } from '@mui/icons-material';
 import CodeBlock from 'ui-component/CodeBlock';
 
@@ -441,12 +439,14 @@ main();`,
               },
               {
                 step: 3,
-                title: '开始调用',
-                description: '运行您的代码，享受稳定高效的AI服务体验',
-                code: '✓ 连接成功，开始使用',
-                icon: <CheckIcon />,
-                color: '#22c55e',
-                isSuccess: true
+                title: 'API 文档',
+                description: '查看完整的接口文档、参数定义与示例',
+                code: 'docs.kapon.cloud/api',
+                icon: <BookIcon />,
+                color: '#4299E1',
+                isSuccess: true,
+                link: 'https://docs.kapon.cloud/api/',
+                buttonText: '查看完整文档'
               }
             ].map((item, index) => (
               <Grid item xs={12} md={4} key={item.step}>
@@ -487,47 +487,26 @@ main();`,
                         {item.description}
                       </Typography>
                       
-                      <Box
-                        sx={{
-                          bgcolor: item.isSuccess ? '#f0fdf4' : '#f8fafc',
-                          border: item.isSuccess ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
-                          p: 3,
-                          borderRadius: '16px',
-                          textAlign: 'left',
-                          width: '100%',
-                          position: 'relative'
-                        }}
-                      >
-                        <Typography
-                          component="code"
+                      {item.link && (
+                        <Button
+                          variant="contained"
+                          component="a"
+                          href={item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           sx={{
-                            fontSize: '0.9rem',
-                            color: item.isSuccess ? '#22c55e' : '#4299E1',
-                            fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
-                            fontWeight: 600,
-                            display: 'block',
-                            wordBreak: 'break-all'
+                            mt: 1,
+                            borderRadius: '24px',
+                            px: 3,
+                            py: 1,
+                            fontWeight: 700,
+                            background: 'linear-gradient(135deg, #4299E1, #3182CE)',
+                            textTransform: 'none'
                           }}
                         >
-                          {item.code}
-                        </Typography>
-                        
-                        {!item.isSuccess && (
-                          <IconButton
-                            size="small"
-                            sx={{
-                              position: 'absolute',
-                              top: 8,
-                              right: 8,
-                              color: '#718096',
-                              '&:hover': { color: '#4299E1' }
-                            }}
-                            onClick={() => navigator.clipboard.writeText(item.code)}
-                          >
-                            <CopyIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                      </Box>
+                          {item.buttonText || '查看文档'}
+                        </Button>
+                      )}
                     </Stack>
                   </CardContent>
                   
@@ -598,123 +577,7 @@ main();`,
         </Container>
       </Box>
 
-      {/* Core Resources */}
-      <Box sx={{
-        background: 'linear-gradient(135deg, #f9fafb 0%, #ffffff 100%)',
-        py: { xs: 8, md: 10 },
-        px: { xs: 3, md: 6, lg: 12 }
-      }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <Typography
-              variant="h2"
-              sx={{
-                fontSize: { xs: '2rem', md: '2.5rem' },
-                fontWeight: 700,
-                color: '#1A202C',
-                mb: 3,
-                textShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}
-            >
-              核心开发资源
-            </Typography>
-            <Typography
-              variant="h6"
-              sx={{
-                color: '#718096',
-                fontWeight: 300
-              }}
-            >
-              开发者最需要的工具和文档，一站式获取
-            </Typography>
-          </Box>
-
-          <Grid container spacing={4}>
-            {[
-              {
-                icon: <BookIcon sx={{ fontSize: '2rem' }} />,
-                title: 'API 文档',
-                description: '详尽的接口说明、参数定义和响应格式，让您快速上手',
-                buttonText: '查看完整文档',
-                buttonColor: 'linear-gradient(135deg, #4299E1, #3182CE)',
-                link: 'https://docs.kapon.cloud/api/'
-              },
-              {
-                icon: <HeartIcon sx={{ fontSize: '2rem' }} />,
-                title: '服务状态',
-                description: '实时监控所有模型和服务的可用性，透明展示系统状态',
-                buttonText: '查看实时状态',
-                buttonColor: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                link: '#'
-              }
-            ].map((resource, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <HoverLiftCard sx={{ p: 4, textAlign: 'center', height: '100%' }}>
-                  <CardContent>
-                    <Box
-                      sx={{
-                        width: '64px',
-                        height: '64px',
-                        background: resource.buttonColor,
-                        borderRadius: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        mx: 'auto',
-                        mb: 3
-                      }}
-                    >
-                      {resource.icon}
-                    </Box>
-                    <Typography
-                      variant="h5"
-                      sx={{
-                        fontWeight: 700,
-                        color: '#1A202C',
-                        mb: 2
-                      }}
-                    >
-                      {resource.title}
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        color: '#718096',
-                        mb: 3,
-                        lineHeight: 1.6
-                      }}
-                    >
-                      {resource.description}
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      component="a"
-                      href={resource.link}
-                      target={resource.link.startsWith('http') ? '_blank' : '_self'}
-                      rel={resource.link.startsWith('http') ? 'noopener noreferrer' : ''}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: '25px',
-                        background: resource.buttonColor,
-                        fontWeight: 600,
-                        textTransform: 'none',
-                        '&:hover': {
-                          transform: 'scale(1.05)',
-                          transition: 'all 0.3s ease'
-                        }
-                      }}
-                    >
-                      {resource.buttonText}
-                    </Button>
-                  </CardContent>
-                </HoverLiftCard>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
+      {/* Core Resources section removed as requested */}
 
       {/* Code Samples */}
       <Box sx={{ 
@@ -941,46 +804,40 @@ main();`,
                 lineHeight: 1.6
               }}
             >
-              使用官方 OpenAI SDK，只需更换 Base URL 即可无缝接入
+              本网站支持各家原生 API，直接使用各厂商官方 SDK 接入
               <br />
               <Box component="span" sx={{ color: '#4299E1', fontWeight: 500 }}>
-                兼容所有 OpenAI 接口标准
+                覆盖 OpenAI / Claude（Anthropic）/ 火山方舟 等主流生态
               </Box>
             </Typography>
           </Box>
 
           <Grid container spacing={3}>
-            {[
+            {[ 
+              // 仅保留 Python SDK
               {
-                icon: '🐍',
-                title: 'Python SDK',
+                icon: '🟩',
+                title: 'OpenAI · Python SDK',
                 command: 'pip install openai',
-                color: '#3776ab',
-                description: '使用官方 OpenAI Python SDK'
+                color: '#10a37f',
+                description: '本网站原生兼容 OpenAI API'
               },
               {
-                icon: '📗',
-                title: 'Node.js SDK',
-                command: 'npm install openai',
-                color: '#339933',
-                description: '使用官方 OpenAI Node.js SDK'
+                icon: '🟣',
+                title: 'Claude · Python SDK',
+                command: 'pip install anthropic',
+                color: '#8b5cf6',
+                description: '本网站原生兼容 Claude API（Anthropic）'
               },
               {
-                icon: '💎',
-                title: 'Ruby SDK',
-                command: 'gem install openai',
-                color: '#cc342d',
-                description: '使用官方 OpenAI Ruby SDK'
-              },
-              {
-                icon: '🔷',
-                title: 'Go SDK',
-                command: 'go get -u github.com/openai/openai-go@v2.1.1',
-                color: '#00add8',
-                description: '使用官方 OpenAI Go SDK'
+                icon: '🔵',
+                title: '火山方舟 · Python SDK',
+                command: 'pip install volcengine-python-sdk',
+                color: '#1e80ff',
+                description: '本网站原生兼容火山方舟 Ark API'
               }
             ].map((sdk, index) => (
-              <Grid item xs={6} md={3} key={index}>
+              <Grid item xs={12} sm={6} md={4} key={index}>
                 <HoverLiftCard sx={{ p: 3, textAlign: 'center', height: '100%' }}>
                   <CardContent sx={{ p: 0 }}>
                     <Typography
