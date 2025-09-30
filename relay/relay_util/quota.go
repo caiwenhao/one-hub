@@ -198,6 +198,13 @@ func (q *Quota) GetInputRatio() float64 {
 	return q.inputRatio
 }
 
+func (q *Quota) GetGroupRatio() float64 {
+	if q.groupRatio == 0 {
+		return 1
+	}
+	return q.groupRatio
+}
+
 func (q *Quota) GetLogMeta(usage *types.Usage) map[string]any {
 	meta := map[string]any{
 		"group_name":   q.groupName,

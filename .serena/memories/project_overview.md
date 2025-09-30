@@ -1,0 +1,4 @@
+- One Hub 基于 one-api 二次开发，提供多模型聚合转发、渠道治理、价格管理与监控等能力，定位为多家大模型服务的统一代理层。
+- 后端采用 Go 1.24 + Gin，结合 GORM、Redis/Freecache、Prometheus、支付网关等组件；前端使用 React 18 + Vite + MUI 体系，位于 web/ 目录。
+- 核心目录：providers/ 负责各厂商适配，relay/ 实现请求转发与任务编排，controller/ 与 router/ 暴露 API，model/ 管理数据库实体与定价表，web/ 为管理后台 UI，scripts/hack/ 提供构建与生成脚本。
+- 项目支持 Docker/Tasfile 方式构建，默认通过配置文件驱动渠道与价格；附带 docs/、metrics/、cron/ 等扩展模块便于部署与运维。

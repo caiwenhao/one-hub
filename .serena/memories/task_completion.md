@@ -1,0 +1,4 @@
+- 完成功能后先运行 `task lint`（或至少 gofmt + goimports + golangci-lint）确保后端代码规范；前端改动需执行 `yarn lint`/`yarn prettier`。
+- 根据改动范围运行 `go test ./...` 与相关集成脚本，确认关键路径未回归；前端视情况执行 `yarn build` 验证打包。
+- 若涉及渠道/模型配置，更新 `config*.yaml` 或文档并同步价格表，避免遗漏部署所需参数。
+- 核查 `config-dev.yaml`、`.env` 等敏感配置未被误提交，必要时更新 README/Docs 记录变更。

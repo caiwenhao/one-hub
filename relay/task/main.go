@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"one-api/common/config"
 	"one-api/common/logger"
@@ -36,7 +37,25 @@ func RelayTaskSubmit(c *gin.Context) {
 		return
 	}
 
-	quotaInstance := relay_util.NewQuota(c, taskAdaptor.GetModelName(), 1000)
+	estimatedPromptTokens := 1000
+	if raw, exists := c.Get("async_estimated_prompt_tokens"); exists {
+		switch value := raw.(type) {
+		case int:
+			if value > 0 {
+				estimatedPromptTokens = value
+			}
+		case int64:
+			if value > 0 && value < math.MaxInt32 {
+				estimatedPromptTokens = int(value)
+			}
+		case float64:
+			if value > 0 && value < math.MaxInt32 {
+				estimatedPromptTokens = int(value)
+			}
+		}
+	}
+
+	quotaInstance := relay_util.NewQuota(c, taskAdaptor.GetModelName(), estimatedPromptTokens)
 	if errWithOA := quotaInstance.PreQuotaConsumption(); errWithOA != nil {
 		taskAdaptor.HandleError(base.OpenAIErrToTaskErr(errWithOA))
 		return
@@ -95,6 +114,8 @@ func CompletedTask(quotaInstance *relay_util.Quota, taskAdaptor base.TaskInterfa
 
 	task := taskAdaptor.GetTask()
 	task.Quota = int(quotaInstance.GetInputRatio() * 1000)
+	task.BillingGroupRatio = quotaInstance.GetGroupRatio()
+	task.BillingModel = taskAdaptor.GetModelName()
 
 	err := task.Insert()
 	if err != nil {

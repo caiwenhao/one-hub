@@ -40,11 +40,15 @@ type VolcArkVideoTask struct {
 type VolcArkVideoTaskMedia struct {
 	VideoURL     string `json:"video_url,omitempty"`
 	LastFrameURL string `json:"last_frame_url,omitempty"`
+	Width        int    `json:"width,omitempty"`
+	Height       int    `json:"height,omitempty"`
 }
 
 type VolcArkVideoUsage struct {
-	CompletionTokens int `json:"completion_tokens,omitempty"`
-	TotalTokens      int `json:"total_tokens,omitempty"`
+	PromptTokens     int64 `json:"prompt_tokens,omitempty"`
+	CompletionTokens int64 `json:"completion_tokens,omitempty"`
+	TotalTokens      int64 `json:"total_tokens,omitempty"`
+	VideoTokens      int64 `json:"video_tokens,omitempty"`
 }
 
 type VolcArkVideoListResponse struct {

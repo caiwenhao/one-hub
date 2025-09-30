@@ -198,8 +198,6 @@ const typeConfig = {
       base_url: 'https://ark.cn-beijing.volces.com',
       models: [
         'deepseek-v3.1',
-        'deepseek-v3',
-        'deepseek-r1',
         'kimi-k2',
         'doubao-seed-translation',
         'doubao-seed-1.6',
@@ -213,8 +211,15 @@ const typeConfig = {
         'doubao-pro-128k',
         'doubao-pro-256k',
         'doubao-1.5-pro-32k',
-        'doubao-seendance-1-0-pro',
+        'doubao-seedance-1-0-pro',
+        'doubao-seedance-1-0-lite',
+        'doubao-seaweed',
+        'wan2.1-14b',
         'doubao-seedream-4.0',
+        'doubao-seedream-3.0-t2i',
+        'doubao-seedream-3-0-t2i-250415',
+        'doubao-seededit-3.0-i2i',
+        'doubao-seededit-3-0-i2i-250628',
         'doubao-embedding-vision'
       ],
       test_model: 'deepseek-v3.1'

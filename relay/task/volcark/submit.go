@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"one-api/common"
 	"one-api/common/logger"
@@ -20,6 +21,7 @@ type VolcArkTask struct {
 	base.TaskBase
 	Request  map[string]any
 	Provider *volcarkProvider.VolcArkProvider
+	estimate videoEstimate
 }
 
 func (t *VolcArkTask) HandleError(err *base.TaskError) {
@@ -40,6 +42,15 @@ func (t *VolcArkTask) Init() *base.TaskError {
 
 	t.Request = payload
 	t.OriginalModel = modelName
+	t.estimate = estimateFromPayload(modelName, payload)
+
+	if t.estimate.Tokens > 0 {
+		estimatedPromptTokens := int(math.Round(float64(t.estimate.Tokens) / 1000.0))
+		if estimatedPromptTokens <= 0 {
+			estimatedPromptTokens = 1
+		}
+		t.C.Set("async_estimated_prompt_tokens", estimatedPromptTokens)
+	}
 
 	if originTaskID, ok := payload["origin_task_id"].(string); ok {
 		t.OriginTaskID = originTaskID
@@ -80,6 +91,22 @@ func (t *VolcArkTask) Relay() *base.TaskError {
 	t.Task.TaskID = resp.ID
 	t.Task.ChannelId = t.Provider.Channel.Id
 	t.Task.Action = "contents/generations"
+	t.Task.BillingModel = t.GetModelName()
+	if t.estimate.Tokens > 0 {
+		t.Task.VideoEstimatedTokens = t.estimate.Tokens
+	}
+	if t.estimate.Width > 0 {
+		t.Task.VideoWidth = t.estimate.Width
+	}
+	if t.estimate.Height > 0 {
+		t.Task.VideoHeight = t.estimate.Height
+	}
+	if t.estimate.FPS > 0 {
+		t.Task.VideoFps = t.estimate.FPS
+	}
+	if t.estimate.Duration > 0 {
+		t.Task.VideoDuration = t.estimate.Duration
+	}
 	if data, marshalErr := json.Marshal(resp); marshalErr == nil {
 		t.Task.Data = data
 	}
@@ -173,6 +200,8 @@ func applyResponseToTask(task *model.Task, resp *volcarkProvider.VolcArkVideoTas
 	} else if status == model.TaskStatusSuccess {
 		task.FailReason = ""
 	}
+
+	finalizeVolcArkBilling(task, resp)
 
 	if data, err := json.Marshal(resp); err == nil {
 		task.Data = data

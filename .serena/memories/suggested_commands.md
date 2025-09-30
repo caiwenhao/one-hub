@@ -1,0 +1,6 @@
+- `./dev-start.sh start|stop|restart|status`：一键启动/停止本地后端、前端与依赖容器。
+- `docker compose -f docker-compose-dev.yml up -d`：仅启动 MySQL 与 Redis 开发容器。
+- `go build -o tmp/one-hub-dev main.go` && `./tmp/one-hub-dev --config config-dev.yaml`：手动编译运行后端。
+- `cd web && yarn install && yarn dev`：启动前端 Vite 开发服务器。
+- `task build` / `task run`：使用 Taskfile 构建二进制或运行最新产物；`task lint` 统一执行 gofmt + goimports + golangci-lint。
+- `go test ./...`：在提交前执行 Go 单元测试。

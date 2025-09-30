@@ -359,7 +359,6 @@ func GetDefaultPrice() []*Price {
 		"deepseek-chat":  {[]float64{0.75, 0.75}, config.ChannelTypeDeepseek}, // 暂定 $0.0015 / 1K tokens
 
 		// 火山方舟默认模型（按 Ark 官方 RMB/百万 token 折算）
-		"deepseek-v3":                         {[]float64{0.142857143, 0.571428571}, config.ChannelTypeVolcArk},
 		"deepseek-v3.1":                       {[]float64{0.285714286, 0.857142857}, config.ChannelTypeVolcArk},
 		"deepseek-v3-1-terminus":              {[]float64{0.285714286, 0.857142857}, config.ChannelTypeVolcArk},
 		"deepseek-v3-1-250821":                {[]float64{0.285714286, 0.857142857}, config.ChannelTypeVolcArk},
@@ -375,7 +374,6 @@ func GetDefaultPrice() []*Price {
 		"doubao-1.5-thinking-vision-pro":      {[]float64{0.214285714, 0.642857143}, config.ChannelTypeVolcArk},
 		"doubao-1-5-ui-tars":                  {[]float64{0.25, 0.857142857}, config.ChannelTypeVolcArk},
 		"doubao-1-5-ui-tars-250428":           {[]float64{0.25, 0.857142857}, config.ChannelTypeVolcArk},
-		"deepseek-r1":                         {[]float64{0.285714286, 1.142857143}, config.ChannelTypeVolcArk},
 		"doubao-seed-translation":             {[]float64{0.085714286, 0.257142857}, config.ChannelTypeVolcArk},
 		"doubao-seed-translation-250915":      {[]float64{0.085714286, 0.257142857}, config.ChannelTypeVolcArk},
 		"doubao-1.5-pro-32k":                  {[]float64{0.057142857, 0.142857143}, config.ChannelTypeVolcArk},
@@ -393,10 +391,10 @@ func GetDefaultPrice() []*Price {
 		"doubao-pro-4k":                       {[]float64{0.057142857, 0.142857143}, config.ChannelTypeVolcArk},
 		"doubao-pro-128k":                     {[]float64{0.357142857, 0.642857143}, config.ChannelTypeVolcArk},
 		"doubao-pro-256k":                     {[]float64{0.357142857, 0.642857143}, config.ChannelTypeVolcArk},
-		"doubao-seedance-1-0-pro":             {[]float64{1.071428571, 1.071428571}, config.ChannelTypeVolcArk},
-		"doubao-seedance-1-0-lite":            {[]float64{0.714285714, 0.714285714}, config.ChannelTypeVolcArk},
-		"doubao-seaweed":                      {[]float64{2.142857143, 2.142857143}, config.ChannelTypeVolcArk},
-		"wan2.1-14b":                          {[]float64{3.571428571, 3.571428571}, config.ChannelTypeVolcArk},
+		"doubao-seedance-1-0-pro":             {[]float64{1.071428571, 1.071428571}, config.ChannelTypeVolcArk}, // ¥15 / 1M tokens（文/图生视频）
+		"doubao-seedance-1-0-lite":            {[]float64{0.714285714, 0.714285714}, config.ChannelTypeVolcArk}, // ¥10 / 1M tokens（文/图生视频）
+		"doubao-seaweed":                      {[]float64{2.142857143, 2.142857143}, config.ChannelTypeVolcArk}, // ¥30 / 1M tokens（文/图生视频）
+		"wan2.1-14b":                          {[]float64{3.571428571, 3.571428571}, config.ChannelTypeVolcArk}, // ¥50 / 1M tokens（文/图生视频）
 
 		"moonshot-v1-8k":   {[]float64{0.8572, 0.8572}, config.ChannelTypeMoonshot}, // ¥0.012 / 1K tokens
 		"moonshot-v1-32k":  {[]float64{1.7143, 1.7143}, config.ChannelTypeMoonshot}, // ¥0.024 / 1K tokens
@@ -453,10 +451,6 @@ func GetDefaultPrice() []*Price {
 	}
 
 	arkExtraRatios := map[string]map[string]float64{
-		"deepseek-v3": {
-			config.UsageExtraCache:       0.001214286,
-			config.UsageExtraCachedWrite: 0.057142857,
-		},
 		"deepseek-v3.1": {
 			config.UsageExtraCache:       0.001214286,
 			config.UsageExtraCachedWrite: 0.057142857,
@@ -466,10 +460,6 @@ func GetDefaultPrice() []*Price {
 			config.UsageExtraCachedWrite: 0.057142857,
 		},
 		"deepseek-v3-1-250821": {
-			config.UsageExtraCache:       0.001214286,
-			config.UsageExtraCachedWrite: 0.057142857,
-		},
-		"deepseek-r1": {
 			config.UsageExtraCache:       0.001214286,
 			config.UsageExtraCachedWrite: 0.057142857,
 		},
@@ -794,9 +784,11 @@ func GetDefaultPrice() []*Price {
 	}
 
 	var defaultVolcArkImagePrice = map[string]float64{
-		"doubao-seedream-4.0":     0.2,
-		"doubao-seedream-3.0-t2i": 0.259,
-		"doubao-seededit-3.0-i2i": 0.3,
+		"doubao-seedream-4.0":            0.2,
+		"doubao-seedream-3.0-t2i":        0.259,
+		"doubao-seedream-3-0-t2i-250415": 0.259,
+		"doubao-seededit-3.0-i2i":        0.3,
+		"doubao-seededit-3-0-i2i-250628": 0.3,
 	}
 
 	for model, pricePerImage := range defaultVolcArkImagePrice {

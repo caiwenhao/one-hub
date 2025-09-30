@@ -1,0 +1,4 @@
+- Go 代码必须经过 gofmt/goimports 处理，并通过 golangci-lint；启用的规则包含 govet、misspell、ineffassign、typecheck、whitespace、gocyclo、revive、unused 等，提交前需关注圈复杂度与未用参数。
+- 项目推荐以模块化方式扩展 provider，沿用 providers/base 中封装的 BaseProvider；错误处理沿用 OpenAI 风格的 OpenAIError 结构。
+- 前端遵循 React + Vite 组件化写法，使用 ESLint（react-app 规则集）与 Prettier；UI 基于 MUI 组件库，样式倾向 Emotion + @mui/system。
+- 文档与注释优先使用中文，保持与后端/前端国际化文件一致，必要时补充使用说明。

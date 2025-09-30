@@ -151,7 +151,10 @@ func ListClaudeModelsByToken(c *gin.Context) {
 func inferOwnedBy(modelName string, channelType int) *string {
 	// 优先使用价格表中的 channelType
 	if channelType != config.ChannelTypeUnknown {
-		return getModelOwnedBy(channelType)
+		owned := getModelOwnedBy(channelType)
+		if owned != nil && *owned != model.UnknownOwnedBy && *owned != "" {
+			return owned
+		}
 	}
 	// 否则根据模型命名进行供应商推断，避免显示“未知”
 	lower := strings.ToLower(modelName)
@@ -167,6 +170,14 @@ func inferOwnedBy(modelName string, channelType int) *string {
 		name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeVidu)
 		if name == model.UnknownOwnedBy || name == "" {
 			fallback := "Vidu"
+			return &fallback
+		}
+		return &name
+	}
+	if strings.HasPrefix(lower, "doubao") || strings.Contains(lower, "doubao-") || strings.Contains(lower, "wan2.1") {
+		name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeVolcArk)
+		if name == model.UnknownOwnedBy || name == "" {
+			fallback := "Volc Ark"
 			return &fallback
 		}
 		return &name
