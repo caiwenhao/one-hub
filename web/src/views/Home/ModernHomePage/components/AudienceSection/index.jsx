@@ -96,7 +96,7 @@ const AudienceSection = () => {
               letterSpacing: '-0.01em',
               '& .gradient-text': {
                 fontWeight: 'bold',
-                color: '#4299E1' // 使用纯色替代渐变文字
+                color: '#0EA5FF' // 使用纯色替代渐变文字（AI 科技主色）
               }
             }}
           >

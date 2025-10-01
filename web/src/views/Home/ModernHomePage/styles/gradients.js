@@ -1,29 +1,29 @@
 // 渐变色配置
 export const gradients = {
-  // 主要渐变
-  primary: 'linear-gradient(135deg, #4299E1 0%, #3182CE 50%, #2B6CB0 100%)',
+  // 主要渐变（AI 科技风：电光蓝 → 电子紫）
+  primary: 'linear-gradient(135deg, #0EA5FF 0%, #8B5CF6 100%)',
   
   // 英雄区域渐变
-  hero: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  heroBackground: 'linear-gradient(to bottom right, #ffffff 0%, rgba(59, 130, 246, 0.05) 30%, rgba(139, 92, 246, 0.05) 70%, #ffffff 100%)',
+  hero: 'linear-gradient(135deg, #0EA5FF 0%, #8B5CF6 100%)',
+  heroBackground: 'linear-gradient(to bottom right, #ffffff 0%, rgba(14,165,255,0.06) 30%, rgba(139,92,246,0.06) 70%, #ffffff 100%)',
   
   // 卡片渐变
   card: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
   
   // CTA按钮渐变
-  cta: 'linear-gradient(135deg, #4299E1 0%, #3182CE 50%, #2B6CB0 100%)',
+  cta: 'linear-gradient(135deg, #0EA5FF 0%, #8B5CF6 100%)',
   
   // 文字渐变
-  textGradient: 'linear-gradient(to right, #4299E1, #8B5CF6, #EC4899)',
+  textGradient: 'linear-gradient(to right, #22D3EE, #0EA5FF, #8B5CF6)',
   
   // 特性卡片渐变
-  featureAccent: 'linear-gradient(to bottom right, rgba(66, 153, 225, 0.05), transparent)',
-  featurePurple: 'linear-gradient(to bottom right, rgba(139, 92, 246, 0.05), transparent)',
+  featureAccent: 'linear-gradient(to bottom right, rgba(14, 165, 255, 0.06), transparent)',
+  featurePurple: 'linear-gradient(to bottom right, rgba(139, 92, 246, 0.06), transparent)',
   featurePink: 'linear-gradient(to bottom right, rgba(236, 72, 153, 0.05), transparent)',
   featureOrange: 'linear-gradient(to bottom right, rgba(245, 158, 11, 0.05), transparent)',
   
   // 图标背景渐变
-  iconAccent: 'linear-gradient(to bottom right, rgba(66, 153, 225, 0.2), rgba(139, 92, 246, 0.2))',
+  iconAccent: 'linear-gradient(to bottom right, rgba(14, 165, 255, 0.25), rgba(139, 92, 246, 0.25))',
   iconPurple: 'linear-gradient(to bottom right, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))',
   iconPink: 'linear-gradient(to bottom right, rgba(236, 72, 153, 0.2), rgba(245, 158, 11, 0.2))',
   iconOrange: 'linear-gradient(to bottom right, rgba(245, 158, 11, 0.2), rgba(66, 153, 225, 0.2))',
@@ -49,9 +49,9 @@ export const gradients = {
 // 颜色配置
 export const colors = {
   primary: '#1A202C',
-  accent: '#4299E1',
-  accentLight: '#63B3ED',
-  accentDark: '#3182CE',
+  accent: '#0EA5FF',
+  accentLight: '#7BD3FF',
+  accentDark: '#0369A1',
   background: '#F7FAFC',
   secondary: '#718096',
   purple: '#8B5CF6',
@@ -60,11 +60,11 @@ export const colors = {
   
   // 透明度变体
   accentAlpha: {
-    5: 'rgba(66, 153, 225, 0.05)',
-    10: 'rgba(66, 153, 225, 0.1)',
-    20: 'rgba(66, 153, 225, 0.2)',
-    30: 'rgba(66, 153, 225, 0.3)',
-    40: 'rgba(66, 153, 225, 0.4)'
+    5: 'rgba(14, 165, 255, 0.05)',
+    10: 'rgba(14, 165, 255, 0.10)',
+    20: 'rgba(14, 165, 255, 0.20)',
+    30: 'rgba(14, 165, 255, 0.30)',
+    40: 'rgba(14, 165, 255, 0.40)'
   },
   
   purpleAlpha: {

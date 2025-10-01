@@ -40,7 +40,7 @@ const gradientShift = keyframes`
 
 // 样式化组件
 const AnimatedGradientBox = styled(Box)(({ theme }) => ({
-  background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
+  background: 'linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6)',
   backgroundSize: '400% 400%',
   animation: `${gradientShift} 4s ease infinite`,
   borderRadius: '16px',
@@ -76,14 +76,14 @@ const HoverLiftCard = styled(Card)(({ theme }) => ({
 const StepCard = styled(Card)(({ theme, isActive }) => ({
   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   borderRadius: '24px',
-  border: isActive ? '2px solid #4299E1' : '1px solid rgba(229, 231, 235, 0.5)',
+  border: isActive ? '2px solid #0EA5FF' : '1px solid rgba(229, 231, 235, 0.5)',
   position: 'relative',
   overflow: 'hidden',
-  background: isActive ? 'linear-gradient(135deg, rgba(66, 153, 225, 0.05) 0%, rgba(255, 255, 255, 1) 100%)' : 'white',
+  background: isActive ? 'linear-gradient(135deg, rgba(14, 165, 255, 0.06) 0%, rgba(255, 255, 255, 1) 100%)' : 'white',
   '&:hover': {
     transform: 'translateY(-8px) scale(1.02)',
     boxShadow: '0 20px 40px rgba(66, 153, 225, 0.15)',
-    border: '2px solid #4299E1'
+    border: '2px solid #0EA5FF'
   },
   '&::before': {
     content: '""',
@@ -92,14 +92,14 @@ const StepCard = styled(Card)(({ theme, isActive }) => ({
     left: 0,
     right: 0,
     height: '4px',
-    background: isActive ? 'linear-gradient(90deg, #4299E1, #34D399)' : 'transparent',
+    background: isActive ? (theme.aiGradients?.brandLinear || 'linear-gradient(90deg, #0EA5FF, #8B5CF6)') : 'transparent',
     transition: 'all 0.3s ease'
   }
 }));
 
 const StepNumber = styled(Box)(({ theme, isActive }) => ({
   background: isActive 
-    ? 'linear-gradient(135deg, #4299E1, #34D399)' 
+    ? (theme.aiGradients?.brandLinear || 'linear-gradient(135deg, #0EA5FF, #8B5CF6)') 
     : 'linear-gradient(135deg, #E2E8F0, #CBD5E0)',
   width: '80px',
   height: '80px',
@@ -124,7 +124,7 @@ const CodeTab = styled(Tab)(({ theme }) => ({
   textTransform: 'none',
   fontWeight: 600,
   '&.Mui-selected': {
-    background: 'linear-gradient(135deg, #4299E1, #3182CE)',
+    background: 'linear-gradient(135deg, #0EA5FF, #8B5CF6)',
     color: 'white',
     borderRadius: '8px 8px 0 0'
   }
@@ -198,7 +198,7 @@ main();`,
       <Box
         sx={{
           position: 'relative',
-          background: 'linear-gradient(135deg, #ffffff 0%, rgba(59, 130, 246, 0.05) 50%, #ffffff 100%)',
+                            background: 'linear-gradient(135deg, #ffffff 0%, rgba(14, 165, 255, 0.06) 50%, #ffffff 100%)',
           pt: { xs: 8, md: 12 },
           pb: { xs: 8, md: 10 },
           px: { xs: 3, md: 6, lg: 12 },
@@ -209,7 +209,7 @@ main();`,
         }}
       >
         {/* 背景装饰元素 */}
-        <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(66, 153, 225, 0.08) 0%, rgba(147, 51, 234, 0.05) 50%, rgba(34, 197, 94, 0.08) 100%)' }} />
+        <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(14, 165, 255, 0.08) 0%, rgba(139, 92, 246, 0.06) 100%)' }} />
         
         {/* 浮动装饰点 */}
         <FloatingElement
@@ -273,7 +273,7 @@ main();`,
                 component="span"
                 sx={{
                   fontWeight: 700,
-                  background: 'linear-gradient(45deg, #4299E1 0%, #34D399 50%, #A855F7 100%)',
+                  background: 'linear-gradient(45deg, #22D3EE 0%, #0EA5FF 50%, #8B5CF6 100%)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   color: 'transparent',
@@ -315,7 +315,7 @@ main();`,
                 fontSize: '1.1rem',
                 fontWeight: 700,
                 borderRadius: '25px',
-                background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
+                background: 'linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6)',
                 backgroundSize: '400% 400%',
                 animation: `${gradientShift} 4s ease infinite`,
                 textTransform: 'none',
@@ -355,10 +355,12 @@ main();`,
           left: 0,
           right: 0,
           height: '200px',
-          background: 'linear-gradient(135deg, rgba(66, 153, 225, 0.03) 0%, rgba(52, 211, 153, 0.03) 100%)',
+          background: 'linear-gradient(135deg, rgba(14, 165, 255, 0.04) 0%, rgba(139, 92, 246, 0.04) 100%)',
           borderRadius: '0 0 50% 50%',
           transform: 'scale(1.5)'
         }} />
+        {/* 轻量网格覆盖层 */}
+        <Box className="ai-grid-overlay" sx={{ opacity: 0.25 }} />
         
         <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
           <Box sx={{ textAlign: 'center', mb: 10 }}>
@@ -370,7 +372,7 @@ main();`,
                 py: 1,
                 fontSize: '0.875rem',
                 fontWeight: 600,
-                background: 'linear-gradient(135deg, #4299E1, #34D399)',
+                background: (theme) => theme.aiGradients?.brandLinear || 'linear-gradient(135deg, #0EA5FF, #8B5CF6)',
                 color: 'white',
                 '& .MuiChip-label': { px: 2 }
               }}
@@ -391,7 +393,7 @@ main();`,
                 component="span"
                 sx={{
                   fontWeight: 700,
-                  background: 'linear-gradient(45deg, #4299E1, #34D399)',
+                  background: (theme) => theme.aiGradients?.brandLinear || 'linear-gradient(45deg, #0EA5FF, #8B5CF6)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   color: 'transparent'
@@ -412,7 +414,7 @@ main();`,
             >
               三个简单步骤，即可完成从传统API到Kapon AI的无缝切换
               <br />
-              <Box component="span" sx={{ color: '#4299E1', fontWeight: 500 }}>
+              <Box component="span" sx={{ color: '#0EA5FF', fontWeight: 500 }}>
                 平均集成时间仅需3分钟
               </Box>
             </Typography>
@@ -426,7 +428,7 @@ main();`,
                 description: '注册并登录您的Kapon AI账户，在控制台中生成专属API密钥',
                 code: 'API_KEY = "kp-xxxxxxxxxxxxxxxx"',
                 icon: <CodeIcon />,
-                color: '#4299E1',
+                color: '#0EA5FF',
                 isActive: true
               },
               {
@@ -443,7 +445,7 @@ main();`,
                 description: '查看完整的接口文档、参数定义与示例',
                 code: 'docs.kapon.cloud/api',
                 icon: <BookIcon />,
-                color: '#4299E1',
+                color: '#0EA5FF',
                 isSuccess: true,
                 link: 'https://docs.kapon.cloud/api/',
                 buttonText: '查看完整文档'
@@ -500,7 +502,7 @@ main();`,
                             px: 3,
                             py: 1,
                             fontWeight: 700,
-                            background: 'linear-gradient(135deg, #4299E1, #3182CE)',
+                          background: (theme) => theme.aiGradients?.brandLinear || 'linear-gradient(135deg, #0EA5FF, #8B5CF6)',
                             textTransform: 'none'
                           }}
                         >
@@ -521,7 +523,7 @@ main();`,
                         left: { xs: '50%', md: 'auto' },
                         width: { xs: '2px', md: '48px' },
                         height: { xs: '48px', md: '2px' },
-                        background: 'linear-gradient(90deg, #4299E1, #34D399)',
+                        background: 'linear-gradient(90deg, #0EA5FF, #8B5CF6)',
                         transform: { xs: 'translateX(-50%)', md: 'translateY(-50%)' },
                         display: { xs: 'none', md: 'block' },
                         '&::after': {
@@ -558,7 +560,7 @@ main();`,
                 fontSize: '1.1rem',
                 fontWeight: 700,
                 borderRadius: '30px',
-                background: 'linear-gradient(-45deg, #4299E1, #34D399)',
+                background: 'linear-gradient(-45deg, #0EA5FF, #8B5CF6)',
                 backgroundSize: '400% 400%',
                 animation: `${gradientShift} 4s ease infinite`,
                 textTransform: 'none',
@@ -644,7 +646,7 @@ main();`,
             {/* 顶部装饰条 */}
             <Box sx={{
               height: '4px',
-              background: 'linear-gradient(90deg, #4299E1, #A855F7, #EC4899, #34D399)',
+              background: 'linear-gradient(90deg, #22D3EE, #0EA5FF, #8B5CF6)',
               backgroundSize: '400% 400%',
               animation: `${gradientShift} 6s ease infinite`
             }} />
@@ -732,7 +734,7 @@ main();`,
                   px: 5,
                   py: 2,
                   borderRadius: '25px',
-                  background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
+                  background: 'linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6)',
                   backgroundSize: '400% 400%',
                   animation: `${gradientShift} 4s ease infinite`,
                   fontWeight: 600,
@@ -806,7 +808,7 @@ main();`,
             >
               本网站支持各家原生 API，直接使用各厂商官方 SDK 接入
               <br />
-              <Box component="span" sx={{ color: '#4299E1', fontWeight: 500 }}>
+              <Box component="span" sx={{ color: '#0EA5FF', fontWeight: 500 }}>
                 覆盖 OpenAI / Claude（Anthropic）/ 火山方舟 等主流生态
               </Box>
             </Typography>

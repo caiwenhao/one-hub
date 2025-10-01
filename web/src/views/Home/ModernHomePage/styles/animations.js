@@ -13,10 +13,10 @@ export const floatAnimation = keyframes`
 // 脉冲发光动画
 export const pulseGlowAnimation = keyframes`
   0%, 100% { 
-    box-shadow: 0 0 20px rgba(66, 153, 225, 0.3); 
+    box-shadow: 0 0 20px rgba(14, 165, 255, 0.30); 
   }
   50% { 
-    box-shadow: 0 0 40px rgba(66, 153, 225, 0.6), 0 0 60px rgba(66, 153, 225, 0.3); 
+    box-shadow: 0 0 40px rgba(14, 165, 255, 0.55), 0 0 60px rgba(139, 92, 246, 0.35); 
   }
 `;
 
@@ -64,7 +64,7 @@ export const animationStyles = {
     animation: `${pulseGlowAnimation} 3s ease-in-out infinite`
   },
   gradientShift: {
-    background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
+    background: 'linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6)',
     backgroundSize: '400% 400%',
     animation: `${gradientShiftAnimation} 4s ease infinite`
   },

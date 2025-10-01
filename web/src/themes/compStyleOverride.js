@@ -11,6 +11,14 @@ export default function componentStyleOverrides(theme) {
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
+        /* 无障碍与性能：尊重系统“减少动态效果”设置 */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation: none !important;
+            transition: none !important;
+            scroll-behavior: auto !important;
+          }
+        }
         .apexcharts-title-text {
           fill: ${theme.textDark} !important
         }
@@ -26,40 +34,65 @@ export default function componentStyleOverrides(theme) {
         .apexcharts-gridline, .apexcharts-xaxistooltip-background, .apexcharts-yaxistooltip-background {
           stroke: ${theme.divider} !important;
         }
+
+        /* AI 科技风 - 轻量网格覆盖层（根据主题自动调节透明度） */
+        .ai-grid-overlay {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background-image:
+            repeating-linear-gradient(0deg,
+              ${theme.mode === 'dark' ? 'rgba(14,165,255,0.06)' : 'rgba(14,165,255,0.06)'} 0 1px,
+              transparent 1px 100%),
+            repeating-linear-gradient(90deg,
+              ${theme.mode === 'dark' ? 'rgba(139,92,246,0.06)' : 'rgba(139,92,246,0.06)'} 0 1px,
+              transparent 1px 100%);
+          background-size: 24px 24px;
+        }
+
+        /* AI 科技风 - 品牌渐变背景工具类 */
+        .ai-tech-gradient {
+          background: linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6);
+          background-size: 400% 400%;
+        }
       `
     },
     MuiButton: {
       styleOverrides: {
         root: {
-          fontWeight: 500,
-          borderRadius: '10px',
+          fontWeight: 600,
+          borderRadius: '14px',
           textTransform: 'none',
           boxShadow: 'none',
           minHeight: '36px',
           padding: '6px 16px',
           letterSpacing: '0.01em',
-          transition: 'background-color 0.2s ease-in-out',
+          transition: 'all 0.25s ease',
           '&.Mui-disabled': {
             color: theme.colors?.grey600
           },
           '&:hover': {
-            boxShadow: 'none'
+            boxShadow: '0 8px 24px rgba(14, 165, 255, 0.25)'
           },
           '&:active': {
             transform: 'translateY(0)'
           }
         },
         containedPrimary: {
-          background: theme.colors?.primaryMain,
+          background: `linear-gradient(135deg, ${theme.colors?.primaryMain}, ${theme.colors?.secondaryMain})`,
+          color: '#fff',
+          boxShadow: '0 6px 16px rgba(14,165,255,0.24)',
           '&:hover': {
-            background: theme.colors?.primaryDark
+            background: `linear-gradient(135deg, ${theme.colors?.primaryMain}, ${theme.colors?.primaryDark})`,
+            boxShadow: '0 10px 28px rgba(14,165,255,0.35)'
           }
         },
         outlinedPrimary: {
           borderColor: theme.colors?.primaryMain,
           color: theme.colors?.primaryMain,
           '&:hover': {
-            backgroundColor: 'rgba(8, 132, 221, 0.04)'
+            backgroundColor: 'rgba(14, 165, 255, 0.06)',
+            boxShadow: '0 6px 16px rgba(14,165,255,0.15)'
           }
         },
         text: {
@@ -102,8 +135,15 @@ export default function componentStyleOverrides(theme) {
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          borderRadius: '14px',
-          boxShadow: theme.mode === 'dark' ? '0 2px 8px 0 rgba(0,0,0,0.2)' : '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)'
+          borderRadius: '16px',
+          background: theme.mode === 'dark'
+            ? 'linear-gradient(180deg, rgba(19,21,26,0.75), rgba(26,29,35,0.65))'
+            : 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,250,252,0.8))',
+          backdropFilter: 'blur(8px)',
+          border: theme.mode === 'dark'
+            ? '1px solid rgba(139, 92, 246, 0.12)'
+            : '1px solid rgba(14, 165, 255, 0.10)',
+          boxShadow: theme.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.35)' : '0 10px 28px rgba(14,165,255,0.10)'
         },
         rounded: {
           borderRadius: `${theme?.customization?.borderRadius || 14}px`
@@ -120,14 +160,13 @@ export default function componentStyleOverrides(theme) {
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: '14px',
+          borderRadius: '20px',
           padding: 0,
-          boxShadow: theme.mode === 'dark' ? '0 2px 8px 0 rgba(0,0,0,0.2)' : '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)',
-          transition: 'box-shadow 0.3s ease',
+          boxShadow: theme.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.35)' : '0 10px 28px rgba(14,165,255,0.10)',
+          transition: 'all 0.3s ease',
           overflow: 'hidden',
           '&:hover': {
-            boxShadow:
-              theme.mode === 'dark' ? '0 6px 16px 0 rgba(0,0,0,0.3)' : '0 8px 14px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)'
+            boxShadow: theme.mode === 'dark' ? '0 12px 32px rgba(0,0,0,0.45)' : '0 16px 40px rgba(14,165,255,0.18)'
           },
           '& .MuiTableContainer-root': {
             borderRadius: 0

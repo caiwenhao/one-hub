@@ -1,9 +1,9 @@
 // 热门模型页面的主题样式定义
 export const colors = {
   primary: '#1A202C',
-  accent: '#4299E1',
-  accentLight: '#63B3ED',
-  accentDark: '#3182CE',
+  accent: '#0EA5FF',
+  accentLight: '#7BD3FF',
+  accentDark: '#0369A1',
   background: '#F7FAFC',
   secondary: '#718096',
   purple: '#8B5CF6',
@@ -15,19 +15,19 @@ export const colors = {
 };
 
 export const gradients = {
-  primary: 'linear-gradient(135deg, #4299E1 0%, #3182CE 50%, #2B6CB0 100%)',
-  heroBackground: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  primary: 'linear-gradient(135deg, #0EA5FF 0%, #8B5CF6 100%)',
+  heroBackground: 'linear-gradient(135deg, #0EA5FF 0%, #8B5CF6 100%)',
   card: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
-  textGradient: 'linear-gradient(45deg, #4299E1 30%, #8B5CF6 90%)',
+  textGradient: 'linear-gradient(45deg, #22D3EE 0%, #0EA5FF 50%, #8B5CF6 100%)',
   
   // 特性卡片渐变
-  featureAccent: 'linear-gradient(135deg, rgba(66, 153, 225, 0.05), transparent)',
+  featureAccent: 'linear-gradient(135deg, rgba(14, 165, 255, 0.06), transparent)',
   featurePurple: 'linear-gradient(135deg, rgba(139, 92, 246, 0.05), transparent)',
   featurePink: 'linear-gradient(135deg, rgba(236, 72, 153, 0.05), transparent)',
   featureOrange: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05), transparent)',
   
   // 图标渐变
-  iconAccent: 'linear-gradient(135deg, #4299E1, #3182CE)',
+  iconAccent: 'linear-gradient(135deg, #0EA5FF, #8B5CF6)',
   iconPurple: 'linear-gradient(135deg, #8B5CF6, #7C3AED)',
   iconPink: 'linear-gradient(135deg, #EC4899, #DB2777)',
   iconOrange: 'linear-gradient(135deg, #F59E0B, #D97706)',

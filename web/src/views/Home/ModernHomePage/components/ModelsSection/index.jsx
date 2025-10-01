@@ -79,7 +79,7 @@ const ModelsSection = () => {
               letterSpacing: '-0.01em',
               '& .gradient-text': {
                 fontWeight: 'bold',
-                color: '#4299E1' // 使用纯色替代渐变文字
+                color: '#0EA5FF' // 使用纯色替代渐变文字（AI 科技主色）
               }
             }}
           >
@@ -227,12 +227,12 @@ const ModelsSection = () => {
               px: 5,
               py: 2,
               borderRadius: '50px',
-              background: '#4299E1', // 使用纯色背景替代渐变
+              background: '#0EA5FF', // 使用纯色背景替代渐变（AI 科技主色）
               fontWeight: 600,
               boxShadow: 'none', // 移除阴影
               transition: 'background-color 0.2s ease',
               '&:hover': {
-                background: '#3182CE' // hover时使用稍深的颜色
+                background: '#0369A1' // hover时使用稍深的颜色（主色深色）
               }
             }}
           >
@@ -279,7 +279,7 @@ const ModelsSection = () => {
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  background: '#4299E1' // 使用纯色替代渐变
+                  background: '#0EA5FF' // 使用纯色替代渐变（AI 科技主色）
                 }}
               />
               <Typography

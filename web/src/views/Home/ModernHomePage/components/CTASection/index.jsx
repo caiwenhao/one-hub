@@ -164,12 +164,12 @@ const CTASection = () => {
                 px: { xs: 6, md: 8 },
                 py: { xs: 2, md: 2.5 },
                 borderRadius: '50px',
-                background: '#4299E1', // 使用纯色背景替代渐变
+                background: '#0EA5FF', // 使用纯色背景替代渐变（AI 科技主色）
                 fontWeight: 'bold',
                 boxShadow: 'none', // 移除阴影
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  background: '#3182CE' // hover时使用稍深的颜色
+                  background: '#0369A1' // hover时使用稍深的颜色（主色深色）
                 }
               }}
             >

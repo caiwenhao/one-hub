@@ -60,7 +60,7 @@ const CategorySection = () => {
               textShadow: 'none',
               '& .gradient-text': {
                 fontWeight: 'bold',
-                ...createGradientText('linear-gradient(45deg, #4299E1 30%, #8B5CF6 90%)')
+                ...createGradientText('linear-gradient(45deg, #22D3EE 0%, #0EA5FF 50%, #8B5CF6 100%)')
               }
             }}
           >

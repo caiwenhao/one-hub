@@ -101,14 +101,14 @@ const FreeTrialSection = () => {
                 width={20}
                 height={20}
                 style={{
-                  color: '#4299E1', // 使用与明星模型荟萃一致的蓝色
+                  color: '#0EA5FF', // 统一为AI科技主色
                   marginRight: '12px'
                 }}
               />
               <Typography
                 variant="body1"
                 sx={{
-                  color: '#4299E1', // 使用与明星模型荟萃一致的蓝色
+                  color: '#0EA5FF', // 统一为AI科技主色
                   fontWeight: 600,
                   fontSize: '1rem'
                 }}
@@ -149,7 +149,7 @@ const FreeTrialSection = () => {
                 sx={{
                   fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
                   fontWeight: 700,
-                  background: 'linear-gradient(45deg, #4299E1 30%, #8B5CF6 90%)',
+                  background: 'linear-gradient(45deg, #22D3EE 0%, #0EA5FF 50%, #8B5CF6 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text'
@@ -174,7 +174,7 @@ const FreeTrialSection = () => {
                 onClick={handleRegisterClick}
                 sx={{
                   position: 'relative',
-                  background: `linear-gradient(-45deg, ${theme.palette.primary.main}, #3182CE, #2B6CB0, #2A69AC)`,
+                  background: `linear-gradient(-45deg, ${theme.palette.primary.main}, #22D3EE, #8B5CF6)`,
                   backgroundSize: '400% 400%',
                   color: 'white',
                   px: 5,

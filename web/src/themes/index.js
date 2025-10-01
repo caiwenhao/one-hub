@@ -65,6 +65,12 @@ export const theme = (customization) => {
   const themes = createTheme(themeOptions);
   themes.components = componentStyleOverrides(themeOption);
 
+  // 暴露 AI 科技风 tokens（供组件通过 useTheme 访问）
+  themes.aiGradients = {
+    brand: 'linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6)',
+    brandLinear: 'linear-gradient(135deg, #0EA5FF, #8B5CF6)'
+  };
+
   return themes;
 };
 

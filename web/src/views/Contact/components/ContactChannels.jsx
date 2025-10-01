@@ -187,7 +187,7 @@ const ContactCard = ({
         {contactType === 'email' && email && (
           <Typography
             sx={{
-              color: gradientColors.includes('#10B981') ? '#059669' : '#4299E1',
+              color: gradientColors.includes('#10B981') ? '#059669' : '#0EA5FF',
               fontWeight: 600,
               fontSize: '1.125rem',
               display: 'flex',
@@ -195,7 +195,7 @@ const ContactCard = ({
               justifyContent: 'center',
               gap: 1,
               '&:hover': {
-                color: gradientColors.includes('#10B981') ? '#047857' : '#3182CE'
+                color: gradientColors.includes('#10B981') ? '#047857' : '#0369A1'
               }
             }}
           >
@@ -207,7 +207,7 @@ const ContactCard = ({
         {contactType === 'phone' && phone && (
           <Typography
             sx={{
-              color: gradientColors.includes('#10B981') ? '#059669' : '#4299E1',
+              color: gradientColors.includes('#10B981') ? '#059669' : '#0EA5FF',
               fontWeight: 600,
               fontSize: '1.125rem',
               display: 'flex',
@@ -215,7 +215,7 @@ const ContactCard = ({
               justifyContent: 'center',
               gap: 1,
               '&:hover': {
-                color: gradientColors.includes('#10B981') ? '#047857' : '#3182CE'
+                color: gradientColors.includes('#10B981') ? '#047857' : '#0369A1'
               }
             }}
           >
@@ -248,7 +248,7 @@ const ContactCard = ({
             />
             <Typography
               sx={{
-                color: gradientColors.includes('#10B981') ? '#059669' : '#4299E1',
+                color: gradientColors.includes('#10B981') ? '#059669' : '#0EA5FF',
                 fontWeight: 600,
                 fontSize: '0.875rem',
                 textAlign: 'center',

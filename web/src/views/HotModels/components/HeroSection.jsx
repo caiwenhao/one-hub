@@ -22,9 +22,11 @@ const HeroSection = () => {
         sx={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(to bottom right, rgba(66, 153, 225, 0.08) 0%, rgba(139, 92, 246, 0.05) 50%, rgba(236, 72, 153, 0.08) 100%)'
+          background: 'linear-gradient(to bottom right, rgba(14, 165, 255, 0.08) 0%, rgba(139, 92, 246, 0.06) 100%)'
         }}
       />
+      {/* 轻量网格覆盖层（AI 科技风） */}
+      <Box className="ai-grid-overlay" sx={{ opacity: 0.25 }} />
 
       {/* 浮动装饰元素 */}
       <Box

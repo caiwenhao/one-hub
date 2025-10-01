@@ -15,7 +15,7 @@ const DesignFooter = () => {
     }
   };
 
-  const gradient = 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)';
+  const gradient = 'linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6)';
 
   return (
     <Box component="footer" sx={{ backgroundColor: '#ffffff', borderTop: '1px solid rgba(0,0,0,0.08)', py: { xs: 8, md: 12 } }}>
@@ -66,7 +66,7 @@ const DesignFooter = () => {
                           fontWeight: 300,
                           cursor: l.href ? 'pointer' : 'default',
                           transition: l.href ? 'all 0.3s ease' : 'none',
-                          '&:hover': l.href ? { color: '#4299E1', transform: 'translateX(4px)' } : {}
+                          '&:hover': l.href ? { color: '#0EA5FF', transform: 'translateX(4px)' } : {}
                         }}
                       >
                         {l.label}

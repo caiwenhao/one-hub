@@ -110,17 +110,19 @@ const ResourceCard = ({
 
 const HelpResources = () => {
   // 处理按钮点击事件
-  const handleDocumentationClick = () => {
-    window.open('https://docs.kapon.cloud/api/', '_blank');
+  // VIDU 官方文档跳转
+  const handleViduDocsClick = () => {
+    window.open('https://platform.vidu.cn/docs/introduction', '_blank');
   };
 
-  const handleFAQClick = () => {
-    window.open('/about', '_blank');
+  // Kling 官方文档跳转
+  const handleKlingDocsClick = () => {
+    window.open('https://app.klingai.com/cn/dev/document-api/quickStart/productIntroduction/overview', '_blank');
   };
 
-  const handleStatusClick = () => {
-    // 这里可以链接到实际的服务状态页面
-    console.log('查看服务状态');
+  // 火山方舟官方文档跳转
+  const handleVolcDocsClick = () => {
+    window.open('https://www.volcengine.com/docs/82379/1494384', '_blank');
   };
 
   return (
@@ -145,7 +147,7 @@ const HelpResources = () => {
               textShadow: 'none'
             }}
           >
-            更多帮助资源
+            更多资源
           </Typography>
           <Typography
             variant="h6"
@@ -160,42 +162,42 @@ const HelpResources = () => {
 
         {/* 资源卡片网格 */}
         <Grid container spacing={{ xs: 4, md: 4 }}>
-          {/* 开发者文档 */}
+          {/* VIDU 文档 */}
           <Grid item xs={12} md={4}>
             <ResourceCard
-              title="开发者文档"
-              description="完整的API文档、代码示例和最佳实践指南"
+              title="VIDU API 文档"
+              description="VIDU 平台官方 API 文档与使用指南"
               buttonText="查看文档"
-              buttonColor="linear-gradient(135deg, #4299E1, #3182CE)"
+              buttonColor="linear-gradient(135deg, #0EA5FF, #8B5CF6)"
               icon={MenuBookIcon}
-              iconGradient="linear-gradient(135deg, #4299E1, #3182CE)"
-              onClick={handleDocumentationClick}
+              iconGradient="linear-gradient(135deg, #0EA5FF, #8B5CF6)"
+              onClick={handleViduDocsClick}
             />
           </Grid>
 
-          {/* 常见问题 */}
+          {/* Kling 文档 */}
           <Grid item xs={12} md={4}>
             <ResourceCard
-              title="常见问题"
-              description="快速找到关于服务、计费和技术的常见问题答案"
-              buttonText="查看FAQ"
-              buttonColor="#10B981"
+              title="Kling API 文档"
+              description="Kling 平台官方 API 文档与快速开始"
+              buttonText="查看文档"
+              buttonColor="linear-gradient(135deg, #F59E0B, #EF4444)"
               icon={HelpOutlineIcon}
-              iconGradient="linear-gradient(135deg, #10B981, #059669)"
-              onClick={handleFAQClick}
+              iconGradient="linear-gradient(135deg, #F59E0B, #EF4444)"
+              onClick={handleKlingDocsClick}
             />
           </Grid>
 
-          {/* 服务状态 */}
+          {/* 火山方舟文档 */}
           <Grid item xs={12} md={4}>
             <ResourceCard
-              title="服务状态"
-              description="实时查看所有模型和服务的运行状态"
-              buttonText="查看状态"
-              buttonColor="#8B5CF6"
+              title="火山方舟 API 文档"
+              description="火山引擎方舟大模型服务官方 API 文档"
+              buttonText="查看文档"
+              buttonColor="linear-gradient(135deg, #22C55E, #16A34A)"
               icon={FavoriteIcon}
-              iconGradient="linear-gradient(135deg, #8B5CF6, #7C3AED)"
-              onClick={handleStatusClick}
+              iconGradient="linear-gradient(135deg, #22C55E, #16A34A)"
+              onClick={handleVolcDocsClick}
             />
           </Grid>
         </Grid>

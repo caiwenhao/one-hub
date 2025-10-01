@@ -118,7 +118,7 @@ const HeroSection = () => {
             component="span"
             sx={{
               fontWeight: 700, // font-bold
-              background: 'linear-gradient(45deg, #4299E1, #10B981, #8B5CF6)',
+              background: 'linear-gradient(45deg, #22D3EE, #0EA5FF, #8B5CF6)',
               backgroundSize: '400% 400%',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',

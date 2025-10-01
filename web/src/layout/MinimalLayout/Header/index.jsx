@@ -53,7 +53,7 @@ const Header = () => {
           component={Link}
           to="/"
           sx={{
-            color: pathname === '/' ? '#4299E1' : '#718096', // text-gray-700
+            color: pathname === '/' ? '#0EA5FF' : '#718096', // text-gray-700
             fontWeight: pathname === '/' ? 600 : 500, // font-medium
             textDecoration: 'none',
             fontSize: '1rem',
@@ -61,7 +61,7 @@ const Header = () => {
             position: 'relative',
             transition: 'all 0.3s ease', // transition-all duration-300
             '&:hover': {
-              color: '#4299E1' // hover:text-accent
+              color: '#0EA5FF' // hover:text-accent
             },
             '&::after': {
               content: '""',
@@ -70,7 +70,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px', // h-0.5
-              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
+              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)', // from-accent to-electronic-purple
               transform: pathname === '/' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
@@ -87,7 +87,7 @@ const Header = () => {
           component={Link}
           to="/models"
           sx={{
-            color: pathname === '/models' ? '#4299E1' : '#718096', // text-gray-700
+            color: pathname === '/models' ? '#0EA5FF' : '#718096', // text-gray-700
             fontWeight: pathname === '/models' ? 600 : 500, // font-medium
             textDecoration: 'none',
             fontSize: '1rem',
@@ -95,7 +95,7 @@ const Header = () => {
             position: 'relative',
             transition: 'all 0.3s ease', // transition-all duration-300
             '&:hover': {
-              color: '#4299E1' // hover:text-accent
+              color: '#0EA5FF' // hover:text-accent
             },
             '&::after': {
               content: '""',
@@ -104,7 +104,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px', // h-0.5
-              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
+              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)', // tech gradient
               transform: pathname === '/models' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
@@ -121,7 +121,7 @@ const Header = () => {
           component={Link}
           to="/price"
           sx={{
-            color: pathname === '/price' ? '#4299E1' : '#718096', // text-gray-700
+            color: pathname === '/price' ? '#0EA5FF' : '#718096', // text-gray-700
             fontWeight: pathname === '/price' ? 600 : 500, // font-medium
             textDecoration: 'none',
             fontSize: '1rem',
@@ -129,7 +129,7 @@ const Header = () => {
             position: 'relative',
             transition: 'all 0.3s ease', // transition-all duration-300
             '&:hover': {
-              color: '#4299E1' // hover:text-accent
+              color: '#0EA5FF' // hover:text-accent
             },
             '&::after': {
               content: '""',
@@ -138,7 +138,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px', // h-0.5
-              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
+              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)', // tech gradient
               transform: pathname === '/price' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
@@ -155,7 +155,7 @@ const Header = () => {
           component={Link}
           to="/developer"
           sx={{
-            color: pathname.startsWith('/developer') ? '#4299E1' : '#718096',
+            color: pathname.startsWith('/developer') ? '#0EA5FF' : '#718096',
             fontWeight: pathname.startsWith('/developer') ? 600 : 500,
             textDecoration: 'none',
             fontSize: '1rem',
@@ -163,7 +163,7 @@ const Header = () => {
             position: 'relative',
             transition: 'all 0.3s ease',
             '&:hover': {
-              color: '#4299E1'
+              color: '#0EA5FF'
             },
             '&::after': {
               content: '""',
@@ -172,7 +172,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px',
-              background: 'linear-gradient(to right, #4299E1, #3182CE)',
+              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)',
               transform: pathname.startsWith('/developer') ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease'
@@ -189,7 +189,7 @@ const Header = () => {
           component={Link}
           to="/playground"
           sx={{
-            color: pathname === '/playground' ? '#4299E1' : '#718096',
+            color: pathname === '/playground' ? '#0EA5FF' : '#718096',
             fontWeight: pathname === '/playground' ? 600 : 500,
             textDecoration: 'none',
             fontSize: '1rem',
@@ -197,7 +197,7 @@ const Header = () => {
             position: 'relative',
             transition: 'all 0.3s ease',
             '&:hover': {
-              color: '#4299E1'
+              color: '#0EA5FF'
             },
             '&::after': {
               content: '""',
@@ -206,7 +206,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px',
-              background: 'linear-gradient(to right, #4299E1, #3182CE)',
+              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)',
               transform: pathname === '/playground' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease'
@@ -223,7 +223,7 @@ const Header = () => {
           component={Link}
           to="/contact"
           sx={{
-            color: pathname === '/contact' ? '#4299E1' : '#718096', // text-gray-700
+            color: pathname === '/contact' ? '#0EA5FF' : '#718096', // text-gray-700
             fontWeight: pathname === '/contact' ? 600 : 500, // font-medium
             textDecoration: 'none',
             fontSize: '1rem',
@@ -231,7 +231,7 @@ const Header = () => {
             position: 'relative',
             transition: 'all 0.3s ease', // transition-all duration-300
             '&:hover': {
-              color: '#4299E1' // hover:text-accent
+              color: '#0EA5FF' // hover:text-accent
             },
             '&::after': {
               content: '""',
@@ -240,7 +240,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px', // h-0.5
-              background: 'linear-gradient(to right, #4299E1, #3182CE)', // from-accent to-accent-dark
+              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)', // tech gradient
               transform: pathname === '/contact' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
@@ -285,12 +285,12 @@ const Header = () => {
                   fontWeight: 500, // font-medium
                   textTransform: 'none',
                   borderRadius: '25px', // rounded-full
-                  background: '#4299E1', // 使用纯色背景替代渐变
+                  background: '#0EA5FF', // 使用纯色背景替代渐变
                   color: 'white', // text-white
                   border: 'none',
                   boxShadow: 'none',
                   '&:hover': {
-                    background: '#3182CE', // hover时使用稍深的颜色
+                    background: '#0369A1', // hover时使用稍深的颜色
                     transition: 'background-color 0.2s ease'
                   }
                 }}
@@ -316,8 +316,8 @@ const Header = () => {
                     backgroundColor: 'transparent',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', // hover-lift transition
                     '&:hover': {
-                      borderColor: '#4299E1', // hover:border-accent
-                      color: '#4299E1', // hover:text-accent
+                      borderColor: '#0EA5FF', // hover:border-accent
+                      color: '#0EA5FF', // hover:text-accent
                       backgroundColor: 'transparent',
                       transform: 'translateY(-8px) scale(1.02)', // hover-lift effect
                       boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
@@ -339,13 +339,13 @@ const Header = () => {
                     fontWeight: 500, // font-medium
                     textTransform: 'none',
                     borderRadius: '25px', // rounded-full
-                    background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)', // gradient fill
+                    background: (theme) => theme.aiGradients?.brand || 'linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6)', // gradient fill (AI 科技)
                     color: 'white', // text-white
                     border: 'none',
                     boxShadow: 'none',
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      background: 'linear-gradient(-45deg, #4299E1, #3182CE, #2B6CB0, #2A69AC)',
+                      background: (theme) => theme.aiGradients?.brand || 'linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6)',
                       transform: 'translateY(-1px)'
                     }
                   }}

@@ -38,9 +38,11 @@ const HeroSection = () => {
         sx={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(to bottom right, rgba(249, 250, 251, 0.5), rgba(59, 130, 246, 0.03))'
+          background: 'linear-gradient(to bottom right, rgba(249, 250, 251, 0.5), rgba(14, 165, 255, 0.06))'
         }}
       />
+      {/* 轻量网格覆盖层（AI 科技风） */}
+      <Box className="ai-grid-overlay" sx={{ opacity: 0.35 }} />
 
 
 
@@ -64,7 +66,7 @@ const HeroSection = () => {
               letterSpacing: '-0.02em',
               '& .gradient-text': {
                 fontWeight: 'bold',
-                color: '#4299E1' // 使用纯色替代渐变文字
+                color: '#0EA5FF' // 使用纯色替代渐变文字（AI 科技主色）
               }
             }}
           >
@@ -110,12 +112,12 @@ const HeroSection = () => {
                 px: { xs: 4, md: 6 },
                 py: { xs: 1.5, md: 2 },
                 borderRadius: '50px',
-                background: '#4299E1', // 使用纯色背景替代渐变
+                background: '#0EA5FF', // 使用纯色背景替代渐变（AI 科技主色）
                 fontWeight: 600,
                 boxShadow: 'none', // 移除阴影
                 transition: 'background-color 0.2s ease',
                 '&:hover': {
-                  background: '#3182CE' // hover时使用稍深的颜色
+                  background: '#0369A1' // hover时使用稍深的颜色（主色深色）
                 }
               }}
             >

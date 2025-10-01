@@ -192,7 +192,7 @@ export const createAnimationStyles = (theme) => ({
   
   // 渐变动画样式
   animatedGradient: {
-    background: `linear-gradient(-45deg, ${theme.palette.primary.main}, #3182CE, #2B6CB0, #2A69AC)`,
+    background: `linear-gradient(-45deg, ${theme.palette.primary.main}, #22D3EE, #8B5CF6)`,
     backgroundSize: '400% 400%',
     animation: `${gradientShift} 4s ease infinite`
   },
