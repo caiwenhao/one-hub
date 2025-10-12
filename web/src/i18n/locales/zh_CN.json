@@ -583,7 +583,7 @@
   "modelpricePage": {
     "model": "模型名称",
     "type": "类型",
-    "channelType": "供应商",
+    "channelType": "品牌",
     "availableModels": "可用模型",
     "group": "分组",
     "free": "免费",

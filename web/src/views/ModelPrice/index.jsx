@@ -19,7 +19,11 @@ import {
   useMediaQuery,
   Avatar,
   ButtonBase,
-  Tooltip
+  Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { API } from 'utils/api';
@@ -47,6 +51,40 @@ export default function ModelPrice() {
   // 使用偏好存储的单位默认值（M单位）
   const [unit, setUnit] = useState(() => getUnitPreference(PAGE_KEYS.MODEL_PRICE));
   const [onlyShowAvailable, setOnlyShowAvailable] = useState(false);
+  // 渠道列表与选择
+  const [channels, setChannels] = useState([]);
+  const [selectedChannel, setSelectedChannel] = useState('all');
+
+  const parseChannelModels = (modelsStr) => {
+    if (!modelsStr) return [];
+    return modelsStr
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  };
+
+  const matchModel = (pattern, modelName) => {
+    if (!pattern) return false;
+    if (pattern.endsWith('*')) {
+      const prefix = pattern.slice(0, -1);
+      return modelName.startsWith(prefix);
+    }
+    return pattern.toLowerCase() === modelName.toLowerCase();
+  };
+
+  const fetchChannels = useCallback(async () => {
+    try {
+      const res = await API.get('/api/channel/', { params: { page: 1, size: 100 } });
+      const { success, message, data } = res.data;
+      if (success && data?.data) {
+        setChannels(data.data);
+      } else if (!success) {
+        showError(message);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
 
   const fetchAvailableModels = useCallback(async () => {
     try {
@@ -80,12 +118,22 @@ export default function ModelPrice() {
   useEffect(() => {
     fetchAvailableModels();
     fetchUserGroupMap();
-  }, [fetchAvailableModels, fetchUserGroupMap]);
+    fetchChannels();
+  }, [fetchAvailableModels, fetchUserGroupMap, fetchChannels]);
 
   useEffect(() => {
     if (!availableModels || !userGroupMap || !selectedGroup) return;
 
     const newRows = Object.entries(availableModels)
+      // 渠道过滤：当选择了具体渠道时，仅保留该渠道支持的模型
+      .filter(([modelName]) => {
+        if (selectedChannel === 'all') return true;
+        const ch = channels.find((c) => c.id === selectedChannel || c.id === Number(selectedChannel));
+        if (!ch) return true;
+        const patterns = parseChannelModels(ch.models);
+        if (!patterns || patterns.length === 0) return false;
+        return patterns.some((p) => matchModel(p, modelName));
+      })
       .filter(([, model]) => selectedOwnedBy === 'all' || model.owned_by === selectedOwnedBy)
       .filter(([, model]) => !onlyShowAvailable || model.groups.includes(selectedGroup))
       .map(([modelName, model], index) => {
@@ -126,7 +174,7 @@ export default function ModelPrice() {
 
     setRows(newRows);
     setFilteredRows(newRows);
-  }, [availableModels, userGroupMap, selectedGroup, selectedOwnedBy, t, unit, onlyShowAvailable]);
+  }, [availableModels, userGroupMap, selectedGroup, selectedOwnedBy, t, unit, onlyShowAvailable, selectedChannel, channels]);
 
   useEffect(() => {
     const filtered = rows.filter((row) => row.model.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -361,6 +409,41 @@ export default function ModelPrice() {
               );
             })}
           </Box>
+        </Box>
+
+        {/* 渠道过滤 */}
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="subtitle1"
+            sx={{
+              mb: 1.5,
+              fontWeight: 600,
+              color: theme.palette.text.primary,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            <Icon icon="eva:link-2-outline" width={18} height={18} />
+            {t('channel')}
+          </Typography>
+          <FormControl size="small" sx={{ minWidth: 240 }}>
+            <InputLabel id="channel-filter-label">{t('channel')}</InputLabel>
+            <Select
+              labelId="channel-filter-label"
+              id="channel-filter"
+              value={selectedChannel}
+              label={t('channel')}
+              onChange={(e) => setSelectedChannel(e.target.value)}
+            >
+              <MenuItem value="all">{t('modelpricePage.all')}</MenuItem>
+              {channels.map((ch) => (
+                <MenuItem key={ch.id} value={ch.id}>
+                  {ch.name} (#{ch.id})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
 
         {/* 用户组标签 */}
