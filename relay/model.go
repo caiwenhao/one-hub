@@ -148,14 +148,17 @@ func ListClaudeModelsByToken(c *gin.Context) {
 	})
 }
 
-func inferOwnedBy(modelName string, channelType int) *string {
-	// 优先使用价格表中的 channelType
-	if channelType != config.ChannelTypeUnknown {
-		owned := getModelOwnedBy(channelType)
-		if owned != nil && *owned != model.UnknownOwnedBy && *owned != "" {
-			return owned
+func inferOwnedBy(modelName string, price *model.Price) *string {
+	var channelType int
+	if price != nil {
+		channelType = price.ChannelType
+		if ownedType := price.GetOwnedByType(); ownedType != config.ChannelTypeUnknown {
+			if owned := getModelOwnedBy(ownedType); owned != nil && *owned != model.UnknownOwnedBy && *owned != "" {
+				return owned
+			}
 		}
 	}
+
 	// 否则根据模型命名进行供应商推断，避免显示“未知”
 	lower := strings.ToLower(modelName)
 	if strings.HasPrefix(lower, "kling") || strings.Contains(lower, "kling-") || strings.Contains(lower, "kling_") {
@@ -182,6 +185,14 @@ func inferOwnedBy(modelName string, channelType int) *string {
 		}
 		return &name
 	}
+	if strings.Contains(lower, "deepseek") {
+		name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeDeepseek)
+		if name == model.UnknownOwnedBy || name == "" {
+			fallback := "Deepseek"
+			return &fallback
+		}
+		return &name
+	}
 	return getModelOwnedBy(channelType)
 }
 
@@ -193,7 +204,7 @@ func ListModelsForAdmin(c *gin.Context) {
 			Id:      modelId,
 			Object:  "model",
 			Created: 1677649963,
-			OwnedBy: inferOwnedBy(modelId, price.ChannelType),
+			OwnedBy: inferOwnedBy(modelId, price),
 		})
 	}
 	// 根据 OwnedBy 排序
@@ -247,7 +258,7 @@ func getOpenAIModelWithName(modelName string) *OpenAIModels {
 		Id:      modelName,
 		Object:  "model",
 		Created: 1677649963,
-		OwnedBy: inferOwnedBy(modelName, price.ChannelType),
+		OwnedBy: inferOwnedBy(modelName, price),
 	}
 }
 
@@ -266,9 +277,11 @@ type ModelPrice struct {
 }
 
 type AvailableModelResponse struct {
-	Groups  []string     `json:"groups"`
-	OwnedBy string       `json:"owned_by"`
-	Price   *model.Price `json:"price"`
+	Groups      []string     `json:"groups"`
+	OwnedBy     string       `json:"owned_by"`
+	OwnedByType int          `json:"owned_by_type"`
+	ChannelType int          `json:"channel_type"`
+	Price       *model.Price `json:"price"`
 }
 
 func AvailableModel(c *gin.Context) {
@@ -308,10 +321,17 @@ func getAvailableModels(groupName string) map[string]*AvailableModelResponse {
 
 		if _, ok := availableModels[modelName]; !ok {
 			price := model.PricingInstance.GetPrice(modelName)
+			owned := inferOwnedBy(modelName, price)
+			ownedName := model.UnknownOwnedBy
+			if owned != nil && *owned != "" {
+				ownedName = *owned
+			}
 			availableModels[modelName] = &AvailableModelResponse{
-				Groups:  groups,
-				OwnedBy: *inferOwnedBy(modelName, price.ChannelType),
-				Price:   price,
+				Groups:      groups,
+				OwnedBy:     ownedName,
+				OwnedByType: price.GetOwnedByType(),
+				ChannelType: price.ChannelType,
+				Price:       price,
 			}
 		}
 	}

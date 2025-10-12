@@ -2,6 +2,7 @@ package model
 
 import (
 	"one-api/common/config"
+	"strings"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/datatypes"
@@ -57,6 +58,7 @@ type Price struct {
 	Model       string  `json:"model" gorm:"type:varchar(100)" binding:"required"`
 	Type        string  `json:"type"  gorm:"default:'tokens'" binding:"required"`
 	ChannelType int     `json:"channel_type" gorm:"default:0" binding:"gte=0"`
+	OwnedByType int     `json:"owned_by_type" gorm:"default:0" binding:"gte=0"`
 	Input       float64 `json:"input" gorm:"default:0" binding:"gte=0"`
 	Output      float64 `json:"output" gorm:"default:0" binding:"gte=0"`
 	Locked      bool    `json:"locked" gorm:"default:false"` // 如果模型为locked 则覆盖模式不会更新locked的模型价格
@@ -64,10 +66,36 @@ type Price struct {
 	ExtraRatios *datatypes.JSONType[map[string]float64] `json:"extra_ratios,omitempty" gorm:"type:json"`
 }
 
+func (price *Price) Normalize() {
+	if price == nil {
+		return
+	}
+
+	price.Model = strings.TrimSpace(price.Model)
+	if price.Type == "" {
+		price.Type = TokensPriceType
+	}
+	if price.Type == TimesPriceType && price.Output == 0 {
+		price.Output = price.Input
+	}
+	price.OwnedByType = resolveOwnedByType(price.Model, price.OwnedByType, price.ChannelType)
+}
+
+func (price *Price) GetOwnedByType() int {
+	if price == nil {
+		return config.ChannelTypeUnknown
+	}
+
+	return resolveOwnedByType(price.Model, price.OwnedByType, price.ChannelType)
+}
+
 func GetAllPrices() ([]*Price, error) {
 	var prices []*Price
 	if err := DB.Find(&prices).Error; err != nil {
 		return nil, err
+	}
+	for _, price := range prices {
+		price.Normalize()
 	}
 	// if config.ExtraTokenPriceJson == "" {
 	// 	return prices, nil
@@ -89,6 +117,10 @@ func GetAllPrices() ([]*Price, error) {
 }
 
 func (price *Price) Update(modelName string) error {
+	if price.Model == "" {
+		price.Model = modelName
+	}
+	price.Normalize()
 	if err := DB.Model(price).Select("*").Where("model = ?", modelName).Updates(price).Error; err != nil {
 		return err
 	}
@@ -97,6 +129,7 @@ func (price *Price) Update(modelName string) error {
 }
 
 func (price *Price) Insert() error {
+	price.Normalize()
 	if err := DB.Create(price).Error; err != nil {
 		return err
 	}
@@ -194,6 +227,74 @@ func (price *Price) Delete() error {
 type ModelType struct {
 	Ratio []float64
 	Type  int
+}
+
+var ownedByKeywordRules = []struct {
+	Type     int
+	Keywords []string
+}{
+	{config.ChannelTypeDeepseek, []string{"deepseek"}},
+	{config.ChannelTypeAnthropic, []string{"claude", "anthropic/"}},
+	{config.ChannelTypeOpenAI, []string{"gpt-", "gpt", "davinci", "curie", "babbage", "ada", "whisper", "dall-e", "text-embedding", "o1-", "o3-"}},
+	{config.ChannelTypeGemini, []string{"gemini", "palm-"}},
+	{config.ChannelTypeAli, []string{"qwen", "tongyi"}},
+	{config.ChannelTypeLLAMA, []string{"llama", "meta-llama"}},
+	{config.ChannelTypeMistral, []string{"mistral", "mixtral"}},
+	{config.ChannelTypeMoonshot, []string{"moonshot"}},
+	{config.ChannelTypeLingyi, []string{"yi-"}},
+	{config.ChannelTypeZhipu, []string{"glm", "cogview"}},
+	{config.ChannelTypeBaichuan, []string{"baichuan"}},
+	{config.ChannelTypeMiniMax, []string{"abab", "minimax"}},
+	{config.ChannelTypeGroq, []string{"groq"}},
+	{config.ChannelTypeKling, []string{"kling"}},
+	{config.ChannelTypeVidu, []string{"vidu"}},
+	{config.ChannelTypeVolcArk, []string{"doubao", "wan2.1", "seaweed", "seedance"}},
+	{config.ChannelTypeHunyuan, []string{"hunyuan"}},
+	{config.ChannelTypeSuno, []string{"suno", "chirp"}},
+	{config.ChannelTypeStabilityAI, []string{"stable-diffusion", "sd3"}},
+	{config.ChannelTypeCohere, []string{"cohere", "command-"}},
+	{config.ChannelTypeCloudflareAI, []string{"@cf/"}},
+}
+
+func resolveOwnedByType(modelName string, ownedByType int, channelType int) int {
+	if ownedByType != 0 && ownedByType != config.ChannelTypeUnknown {
+		return ownedByType
+	}
+
+	detected := detectOwnedByType(modelName, channelType)
+	if detected != config.ChannelTypeUnknown {
+		return detected
+	}
+
+	if channelType != 0 && channelType != config.ChannelTypeUnknown {
+		return channelType
+	}
+
+	return config.ChannelTypeUnknown
+}
+
+func detectOwnedByType(modelName string, fallback int) int {
+	lower := strings.ToLower(strings.TrimSpace(modelName))
+	if lower == "" {
+		if fallback != 0 {
+			return fallback
+		}
+		return config.ChannelTypeUnknown
+	}
+
+	for _, rule := range ownedByKeywordRules {
+		for _, keyword := range rule.Keywords {
+			if strings.Contains(lower, keyword) {
+				return rule.Type
+			}
+		}
+	}
+
+	if fallback != 0 {
+		return fallback
+	}
+
+	return config.ChannelTypeUnknown
 }
 
 // 1 === $0.002 / 1K tokens
@@ -536,6 +637,12 @@ func GetDefaultPrice() []*Price {
 		},
 	}
 
+	ownedByOverrides := map[string]int{
+		"deepseek-v3.1":          config.ChannelTypeDeepseek,
+		"deepseek-v3-1-terminus": config.ChannelTypeDeepseek,
+		"deepseek-v3-1-250821":   config.ChannelTypeDeepseek,
+	}
+
 	var prices []*Price
 
 	for model, modelType := range ModelTypes {
@@ -550,6 +657,10 @@ func GetDefaultPrice() []*Price {
 			jsonData := datatypes.NewJSONType(ratios)
 			price.ExtraRatios = &jsonData
 		}
+		if ownedType, ok := ownedByOverrides[model]; ok {
+			price.OwnedByType = ownedType
+		}
+		price.Normalize()
 		prices = append(prices, price)
 	}
 
@@ -607,13 +718,15 @@ func GetDefaultPrice() []*Price {
 	}
 
 	for model, mjPrice := range DefaultMJPrice {
-		prices = append(prices, &Price{
+		price := &Price{
 			Model:       model,
 			Type:        TimesPriceType,
 			ChannelType: config.ChannelTypeMidjourney,
 			Input:       mjPrice,
 			Output:      mjPrice,
-		})
+		}
+		price.Normalize()
+		prices = append(prices, price)
 	}
 
 	var DefaultSunoPrice = map[string]float64{
@@ -622,13 +735,15 @@ func GetDefaultPrice() []*Price {
 		"chirp-v3-5":  50,
 	}
 	for model, sunoPrice := range DefaultSunoPrice {
-		prices = append(prices, &Price{
+		price := &Price{
 			Model:       model,
 			Type:        TimesPriceType,
 			ChannelType: config.ChannelTypeSuno,
 			Input:       sunoPrice,
 			Output:      sunoPrice,
-		})
+		}
+		price.Normalize()
+		prices = append(prices, price)
 	}
 
 	// 每积分折算成人民币：0.3125 RMB；系统基准值为“单位值 * 汇率”得到货币
@@ -774,13 +889,15 @@ func GetDefaultPrice() []*Price {
 	for model, credits := range defaultViduCredits {
 		// 将“积分”转为系统基准值，保证前端展示的 $ 与 ￥计算正确
 		base := credits * (viduCreditToYuan / RMBRate)
-		prices = append(prices, &Price{
+		price := &Price{
 			Model:       model,
 			Type:        TimesPriceType,
 			ChannelType: config.ChannelTypeVidu,
 			Input:       base,
 			Output:      base,
-		})
+		}
+		price.Normalize()
+		prices = append(prices, price)
 	}
 
 	var defaultVolcArkImagePrice = map[string]float64{
@@ -793,13 +910,15 @@ func GetDefaultPrice() []*Price {
 
 	for model, pricePerImage := range defaultVolcArkImagePrice {
 		base := pricePerImage / RMBRate
-		prices = append(prices, &Price{
+		price := &Price{
 			Model:       model,
 			Type:        TimesPriceType,
 			ChannelType: config.ChannelTypeVolcArk,
 			Input:       base,
 			Output:      base,
-		})
+		}
+		price.Normalize()
+		prices = append(prices, price)
 	}
 
 	// 可灵AI 默认价格配置 (按次计费)
@@ -899,13 +1018,15 @@ func GetDefaultPrice() []*Price {
 	for model, klingPrice := range DefaultKlingPrice {
 		// 将人民币价格折算为系统基准值，保证前端 $ / ￥ 展示正确
 		base := klingPrice / RMBRate
-		prices = append(prices, &Price{
+		price := &Price{
 			Model:       model,
 			Type:        TimesPriceType,
 			ChannelType: config.ChannelTypeKling,
 			Input:       base,
 			Output:      base,
-		})
+		}
+		price.Normalize()
+		prices = append(prices, price)
 	}
 
 	return prices

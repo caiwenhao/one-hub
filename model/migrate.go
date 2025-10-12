@@ -83,6 +83,37 @@ func changeTokenKeyColumnType() *gormigrate.Migration {
 	}
 }
 
+func addOwnedByTypeToPrice() *gormigrate.Migration {
+	return &gormigrate.Migration{
+		ID: "202411300002",
+		Migrate: func(tx *gorm.DB) error {
+			if !tx.Migrator().HasTable(&Price{}) {
+				return nil
+			}
+
+			if !tx.Migrator().HasColumn(&Price{}, "owned_by_type") {
+				if err := tx.Migrator().AddColumn(&Price{}, "owned_by_type"); err != nil {
+					logger.SysLog("新增 owned_by_type 字段失败: " + err.Error())
+					return err
+				}
+			}
+
+			if err := tx.Model(&Price{}).Where("owned_by_type = ?", 0).Update("owned_by_type", gorm.Expr("channel_type")).Error; err != nil {
+				logger.SysLog("初始化价格品牌字段失败: " + err.Error())
+				return err
+			}
+
+			return nil
+		},
+		Rollback: func(tx *gorm.DB) error {
+			if !tx.Migrator().HasTable(&Price{}) || !tx.Migrator().HasColumn(&Price{}, "owned_by_type") {
+				return nil
+			}
+			return tx.Migrator().DropColumn(&Price{}, "owned_by_type")
+		},
+	}
+}
+
 func migrationBefore(db *gorm.DB) error {
 	// 从库不执行
 	if !config.IsMasterNode {
@@ -98,6 +129,7 @@ func migrationBefore(db *gorm.DB) error {
 	m := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{
 		removeKeyIndexMigration(),
 		changeTokenKeyColumnType(),
+		addOwnedByTypeToPrice(),
 	})
 	return m.Migrate()
 }

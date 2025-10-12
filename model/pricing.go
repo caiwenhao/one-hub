@@ -81,6 +81,7 @@ func (p *Pricing) Init() error {
 	newMatch := make(map[string]bool)
 
 	for _, price := range prices {
+		price.Normalize()
 		newPrices[price.Model] = price
 		if strings.HasSuffix(price.Model, "*") {
 			if _, ok := newMatch[price.Model]; !ok {
@@ -109,6 +110,7 @@ func (p *Pricing) GetPrice(modelName string) *Price {
 	defer p.RUnlock()
 
 	if price, ok := p.Prices[modelName]; ok {
+		price.Normalize()
 		return price
 	}
 
@@ -122,15 +124,20 @@ func (p *Pricing) GetPrice(modelName string) *Price {
 
 	matchModel := utils.GetModelsWithMatch(&p.Match, modelName)
 	if price, ok := p.Prices[matchModel]; ok {
+		price.Normalize()
 		return price
 	}
 
-	return &Price{
+	fallback := &Price{
+		Model:       modelName,
 		Type:        TokensPriceType,
 		ChannelType: config.ChannelTypeUnknown,
 		Input:       DefaultPrice,
 		Output:      DefaultPrice,
 	}
+	fallback.Normalize()
+
+	return fallback
 }
 
 func normalizeLegacyViduModelName(modelName string) (string, bool) {
@@ -174,6 +181,7 @@ func (p *Pricing) GetAllPrices() map[string]*Price {
 func (p *Pricing) GetAllPricesList() []*Price {
 	var prices []*Price
 	for _, price := range p.Prices {
+		price.Normalize()
 		prices = append(prices, price)
 	}
 
@@ -183,6 +191,10 @@ func (p *Pricing) GetAllPricesList() []*Price {
 func (p *Pricing) updateRawPrice(modelName string, price *Price) error {
 	if _, ok := p.Prices[modelName]; !ok {
 		return errors.New("model not found")
+	}
+
+	if strings.TrimSpace(price.Model) == "" {
+		price.Model = modelName
 	}
 
 	if _, ok := p.Prices[price.Model]; modelName != price.Model && ok {
@@ -399,6 +411,7 @@ func (p *Pricing) SyncPriceWithOverwrite(pricing []*Price) error {
 				}
 			}
 		}
+		price.Normalize()
 	}
 
 	for _, defaultPrice := range defaultPricing {
@@ -406,6 +419,7 @@ func (p *Pricing) SyncPriceWithOverwrite(pricing []*Price) error {
 			continue
 		}
 		clone := *defaultPrice
+		clone.Normalize()
 		pricing = append(pricing, &clone)
 	}
 
@@ -441,6 +455,7 @@ func (p *Pricing) SyncPriceOnlyUpdate(pricing []*Price) error {
 	var newPricesName []string
 	//系统内存在并且非lock的模型价格加入new price
 	for _, price := range pricing {
+		price.Normalize()
 		if p, ok := p.Prices[price.Model]; ok && !p.Locked {
 			newPrices = append(newPrices, price)
 			newPricesName = append(newPricesName, price.Model)
@@ -476,20 +491,32 @@ func (p *Pricing) SyncPriceWithoutOverwrite(pricing []*Price) error {
 		Model       string
 		ChannelType int
 	}
+	type ownedByTypeUpdate struct {
+		Model       string
+		OwnedByType int
+	}
 	var channelTypeUpdates []channelTypeUpdate
+	var ownedByTypeUpdates []ownedByTypeUpdate
 
 	logger.SysLog(fmt.Sprintf("系统内已有价格配置 %d 个", len(p.Prices)))
 	for _, price := range pricing {
+		price.Normalize()
 		if existing, ok := p.Prices[price.Model]; !ok {
 			// 系统内不存在的模型直接新增
 			newPrices = append(newPrices, price)
-		} else if existing.ChannelType == config.ChannelTypeUnknown && price.ChannelType != config.ChannelTypeUnknown {
-			// 针对旧数据没有渠道类型的情况做一次补齐
-			channelTypeUpdates = append(channelTypeUpdates, channelTypeUpdate{Model: price.Model, ChannelType: price.ChannelType})
+		} else {
+			existing.Normalize()
+			if existing.ChannelType == config.ChannelTypeUnknown && price.ChannelType != config.ChannelTypeUnknown {
+				// 针对旧数据没有渠道类型的情况做一次补齐
+				channelTypeUpdates = append(channelTypeUpdates, channelTypeUpdate{Model: price.Model, ChannelType: price.ChannelType})
+			}
+			if price.OwnedByType != config.ChannelTypeUnknown && price.OwnedByType != existing.OwnedByType {
+				ownedByTypeUpdates = append(ownedByTypeUpdates, ownedByTypeUpdate{Model: price.Model, OwnedByType: price.OwnedByType})
+			}
 		}
 	}
 
-	if len(newPrices) == 0 && len(channelTypeUpdates) == 0 {
+	if len(newPrices) == 0 && len(channelTypeUpdates) == 0 && len(ownedByTypeUpdates) == 0 {
 		return nil
 	}
 
@@ -511,6 +538,16 @@ func (p *Pricing) SyncPriceWithoutOverwrite(pricing []*Price) error {
 			}
 		}
 		logger.SysLog(fmt.Sprintf("本次修正渠道类型 %d 个模型", len(channelTypeUpdates)))
+	}
+
+	if len(ownedByTypeUpdates) > 0 {
+		for _, item := range ownedByTypeUpdates {
+			if err := tx.Model(&Price{}).Where("model = ?", item.Model).Update("owned_by_type", item.OwnedByType).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+		logger.SysLog(fmt.Sprintf("本次修正品牌归属 %d 个模型", len(ownedByTypeUpdates)))
 	}
 
 	tx.Commit()
@@ -642,6 +679,42 @@ func GetOldPricesList() []*Price {
 	}
 
 	return prices
+}
+
+func BatchUpdatePriceOwnedByType(models []string, ownedByType int) error {
+	if len(models) == 0 {
+		return nil
+	}
+
+	cleanSet := make(map[string]struct{}, len(models))
+	cleanList := make([]string, 0, len(models))
+	for _, modelName := range models {
+		trimmed := strings.TrimSpace(modelName)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := cleanSet[trimmed]; exists {
+			continue
+		}
+		cleanSet[trimmed] = struct{}{}
+		cleanList = append(cleanList, trimmed)
+	}
+
+	if len(cleanList) == 0 {
+		return nil
+	}
+
+	tx := DB.Begin()
+	if err := tx.Model(&Price{}).Where("model IN (?)", cleanList).Update("owned_by_type", ownedByType).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	return PricingInstance.Init()
 }
 
 // func ConvertBatchPrices(prices []*Price) []*BatchPrices {
