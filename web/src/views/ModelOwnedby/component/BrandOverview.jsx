@@ -34,6 +34,7 @@ import {
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import { Icon } from '@iconify/react';
 import { useTranslation } from 'react-i18next';
+import { ValueFormatter } from 'utils/common';
 
 const MAX_VISIBLE_CHANNELS = 3;
 
@@ -58,17 +59,18 @@ const formatNumber = (value) => {
   return numeric.toLocaleString(undefined, { maximumFractionDigits: 6 });
 };
 
+// 以 1M 价格显示（tokens类型），times 类型直接按次计费
 const formatPrice = (price, t) => {
-  if (!price) {
-    return '-';
-  }
+  if (!price) return '-';
   if (price.type === 'times') {
-    return t('modelOwnedby.overview.timesPrice', { value: formatNumber(price.input) });
+    // 按次计费：仅显示美元价（不做单位换算）
+    const v = ValueFormatter(price.input, true, false);
+    return t('modelOwnedby.overview.timesPrice', { value: v });
   }
-  return t('modelOwnedby.overview.tokensPrice', {
-    input: formatNumber(price.input),
-    output: formatNumber(price.output)
-  });
+  // tokens 按 1M 显示
+  const input = `${ValueFormatter(price.input, true, true)} / 1M`;
+  const output = `${ValueFormatter(price.output, true, true)} / 1M`;
+  return t('modelOwnedby.overview.tokensPrice', { input, output });
 };
 
 const renderChannels = (channels, t) => {
@@ -158,11 +160,15 @@ const BrandOverview = ({
   onSelectAll,
   onSelectOne,
   onBulkUpdate,
+  onBulkUpdateChannel,
   bulkUpdating
 }) => {
   const { t } = useTranslation();
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [bulkOwnedBy, setBulkOwnedBy] = useState('');
+  // 批量调整价格渠道
+  const [bulkChannelDialogOpen, setBulkChannelDialogOpen] = useState(false);
+  const [bulkChannelType, setBulkChannelType] = useState('');
   const [keywordInput, setKeywordInput] = useState(filters.keyword || '');
 
   useEffect(() => {
@@ -174,6 +180,12 @@ const BrandOverview = ({
       setBulkOwnedBy(String(ownedByOptions[0].id));
     }
   }, [bulkDialogOpen, bulkOwnedBy, ownedByOptions]);
+
+  useEffect(() => {
+    if (bulkChannelDialogOpen && bulkChannelType === '' && ownedByOptions.length > 0) {
+      setBulkChannelType(String(ownedByOptions[0].id));
+    }
+  }, [bulkChannelDialogOpen, bulkChannelType, ownedByOptions]);
 
   const currentModels = useMemo(() => data.map((item) => item.model), [data]);
   const selectedSet = useMemo(() => new Set(selected), [selected]);
@@ -218,6 +230,14 @@ const BrandOverview = ({
     }
     await onBulkUpdate(parseInt(bulkOwnedBy, 10));
     setBulkDialogOpen(false);
+  };
+
+  const handleBulkChannelConfirm = async () => {
+    if (!bulkChannelType) {
+      return;
+    }
+    await onBulkUpdateChannel(parseInt(bulkChannelType, 10));
+    setBulkChannelDialogOpen(false);
   };
 
   const issueOptions = useMemo(() => Object.keys(issueStats || {}), [issueStats]);
@@ -380,16 +400,28 @@ const BrandOverview = ({
                   </Button>
                 </ButtonGroup>
                 <Box sx={{ flexGrow: 1 }} />
-                <Button
-                  variant="contained"
-                  color="primary"
-                  disabled={selected.length === 0}
-                  startIcon={<Icon icon="solar:pen-2-bold-duotone" width={18} />}
-                  onClick={() => setBulkDialogOpen(true)}
-                  sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
-                >
-                  {t('modelOwnedby.overview.bulkAction', { count: selected.length })}
-                </Button>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    disabled={selected.length === 0}
+                    startIcon={<Icon icon="solar:pen-2-bold-duotone" width={18} />}
+                    onClick={() => setBulkDialogOpen(true)}
+                    sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
+                  >
+                    {t('modelOwnedby.overview.bulkAction', { count: selected.length })}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    disabled={selected.length === 0}
+                    startIcon={<Icon icon="solar:settings-bold-duotone" width={18} />}
+                    onClick={() => setBulkChannelDialogOpen(true)}
+                    sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
+                  >
+                    {t('modelOwnedby.overview.bulkChannelAction', { count: selected.length })}
+                  </Button>
+                </Stack>
               </Stack>
             </Grid>
           </Grid>
@@ -498,6 +530,18 @@ const BrandOverview = ({
         selectedCount={selected.length}
         t={t}
       />
+
+      <BulkChannelDialog
+        open={bulkChannelDialogOpen}
+        onClose={() => setBulkChannelDialogOpen(false)}
+        ownedByOptions={ownedByOptions}
+        channelTypeValue={bulkChannelType}
+        onChannelTypeChange={setBulkChannelType}
+        onSubmit={handleBulkChannelConfirm}
+        submitting={bulkUpdating}
+        selectedCount={selected.length}
+        t={t}
+      />
     </Card>
   );
 };
@@ -564,6 +608,7 @@ BrandOverview.propTypes = {
   onSelectAll: PropTypes.func.isRequired,
   onSelectOne: PropTypes.func.isRequired,
   onBulkUpdate: PropTypes.func.isRequired,
+  onBulkUpdateChannel: PropTypes.func.isRequired,
   bulkUpdating: PropTypes.bool
 };
 
@@ -583,6 +628,64 @@ BrandOverview.defaultProps = {
   issueStats: {},
   groups: [],
   bulkUpdating: false
+};
+
+// 批量调整价格渠道对话框
+const BulkChannelDialog = ({
+  open,
+  onClose,
+  ownedByOptions,
+  channelTypeValue,
+  onChannelTypeChange,
+  onSubmit,
+  submitting,
+  selectedCount,
+  t
+}) => (
+  <Dialog maxWidth="xs" fullWidth open={open} onClose={submitting ? undefined : onClose}>
+    <DialogTitle>{t('modelOwnedby.overview.bulkChannelDialogTitle')}</DialogTitle>
+    <DialogContent>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        {t('modelOwnedby.overview.bulkChannelDialogDescription', { count: selectedCount })}
+      </Typography>
+      <FormControl size="small" fullWidth>
+        <InputLabel>{t('modelOwnedby.overview.filterChannelType')}</InputLabel>
+        <Select
+          label={t('modelOwnedby.overview.filterChannelType')}
+          value={channelTypeValue}
+          onChange={(event) => onChannelTypeChange(event.target.value)}
+        >
+          <MenuItem value="0">{t('modelOwnedby.overview.optionUnknown')}</MenuItem>
+          {ownedByOptions.map((option) => (
+            <MenuItem key={option.id} value={String(option.id)}>
+              {option.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </DialogContent>
+    <DialogActions>
+      <Button onClick={onClose} disabled={submitting}>
+        {t('modelOwnedby.overview.bulkCancel')}
+      </Button>
+      <Button onClick={onSubmit} variant="contained" disabled={submitting || !channelTypeValue}>
+        {submitting && <CircularProgress size={18} sx={{ mr: 1 }} />}
+        {t('modelOwnedby.overview.bulkSubmit')}
+      </Button>
+    </DialogActions>
+  </Dialog>
+);
+
+BulkChannelDialog.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  ownedByOptions: PropTypes.array.isRequired,
+  channelTypeValue: PropTypes.string,
+  onChannelTypeChange: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  submitting: PropTypes.bool,
+  selectedCount: PropTypes.number.isRequired,
+  t: PropTypes.func.isRequired
 };
 
 export default BrandOverview;

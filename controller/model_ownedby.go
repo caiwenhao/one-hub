@@ -172,8 +172,8 @@ func checkModelOwnedByReserveID(id int) bool {
 }
 
 type ModelBrandBatchUpdateRequest struct {
-	Models      []string `json:"models" binding:"required"`
-	OwnedByType *int     `json:"owned_by_type"`
+    Models      []string `json:"models" binding:"required"`
+    OwnedByType *int     `json:"owned_by_type"`
 }
 
 func BatchUpdateModelBrand(c *gin.Context) {
@@ -202,4 +202,38 @@ func BatchUpdateModelBrand(c *gin.Context) {
 		"success": true,
 		"message": "",
 	})
+}
+
+// 批量调整价格渠道
+type ModelBrandBatchUpdateChannelRequest struct {
+    Models      []string `json:"models" binding:"required"`
+    ChannelType *int     `json:"channel_type"`
+}
+
+func BatchUpdateModelChannelType(c *gin.Context) {
+    req := &ModelBrandBatchUpdateChannelRequest{}
+    if err := c.ShouldBindJSON(req); err != nil {
+        common.APIRespondWithError(c, http.StatusOK, err)
+        return
+    }
+
+    if len(req.Models) == 0 {
+        common.APIRespondWithError(c, http.StatusOK, errors.New("models is required"))
+        return
+    }
+
+    if req.ChannelType == nil {
+        common.APIRespondWithError(c, http.StatusOK, errors.New("channel_type is required"))
+        return
+    }
+
+    if err := model.BatchUpdatePriceChannelType(req.Models, *req.ChannelType); err != nil {
+        common.APIRespondWithError(c, http.StatusOK, err)
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "success": true,
+        "message": "",
+    })
 }

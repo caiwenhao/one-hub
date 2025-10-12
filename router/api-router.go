@@ -124,6 +124,8 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			modelOwnedByRoute.GET("/overview", controller.GetModelBrandOverview)
 			modelOwnedByRoute.POST("/overview/batch", controller.BatchUpdateModelBrand)
+			// 批量调整价格渠道
+			modelOwnedByRoute.POST("/overview/batch_channel", controller.BatchUpdateModelChannelType)
 			modelOwnedByRoute.GET("/:id", controller.GetModelOwnedBy)
 			modelOwnedByRoute.POST("/", controller.CreateModelOwnedBy)
 			modelOwnedByRoute.PUT("/", controller.UpdateModelOwnedBy)

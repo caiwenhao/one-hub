@@ -57,6 +57,7 @@ export default function ModelOwnedby() {
   const [overviewLoaded, setOverviewLoaded] = useState(false);
   const [selectedModels, setSelectedModels] = useState([]);
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  // 价格渠道批量更新使用同一loading标志，保持交互一致
 
   const [openModal, setOpenModal] = useState(false);
   const [editId, setEditId] = useState(0);
@@ -261,6 +262,32 @@ export default function ModelOwnedby() {
     }
   };
 
+  // 批量调整价格渠道
+  const handleBulkUpdateChannel = async (channelType) => {
+    if (!selectedModels.length) {
+      return;
+    }
+    setBulkUpdating(true);
+    try {
+      const res = await API.post('/api/model_ownedby/overview/batch_channel', {
+        models: selectedModels,
+        channel_type: channelType
+      });
+      const { success, message } = res.data;
+      if (success) {
+        showSuccess(t('modelOwnedby.overview.bulkChannelSuccess'));
+        setSelectedModels([]);
+        await loadOverview();
+      } else {
+        showError(message);
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
   return (
     <>
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
@@ -360,6 +387,7 @@ export default function ModelOwnedby() {
           onSelectAll={handleSelectAll}
           onSelectOne={handleSelectOne}
           onBulkUpdate={handleBulkUpdate}
+          onBulkUpdateChannel={handleBulkUpdateChannel}
           bulkUpdating={bulkUpdating}
         />
       </TabPanel>

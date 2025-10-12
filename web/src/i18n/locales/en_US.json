@@ -1436,7 +1436,8 @@
       "optionUnknown": "Not Set",
       "search": "Search",
       "reset": "Reset",
-      "bulkAction": "Bulk Update ({{count}})",
+      "bulkAction": "Bulk Update Brand ({{count}})",
+      "bulkChannelAction": "Bulk Update Channel ({{count}})",
       "columns": {
         "model": "Model",
         "ownedBy": "Brand",
@@ -1467,9 +1468,12 @@
       "noData": "No model data yet",
       "bulkDialogTitle": "Bulk Update Brand Mapping",
       "bulkDialogDescription": "You are about to update {{count}} model(s). Please choose the target brand.",
+      "bulkChannelDialogTitle": "Bulk Update Pricing Channel",
+      "bulkChannelDialogDescription": "You are about to update {{count}} model(s). Please choose the target channel type.",
       "bulkSubmit": "Apply",
       "bulkCancel": "Cancel",
-      "bulkSuccess": "Brand mapping updated"
+      "bulkSuccess": "Brand mapping updated",
+      "bulkChannelSuccess": "Pricing channel updated"
     }
   },
   "price": "Price",

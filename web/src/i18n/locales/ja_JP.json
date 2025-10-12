@@ -1404,7 +1404,8 @@
       "optionUnknown": "未設定",
       "search": "検索",
       "reset": "リセット",
-      "bulkAction": "一括変更（{{count}}）",
+      "bulkAction": "ブランドを一括変更（{{count}}）",
+      "bulkChannelAction": "価格チャネルを一括変更（{{count}}）",
       "columns": {
         "model": "モデル",
         "ownedBy": "ブランド",
@@ -1435,9 +1436,12 @@
       "noData": "モデルデータがありません",
       "bulkDialogTitle": "ブランドを一括更新",
       "bulkDialogDescription": "{{count}} 件のモデルのブランドを更新します。対象ブランドを選択してください。",
+      "bulkChannelDialogTitle": "価格チャネルを一括更新",
+      "bulkChannelDialogDescription": "{{count}} 件のモデルの価格チャネルを更新します。対象チャネルタイプを選択してください。",
       "bulkSubmit": "保存",
       "bulkCancel": "キャンセル",
-      "bulkSuccess": "ブランドの割り当てを更新しました"
+      "bulkSuccess": "ブランドの割り当てを更新しました",
+      "bulkChannelSuccess": "価格チャネルを更新しました"
     }
   },
   "price": "価格",

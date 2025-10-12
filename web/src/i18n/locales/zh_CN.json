@@ -1468,6 +1468,7 @@
       "search": "查询",
       "reset": "重置",
       "bulkAction": "批量调整（{{count}}）",
+      "bulkChannelAction": "批量调整价格渠道（{{count}}）",
       "columns": {
         "model": "模型",
         "ownedBy": "品牌归属",
@@ -1498,9 +1499,12 @@
       "noData": "暂未统计到模型数据",
       "bulkDialogTitle": "批量调整品牌归属",
       "bulkDialogDescription": "将为 {{count}} 个模型重新指定品牌归属，请选择目标品牌。",
+      "bulkChannelDialogTitle": "批量调整价格渠道",
+      "bulkChannelDialogDescription": "将为 {{count}} 个模型批量设置价格渠道，请选择目标渠道类型。",
       "bulkSubmit": "确认调整",
       "bulkCancel": "取消",
-      "bulkSuccess": "品牌归属已更新"
+      "bulkSuccess": "品牌归属已更新",
+      "bulkChannelSuccess": "价格渠道已更新"
     }
   },
   "禁用流式的模型": "禁用流式的模型",

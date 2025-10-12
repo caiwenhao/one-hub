@@ -1405,7 +1405,8 @@
       "optionUnknown": "未設定",
       "search": "查詢",
       "reset": "重設",
-      "bulkAction": "批量調整（{{count}}）",
+      "bulkAction": "批量調整品牌（{{count}}）",
+      "bulkChannelAction": "批量調整價格渠道（{{count}}）",
       "columns": {
         "model": "模型",
         "ownedBy": "品牌歸屬",
@@ -1436,9 +1437,12 @@
       "noData": "暫未統計模型資料",
       "bulkDialogTitle": "批量調整品牌歸屬",
       "bulkDialogDescription": "將為 {{count}} 個模型重新指定品牌，請選擇目標品牌。",
+      "bulkChannelDialogTitle": "批量調整價格渠道",
+      "bulkChannelDialogDescription": "將為 {{count}} 個模型批量設置價格渠道，請選擇目標渠道類型。",
       "bulkSubmit": "確認調整",
       "bulkCancel": "取消",
-      "bulkSuccess": "品牌歸屬已更新"
+      "bulkSuccess": "品牌歸屬已更新",
+      "bulkChannelSuccess": "價格渠道已更新"
     }
   },
   "price": "價格",

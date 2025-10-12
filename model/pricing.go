@@ -717,6 +717,42 @@ func BatchUpdatePriceOwnedByType(models []string, ownedByType int) error {
 	return PricingInstance.Init()
 }
 
+func BatchUpdatePriceChannelType(models []string, channelType int) error {
+    if len(models) == 0 {
+        return nil
+    }
+
+    cleanSet := make(map[string]struct{}, len(models))
+    cleanList := make([]string, 0, len(models))
+    for _, modelName := range models {
+        trimmed := strings.TrimSpace(modelName)
+        if trimmed == "" {
+            continue
+        }
+        if _, exists := cleanSet[trimmed]; exists {
+            continue
+        }
+        cleanSet[trimmed] = struct{}{}
+        cleanList = append(cleanList, trimmed)
+    }
+
+    if len(cleanList) == 0 {
+        return nil
+    }
+
+    tx := DB.Begin()
+    if err := tx.Model(&Price{}).Where("model IN (?)", cleanList).Update("channel_type", channelType).Error; err != nil {
+        tx.Rollback()
+        return err
+    }
+
+    if err := tx.Commit().Error; err != nil {
+        return err
+    }
+
+    return PricingInstance.Init()
+}
+
 // func ConvertBatchPrices(prices []*Price) []*BatchPrices {
 // 	batchPricesMap := make(map[string]*BatchPrices)
 // 	for _, price := range prices {
