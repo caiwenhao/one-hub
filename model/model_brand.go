@@ -111,28 +111,23 @@ func QueryModelBrandOverview(query *ModelBrandOverviewQuery) (*ModelBrandOvervie
 }
 
 func buildModelBrandOverview() ([]*ModelBrandOverview, []string, error) {
-	var result []*ModelBrandOverview
+    var result []*ModelBrandOverview
 
-	ownedByNames := ModelOwnedBysInstance.GetAll()
-	prices := PricingInstance.GetAllPrices()
-	modelGroups := ChannelGroup.GetModelsGroups()
-	modelChannels := buildModelChannels(ownedByNames)
+    ownedByNames := ModelOwnedBysInstance.GetAll()
+    modelGroups := ChannelGroup.GetModelsGroups()
+    modelChannels := buildModelChannels(ownedByNames)
 
-	modelSet := map[string]struct{}{}
-	for name := range prices {
-		modelSet[name] = struct{}{}
-	}
-	for name := range modelGroups {
-		modelSet[name] = struct{}{}
-	}
-	for name := range modelChannels {
-		modelSet[name] = struct{}{}
-	}
+    // 仅处理“已接入渠道”的模型：以已构建出的 modelChannels 为准
+    // 不再包含未绑定任何渠道的模型
+    modelSet := map[string]struct{}{}
+    for name := range modelChannels {
+        modelSet[name] = struct{}{}
+    }
 
-	allModels := make([]string, 0, len(modelSet))
-	for modelName := range modelSet {
-		allModels = append(allModels, modelName)
-	}
+    allModels := make([]string, 0, len(modelSet))
+    for modelName := range modelSet {
+        allModels = append(allModels, modelName)
+    }
 	sort.Strings(allModels)
 
 	for _, modelName := range allModels {
