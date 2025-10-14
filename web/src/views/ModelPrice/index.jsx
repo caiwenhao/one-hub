@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { API } from 'utils/api';
-import { showError, ValueFormatter, copy } from 'utils/common';
+import { showError, ValueFormatter, copy, useIsAdmin } from 'utils/common';
 import { useTheme } from '@mui/material/styles';
 import Label from 'ui-component/Label';
 import ToggleButtonGroup from 'ui-component/ToggleButton';
@@ -40,6 +40,7 @@ export default function ModelPrice() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const ownedby = useSelector((state) => state.siteInfo?.ownedby);
+  const isAdmin = useIsAdmin();
 
   const [rows, setRows] = useState([]);
   const [filteredRows, setFilteredRows] = useState([]);
@@ -50,7 +51,7 @@ export default function ModelPrice() {
   const [selectedOwnedBy, setSelectedOwnedBy] = useState('all');
   // 使用偏好存储的单位默认值（M单位）
   const [unit, setUnit] = useState(() => getUnitPreference(PAGE_KEYS.MODEL_PRICE));
-  const [onlyShowAvailable, setOnlyShowAvailable] = useState(false);
+  const [onlyShowAvailable, setOnlyShowAvailable] = useState(true); // 默认开启“只显示可用”过滤
   // 渠道列表与选择
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState('all');
@@ -118,8 +119,13 @@ export default function ModelPrice() {
   useEffect(() => {
     fetchAvailableModels();
     fetchUserGroupMap();
-    fetchChannels();
-  }, [fetchAvailableModels, fetchUserGroupMap, fetchChannels]);
+    if (isAdmin) {
+      fetchChannels();
+    } else {
+      setChannels([]);
+      setSelectedChannel('all');
+    }
+  }, [fetchAvailableModels, fetchUserGroupMap, fetchChannels, isAdmin]);
 
   useEffect(() => {
     if (!availableModels || !userGroupMap || !selectedGroup) return;
@@ -412,39 +418,41 @@ export default function ModelPrice() {
         </Box>
 
         {/* 渠道过滤 */}
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="subtitle1"
-            sx={{
-              mb: 1.5,
-              fontWeight: 600,
-              color: theme.palette.text.primary,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}
-          >
-            <Icon icon="eva:link-2-outline" width={18} height={18} />
-            {t('channel')}
-          </Typography>
-          <FormControl size="small" sx={{ minWidth: 240 }}>
-            <InputLabel id="channel-filter-label">{t('channel')}</InputLabel>
-            <Select
-              labelId="channel-filter-label"
-              id="channel-filter"
-              value={selectedChannel}
-              label={t('channel')}
-              onChange={(e) => setSelectedChannel(e.target.value)}
+        {isAdmin && (
+          <Box sx={{ mb: 3 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                mb: 1.5,
+                fontWeight: 600,
+                color: theme.palette.text.primary,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}
             >
-              <MenuItem value="all">{t('modelpricePage.all')}</MenuItem>
-              {channels.map((ch) => (
-                <MenuItem key={ch.id} value={ch.id}>
-                  {ch.name} (#{ch.id})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+              <Icon icon="eva:link-2-outline" width={18} height={18} />
+              {t('channel')}
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 240 }}>
+              <InputLabel id="channel-filter-label">{t('channel')}</InputLabel>
+              <Select
+                labelId="channel-filter-label"
+                id="channel-filter"
+                value={selectedChannel}
+                label={t('channel')}
+                onChange={(e) => setSelectedChannel(e.target.value)}
+              >
+                <MenuItem value="all">{t('modelpricePage.all')}</MenuItem>
+                {channels.map((ch) => (
+                  <MenuItem key={ch.id} value={ch.id}>
+                    {ch.name} (#{ch.id})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        )}
 
         {/* 用户组标签 */}
         <Box sx={{ mb: 0 }}>
