@@ -21,7 +21,8 @@ FROM golang:1.24.2 AS builder2
 
 ENV GO111MODULE=on \
     CGO_ENABLED=1 \
-    GOOS=linux
+    GOOS=linux \
+    TIKTOKEN_CACHE_DIR=/opt/tiktoken-cache
 
 WORKDIR /build
 
@@ -34,6 +35,10 @@ COPY . .
 
 # 从第一阶段复制构建好的前端文件
 COPY --from=builder /build/build ./web/build
+
+# 预热 tiktoken 词表缓存，避免运行时再下载
+RUN mkdir -p ${TIKTOKEN_CACHE_DIR} && \
+    go run ./hack/scripts/prefetch_tiktoken/main.go
 
 # 构建Go应用
 RUN go build -ldflags "-s -w -X 'one-api/common.Version=$(cat VERSION)' -extldflags '-static'" -o one-api
@@ -48,12 +53,17 @@ RUN apk update \
 
 # 复制构建好的应用
 COPY --from=builder2 /build/one-api /
+# 复制预热完成的 tiktoken 缓存
+COPY --from=builder2 /opt/tiktoken-cache /opt/tiktoken-cache
 
 # 暴露端口
 EXPOSE 3000
 
 # 设置工作目录
 WORKDIR /data
+
+# 设置运行阶段的 tiktoken 缓存路径
+ENV TIKTOKEN_CACHE_DIR=/opt/tiktoken-cache
 
 # 启动应用
 ENTRYPOINT ["/one-api"]
