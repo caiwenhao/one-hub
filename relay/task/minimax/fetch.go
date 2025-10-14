@@ -57,7 +57,7 @@ func RelayTaskFetch(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, resp)
+	writeJSONNoEscape(c, http.StatusOK, resp)
 }
 
 func RelayTaskList(c *gin.Context) {
@@ -81,7 +81,7 @@ func RelayTaskList(c *gin.Context) {
 		items = append(items, taskModelToDto(task))
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	writeJSONNoEscape(c, http.StatusOK, gin.H{
 		"data":  items,
 		"total": result.Size,
 		"page":  result.Page,

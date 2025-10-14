@@ -257,7 +257,7 @@ func applyQueryResult(task *model.Task, resp *miniProvider.MiniMaxVideoQueryResp
 		resp.TaskID = task.TaskID
 	}
 
-	if data, err := json.Marshal(resp); err == nil {
+	if data, err := marshalNoEscape(resp); err == nil {
 		task.Data = data
 	}
 
