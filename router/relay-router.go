@@ -6,6 +6,7 @@ import (
 	"one-api/relay"
 	"one-api/relay/midjourney"
 	"one-api/relay/task"
+	"one-api/relay/task/minimax"
 	"one-api/relay/task/suno"
 	"one-api/relay/task/vidu"
 	"one-api/relay/task/volcark"
@@ -23,6 +24,7 @@ func SetRelayRouter(router *gin.Engine) {
 	setGeminiRouter(router)
 	setRecraftRouter(router)
 	setKlingRouter(router)
+	setMiniMaxRouter(router)
 	setViduRouter(router)
 	setVolcArkRouter(router)
 }
@@ -146,6 +148,24 @@ func setRecraftRouter(router *gin.Engine) {
 func setKlingRouter(router *gin.Engine) {
 	// 新增官方API兼容路由
 	setOfficialKlingRouter(router)
+}
+
+func setMiniMaxRouter(router *gin.Engine) {
+	miniMaxRouter := router.Group("/minimax")
+	miniMaxRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+	{
+		miniMaxRouter.POST("/v1/videos/:action", task.RelayTaskSubmit)
+		miniMaxRouter.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
+		miniMaxRouter.GET("/v1/tasks", minimax.RelayTaskList)
+		miniMaxRouter.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
+	}
+
+	miniMaxAlias := router.Group("")
+	miniMaxAlias.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+	{
+		miniMaxAlias.POST("/v1/video_generation", task.RelayTaskSubmit)
+		miniMaxAlias.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
+	}
 }
 
 // setOfficialKlingRouter 设置完全兼容官方API的路由

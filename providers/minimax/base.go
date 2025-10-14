@@ -8,25 +8,51 @@ import (
 	"one-api/providers/base"
 	"one-api/providers/openai"
 	"one-api/types"
+
+	"github.com/gin-gonic/gin"
 )
 
 type MiniMaxProviderFactory struct{}
 
 // 创建 MiniMaxProvider
 func (f MiniMaxProviderFactory) Create(channel *model.Channel) base.ProviderInterface {
-	return &MiniMaxProvider{
+	proxy := ""
+	if channel.Proxy != nil {
+		proxy = *channel.Proxy
+	}
+
+	provider := &MiniMaxProvider{
 		OpenAIProvider: openai.OpenAIProvider{
 			BaseProvider: base.BaseProvider{
 				Config:    getConfig(),
 				Channel:   channel,
-				Requester: requester.NewHTTPRequester(*channel.Proxy, requestErrorHandle),
+				Requester: requester.NewHTTPRequester(proxy, requestErrorHandle),
 			},
 		},
 	}
+
+	provider.VideoClient = newMiniMaxVideoClient(channel)
+
+	return provider
 }
 
 type MiniMaxProvider struct {
 	openai.OpenAIProvider
+	VideoClient *MiniMaxVideoClient
+}
+
+func (p *MiniMaxProvider) SetContext(c *gin.Context) {
+	p.OpenAIProvider.SetContext(c)
+	if p.VideoClient != nil {
+		p.VideoClient.SetContext(c)
+		if p.VideoClient.Requester != nil && c != nil {
+			p.VideoClient.Requester.Context = c.Request.Context()
+		}
+	}
+}
+
+func (p *MiniMaxProvider) GetVideoClient() *MiniMaxVideoClient {
+	return p.VideoClient
 }
 
 func getConfig() base.ProviderConfig {

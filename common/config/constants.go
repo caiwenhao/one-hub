@@ -328,6 +328,7 @@ const (
 	RelayModeResponses
 	RelayModeVolcArkVideo
 	RelayModeVidu
+	RelayModeMiniMaxVideo
 )
 
 type ContextKey string

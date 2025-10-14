@@ -6,6 +6,7 @@ import (
 	"one-api/model"
 	"one-api/relay/task/base"
 	"one-api/relay/task/kling"
+	"one-api/relay/task/minimax"
 	"one-api/relay/task/suno"
 	"one-api/relay/task/vidu"
 	"one-api/relay/task/volcark"
@@ -31,6 +32,10 @@ func GetTaskAdaptor(relayType int, c *gin.Context) (base.TaskInterface, error) {
 		return &volcark.VolcArkTask{
 			TaskBase: getTaskBase(c, model.TaskPlatformVolcArk),
 		}, nil
+	case config.RelayModeMiniMaxVideo:
+		return &minimax.MiniMaxTask{
+			TaskBase: getTaskBase(c, model.TaskPlatformMiniMax),
+		}, nil
 	default:
 		return nil, errors.New("adaptor not found")
 	}
@@ -48,6 +53,8 @@ func GetTaskAdaptorByPlatform(platform string) (base.TaskInterface, error) {
 		relayType = config.RelayModeVidu
 	case model.TaskPlatformVolcArk:
 		relayType = config.RelayModeVolcArkVideo
+	case model.TaskPlatformMiniMax:
+		relayType = config.RelayModeMiniMaxVideo
 	}
 
 	return GetTaskAdaptor(relayType, nil)

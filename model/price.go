@@ -921,6 +921,43 @@ func GetDefaultPrice() []*Price {
 		prices = append(prices, price)
 	}
 
+	// MiniMax 视频默认价格（单位：人民币）
+	var defaultMiniMaxVideoPrice = map[string]float64{
+		// 文生视频（PPInfra 官方报价）
+		"minimax-text2video-minimax-hailuo-02-512p-6s":  0.6,
+		"minimax-text2video-minimax-hailuo-02-512p-10s": 1.0,
+		"minimax-text2video-minimax-hailuo-02-768p-6s":  2.0,
+		"minimax-text2video-minimax-hailuo-02-768p-10s": 4.0,
+		"minimax-text2video-minimax-hailuo-02-1080p-6s": 6.0,
+
+		// 图生视频（暂与文生视频保持一致，可按需调整）
+		"minimax-image2video-minimax-hailuo-02-512p-6s":  0.6,
+		"minimax-image2video-minimax-hailuo-02-512p-10s": 1.0,
+		"minimax-image2video-minimax-hailuo-02-768p-6s":  2.0,
+		"minimax-image2video-minimax-hailuo-02-768p-10s": 4.0,
+		"minimax-image2video-minimax-hailuo-02-1080p-6s": 6.0,
+
+		// 首尾帧视频（默认与图生一致，便于覆盖）
+		"minimax-start-end2video-minimax-hailuo-02-512p-6s":  0.6,
+		"minimax-start-end2video-minimax-hailuo-02-512p-10s": 1.0,
+		"minimax-start-end2video-minimax-hailuo-02-768p-6s":  2.0,
+		"minimax-start-end2video-minimax-hailuo-02-768p-10s": 4.0,
+		"minimax-start-end2video-minimax-hailuo-02-1080p-6s": 6.0,
+	}
+
+	for model, miniMaxPrice := range defaultMiniMaxVideoPrice {
+		base := miniMaxPrice / RMBRate
+		price := &Price{
+			Model:       model,
+			Type:        TimesPriceType,
+			ChannelType: config.ChannelTypeMiniMax,
+			Input:       base,
+			Output:      base,
+		}
+		price.Normalize()
+		prices = append(prices, price)
+	}
+
 	// 可灵AI 默认价格配置 (按次计费)
 	var DefaultKlingPrice = map[string]float64{
 		// 视频生成模型

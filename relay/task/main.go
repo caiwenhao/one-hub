@@ -137,6 +137,8 @@ func GetRelayMode(c *gin.Context) int {
 		relayMode = config.RelayModeVidu
 	} else if strings.HasPrefix(path, "/volcark") {
 		relayMode = config.RelayModeVolcArkVideo
+	} else if strings.HasPrefix(path, "/minimax") || strings.HasPrefix(path, "/v1/video_generation") || strings.HasPrefix(path, "/v1/query/video_generation") {
+		relayMode = config.RelayModeMiniMaxVideo
 	}
 
 	return relayMode
