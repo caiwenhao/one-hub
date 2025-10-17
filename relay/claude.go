@@ -2,10 +2,13 @@ package relay
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"one-api/common"
 	"one-api/common/config"
 	"one-api/common/requester"
+	"one-api/model"
+	providersBase "one-api/providers/base"
 	"one-api/providers/claude"
 	"one-api/safty"
 	"one-api/types"
@@ -14,7 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var AllowChannelType = []int{config.ChannelTypeAnthropic, config.ChannelTypeVertexAI, config.ChannelTypeBedrock}
+var AllowChannelType = []int{config.ChannelTypeAnthropic, config.ChannelTypeVertexAI, config.ChannelTypeBedrock, config.ChannelTypeOpenAI}
 
 type relayClaudeOnly struct {
 	relayBase
@@ -39,6 +42,12 @@ func (r *relayClaudeOnly) setRequest() error {
 		return err
 	}
 	r.setOriginalModel(r.claudeRequest.Model)
+
+	// 品牌映射校验：仅允许归属Anthropic(Claude)的模型走官方端点
+	price := model.PricingInstance.GetPrice(r.claudeRequest.Model)
+	if price.ChannelType != config.ChannelTypeAnthropic {
+		return errors.New("模型不属于Claude品牌，不支持该官方端点")
+	}
 	return nil
 }
 
@@ -58,8 +67,35 @@ func (r *relayClaudeOnly) getPromptTokens() (int, error) {
 func (r *relayClaudeOnly) send() (err *types.OpenAIErrorWithStatusCode, done bool) {
 	chatProvider, ok := r.provider.(claude.ClaudeChatInterface)
 	if !ok {
-		err = common.StringErrorWrapperLocal("channel not implemented", "channel_error", http.StatusServiceUnavailable)
-		done = true
+		// 回退到OpenAI Chat（非流式）
+		fallbackChat, ok2 := r.provider.(providersBase.ChatInterface)
+		if !ok2 {
+			err = common.StringErrorWrapperLocal("channel not implemented", "channel_error", http.StatusServiceUnavailable)
+			done = true
+			return
+		}
+		// 转为OpenAI Chat请求
+		oaiReq, convErr := claude.ClaudeToOpenAIChatRequest(r.claudeRequest)
+		if convErr != nil {
+			err = convErr
+			done = true
+			return
+		}
+		oaiReq.Model = r.modelName
+		if oaiReq.Stream {
+			// 暂不支持回退流式，降级为非流式
+			oaiReq.Stream = false
+		}
+		resp, e := fallbackChat.CreateChatCompletion(oaiReq)
+		if e != nil {
+			err = e
+			return
+		}
+		if r.heartbeat != nil { r.heartbeat.Stop() }
+		cResp := claude.OpenAIToClaudeResponse(resp, r.modelName, r.provider.GetUsage())
+		openErr := responseJsonClient(r.c, cResp)
+		if openErr != nil { err = openErr }
+		if err != nil { done = true }
 		return
 	}
 
@@ -89,9 +125,7 @@ func (r *relayClaudeOnly) send() (err *types.OpenAIErrorWithStatusCode, done boo
 			r.heartbeat.Stop()
 		}
 
-		doneStr := func() string {
-			return ""
-		}
+		doneStr := func() string { return "" }
 		firstResponseTime := responseGeneralStreamClient(r.c, response, doneStr)
 		r.SetFirstResponseTime(firstResponseTime)
 	} else {
@@ -101,20 +135,13 @@ func (r *relayClaudeOnly) send() (err *types.OpenAIErrorWithStatusCode, done boo
 			return
 		}
 
-		if r.heartbeat != nil {
-			r.heartbeat.Stop()
-		}
+		if r.heartbeat != nil { r.heartbeat.Stop() }
 
 		openErr := responseJsonClient(r.c, response)
-
-		if openErr != nil {
-			err = openErr
-		}
+		if openErr != nil { err = openErr }
 	}
 
-	if err != nil {
-		done = true
-	}
+	if err != nil { done = true }
 	return
 }
 

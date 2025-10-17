@@ -2,6 +2,8 @@ package claude
 
 import (
 	"encoding/json"
+	"net/http"
+	"one-api/common"
 	"one-api/types"
 )
 
@@ -217,4 +219,75 @@ type ModelListResponse struct {
 type Model struct {
 	Type string `json:"type"`
 	ID   string `json:"id"`
+}
+
+// 简化：将Claude请求转换为OpenAI ChatCompletion请求（仅文本与基础角色）
+func ClaudeToOpenAIChatRequest(req *ClaudeRequest) (*types.ChatCompletionRequest, *types.OpenAIErrorWithStatusCode) {
+	if req == nil {
+		return nil, common.StringErrorWrapperLocal("empty request", "invalid_request", http.StatusBadRequest)
+	}
+	oai := &types.ChatCompletionRequest{
+		Model:    req.Model,
+		Stream:   req.Stream,
+		Messages: make([]types.ChatCompletionMessage, 0),
+	}
+	// system
+	switch v := req.System.(type) {
+	case string:
+		if v != "" {
+			oai.Messages = append(oai.Messages, types.ChatCompletionMessage{Role: types.ChatMessageRoleSystem, Content: v})
+		}
+	case map[string]any:
+		if txt, ok := v["text"].(string); ok && txt != "" {
+			oai.Messages = append(oai.Messages, types.ChatCompletionMessage{Role: types.ChatMessageRoleSystem, Content: txt})
+		}
+	}
+	for _, m := range req.Messages {
+		role := m.Role
+		if role == "assistant" { role = types.ChatMessageRoleAssistant }
+		if role == "user" { role = types.ChatMessageRoleUser }
+		msg := types.ChatCompletionMessage{Role: role}
+		switch c := m.Content.(type) {
+		case string:
+			msg.Content = c
+		case []any:
+			parts := make([]map[string]any, 0)
+			for _, it := range c {
+				if mp, ok := it.(map[string]any); ok {
+					if t, ok := mp["type"].(string); ok && t == "text" {
+						if txt, ok := mp["text"].(string); ok && txt != "" {
+							parts = append(parts, map[string]any{"type":"text","text":txt})
+						}
+					}
+				}
+			}
+			if len(parts) > 0 { msg.Content = parts }
+		}
+		oai.Messages = append(oai.Messages, msg)
+	}
+	return oai, nil
+}
+
+// 简化：将OpenAI响应转换为Claude响应（仅文本）
+func OpenAIToClaudeResponse(resp *types.ChatCompletionResponse, modelName string, usage *types.Usage) *ClaudeResponse {
+	content := make([]ResContent, 0)
+	var text string
+	if resp != nil {
+		text = resp.GetContent()
+	}
+	if text != "" {
+		content = append(content, ResContent{Type: ContentTypeText, Text: text})
+	}
+	cr := &ClaudeResponse{
+		Id:     resp.ID,
+		Type:   "message",
+		Role:   "assistant",
+		Content: content,
+		Model:  modelName,
+		StopReason: FinishReasonEndTurn,
+	}
+	if usage != nil {
+		cr.Usage = Usage{InputTokens: usage.PromptTokens, OutputTokens: usage.CompletionTokens}
+	}
+	return cr
 }

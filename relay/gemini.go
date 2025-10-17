@@ -3,19 +3,23 @@ package relay
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"one-api/common"
 	"one-api/common/config"
 	"one-api/common/requester"
+	"one-api/model"
+	providersBase "one-api/providers/base"
 	"one-api/providers/gemini"
 	"one-api/safty"
 	"one-api/types"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-var AllowGeminiChannelType = []int{config.ChannelTypeGemini, config.ChannelTypeVertexAI}
+var AllowGeminiChannelType = []int{config.ChannelTypeGemini, config.ChannelTypeVertexAI, config.ChannelTypeOpenAI}
 
 type relayGeminiOnly struct {
 	relayBase
@@ -59,6 +63,12 @@ func (r *relayGeminiOnly) setRequest() error {
 	r.geminiRequest.Stream = isStream
 	r.setOriginalModel(r.geminiRequest.Model)
 
+	// 品牌映射校验：仅允许归属Gemini的模型走官方端点
+	price := model.PricingInstance.GetPrice(r.geminiRequest.Model)
+	if price.ChannelType != config.ChannelTypeGemini {
+		return errors.New("模型不属于Gemini品牌，不支持该官方端点")
+	}
+
 	return nil
 }
 
@@ -76,12 +86,71 @@ func (r *relayGeminiOnly) getPromptTokens() (int, error) {
 }
 
 func (r *relayGeminiOnly) send() (err *types.OpenAIErrorWithStatusCode, done bool) {
+	// 优先品牌原生Provider
 	chatProvider, ok := r.provider.(gemini.GeminiChatInterface)
+	// 不支持则尝试OpenAI Chat回退
 	if !ok {
-		return nil, false
+		fallbackChat, ok2 := r.provider.(providersBase.ChatInterface)
+		if !ok2 {
+			err = common.StringErrorWrapperLocal("channel not implemented", "channel_error", http.StatusServiceUnavailable)
+			done = true
+			return
+		}
+
+		// 转换为OpenAI Chat请求
+		openaiReq, convErr := gemini.GeminiToOpenAIChatRequest(r.geminiRequest)
+		if convErr != nil {
+			err = convErr
+			done = true
+			return
+		}
+		openaiReq.Model = r.modelName
+
+		// 安全审查（按OpenAI消息内容）
+		if config.EnableSafe {
+			for _, m := range openaiReq.Messages {
+				if m.Content != nil {
+					CheckResult, _ := safty.CheckContent(m.Content)
+					if !CheckResult.IsSafe {
+						err = common.StringErrorWrapperLocal(CheckResult.Reason, CheckResult.Code, http.StatusBadRequest)
+						done = true
+						return
+					}
+				}
+			}
+		}
+
+		if openaiReq.Stream {
+			stream, e := fallbackChat.CreateChatCompletionStream(openaiReq)
+			if e != nil {
+				err = e
+				return
+			}
+			if r.heartbeat != nil {
+				r.heartbeat.Stop()
+			}
+			first := forwardOpenAIStreamAsGemini(r.c, stream, r.modelName)
+			r.SetFirstResponseTime(first)
+			return nil, false
+		}
+
+		resp, e := fallbackChat.CreateChatCompletion(openaiReq)
+		if e != nil {
+			err = e
+			return
+		}
+		if r.heartbeat != nil {
+			r.heartbeat.Stop()
+		}
+		gResp := gemini.OpenAIToGeminiChatResponse(resp, r.modelName, r.provider.GetUsage())
+		err = responseJsonClient(r.c, gResp)
+		if err != nil {
+			done = true
+		}
+		return
 	}
 
-	// 内容审查
+	// 内容审查（Gemini原生）
 	if config.EnableSafe {
 		for _, message := range r.geminiRequest.Contents {
 			if message.Parts != nil {
@@ -108,9 +177,7 @@ func (r *relayGeminiOnly) send() (err *types.OpenAIErrorWithStatusCode, done boo
 			r.heartbeat.Stop()
 		}
 
-		doneStr := func() string {
-			return ""
-		}
+		doneStr := func() string { return "" }
 		firstResponseTime := responseGeneralStreamClient(r.c, response, doneStr)
 		r.SetFirstResponseTime(firstResponseTime)
 	} else {
@@ -119,19 +186,66 @@ func (r *relayGeminiOnly) send() (err *types.OpenAIErrorWithStatusCode, done boo
 		if err != nil {
 			return
 		}
-
-		if r.heartbeat != nil {
-			r.heartbeat.Stop()
-		}
-
+		if r.heartbeat != nil { r.heartbeat.Stop() }
 		err = responseJsonClient(r.c, response)
 	}
 
-	if err != nil {
-		done = true
-	}
-
+	if err != nil { done = true }
 	return
+}
+
+// 将OpenAI流式数据转发为Gemini官方SSE片段
+func forwardOpenAIStreamAsGemini(c *gin.Context, stream requester.StreamReaderInterface[string], modelName string) time.Time {
+	requester.SetEventStreamHeaders(c)
+	dataChan, errChan := stream.Recv()
+	done := make(chan struct{})
+	defer stream.Close()
+
+	var first time.Time
+	var isFirst bool
+
+	go func() {
+		defer close(done)
+		for {
+			select {
+			case data, ok := <-dataChan:
+				if !ok { return }
+				line := strings.TrimSpace(data)
+				if strings.HasPrefix(line, "data: ") { line = line[6:] }
+				if line == "[DONE]" || line == "{\"id\":\"\",\"object\":\"done\"}" { return }
+				var oai types.ChatCompletionStreamResponse
+				if err := json.Unmarshal([]byte(line), &oai); err != nil {
+					// 非预期片段，透传原始行
+					fmtStr := "data: %s\n\n"
+					c.Writer.Write([]byte(fmt.Sprintf(fmtStr, line)))
+					c.Writer.Flush()
+					continue
+				}
+				// 组装最小Gemini片段（仅文本增量）
+				var chunks []gemini.GeminiChatCandidate
+				for _, ch := range oai.Choices {
+					if ch.Delta.Content == "" { continue }
+					chunks = append(chunks, gemini.GeminiChatCandidate{
+						Index: int64(ch.Index),
+						Content: gemini.GeminiChatContent{Role: "model", Parts: []gemini.GeminiPart{{Text: ch.Delta.Content}}},
+					})
+				}
+				if len(chunks) == 0 { continue }
+				g := gemini.GeminiChatResponse{Model: modelName, Candidates: chunks}
+				b, _ := json.Marshal(g)
+				sse := "data: " + string(b) + "\n\n"
+				if !isFirst { first = time.Now(); isFirst = true }
+				c.Writer.Write([]byte(sse))
+				c.Writer.Flush()
+			case err := <-errChan:
+				// 出错仍尝试结束
+				_ = err
+				return
+			}
+		}
+	}()
+	<-done
+	return first
 }
 
 func (r *relayGeminiOnly) GetError(err *types.OpenAIErrorWithStatusCode) (int, any) {

@@ -16,6 +16,161 @@ import (
 	goahocorasick "github.com/anknown/ahocorasick"
 )
 
+// 将Gemini角色转换为OpenAI角色
+func convertGeminiRoleToOpenAI(role string) string {
+	switch role {
+	case "model":
+		return types.ChatMessageRoleAssistant
+	case "function":
+		return types.ChatMessageRoleTool
+	default:
+		return types.ChatMessageRoleUser
+	}
+}
+
+// 将Gemini请求转换为OpenAI ChatCompletion请求
+func GeminiToOpenAIChatRequest(req *GeminiChatRequest) (*types.ChatCompletionRequest, *types.OpenAIErrorWithStatusCode) {
+	if req == nil {
+		return nil, common.StringErrorWrapperLocal("empty request", "invalid_request", http.StatusBadRequest)
+	}
+
+	openaiReq := &types.ChatCompletionRequest{
+		Model:   req.Model,
+		Stream:  req.Stream,
+		Messages: make([]types.ChatCompletionMessage, 0),
+	}
+
+	// SystemInstruction
+	switch v := req.SystemInstruction.(type) {
+	case *GeminiChatContent:
+		var buf strings.Builder
+		for _, p := range v.Parts {
+			if p.Text != "" {
+				if buf.Len() > 0 { buf.WriteString("\n") }
+				buf.WriteString(p.Text)
+			}
+		}
+		if buf.Len() > 0 {
+			openaiReq.Messages = append(openaiReq.Messages, types.ChatCompletionMessage{
+				Role:    types.ChatMessageRoleSystem,
+				Content: buf.String(),
+			})
+		}
+	case GeminiChatContent:
+		var buf strings.Builder
+		for _, p := range v.Parts {
+			if p.Text != "" {
+				if buf.Len() > 0 { buf.WriteString("\n") }
+				buf.WriteString(p.Text)
+			}
+		}
+		if buf.Len() > 0 {
+			openaiReq.Messages = append(openaiReq.Messages, types.ChatCompletionMessage{
+				Role:    types.ChatMessageRoleSystem,
+				Content: buf.String(),
+			})
+		}
+	}
+
+	for _, c := range req.Contents {
+		msg := types.ChatCompletionMessage{Role: convertGeminiRoleToOpenAI(c.Role)}
+		parts := make([]map[string]any, 0)
+
+		for _, p := range c.Parts {
+			if p.FunctionCall != nil {
+				args, _ := json.Marshal(p.FunctionCall.Args)
+				msg.ToolCalls = append(msg.ToolCalls, &types.ChatCompletionToolCalls{
+					Type: types.ChatMessageRoleFunction,
+					Function: &types.ChatCompletionToolCallsFunction{
+						Name:      p.FunctionCall.Name,
+						Arguments: string(args),
+					},
+				})
+				continue
+			}
+			if p.FunctionResponse != nil {
+				name := p.FunctionResponse.Name
+				msg.Role = types.ChatMessageRoleTool
+				msg.Name = &name
+				// 兼容多种响应结构：优先取 response.content 字段，否则整体序列化
+				var contentStr string
+				switch v := p.FunctionResponse.Response.(type) {
+				case string:
+					contentStr = v
+				case map[string]any:
+					if s, ok := v["content"].(string); ok {
+						contentStr = s
+					} else {
+						b, _ := json.Marshal(v)
+						contentStr = string(b)
+					}
+				default:
+					b, _ := json.Marshal(v)
+					contentStr = string(b)
+				}
+				msg.Content = contentStr
+				continue
+			}
+			if p.Text != "" {
+				parts = append(parts, map[string]any{"type":"text","text": p.Text})
+			}
+			if p.InlineData != nil {
+				// 使用 data URL 形式传递给OpenAI兼容上游
+				url := fmt.Sprintf("data:%s;base64,%s", p.InlineData.MimeType, p.InlineData.Data)
+				parts = append(parts, map[string]any{
+					"type":"image_url",
+					"image_url": map[string]any{"url": url},
+				})
+			}
+			if p.FileData != nil {
+				// 简化处理：将fileUri作为文本附加
+				parts = append(parts, map[string]any{"type":"text","text": p.FileData.FileUri})
+			}
+		}
+
+		if len(parts) > 0 && msg.Content == nil {
+			msg.Content = parts
+		}
+		openaiReq.Messages = append(openaiReq.Messages, msg)
+	}
+
+	return openaiReq, nil
+}
+
+// 将OpenAI响应转换为Gemini响应（非流式）
+func OpenAIToGeminiChatResponse(resp *types.ChatCompletionResponse, modelName string, usage *types.Usage) *GeminiChatResponse {
+	g := &GeminiChatResponse{
+		Model:     modelName,
+		ResponseId: resp.ID,
+	}
+	cands := make([]GeminiChatCandidate, 0, len(resp.Choices))
+	for _, ch := range resp.Choices {
+		text := ch.Message.StringContent()
+		parts := []GeminiPart{}
+		if text != "" {
+			parts = append(parts, GeminiPart{Text: text})
+		}
+		if len(ch.Message.Image) > 0 {
+			for _, img := range ch.Message.Image {
+				parts = append(parts, GeminiPart{InlineData: &GeminiInlineData{MimeType: "image/png", Data: img.Data}})
+			}
+		}
+		cands = append(cands, GeminiChatCandidate{
+			Index: int64(ch.Index),
+			Content: GeminiChatContent{Role: "model", Parts: parts},
+		})
+	}
+	g.Candidates = cands
+	if usage != nil {
+		g.UsageMetadata = &GeminiUsageMetadata{
+			PromptTokenCount:     usage.PromptTokens,
+			CandidatesTokenCount: usage.CompletionTokens,
+			TotalTokenCount:      usage.TotalTokens,
+		}
+	}
+	return g
+}
+
 const GeminiImageSymbol = "![one-hub-gemini-image]"
 
 const (
