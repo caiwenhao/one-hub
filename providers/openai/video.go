@@ -319,7 +319,9 @@ func (p *OpenAIProvider) retrieveMountSeaVideo(videoID string) (*types.VideoJob,
 	if err != nil {
 		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
 	}
-	defer req.Body.Close()
+	if req.Body != nil {
+		defer req.Body.Close()
+	}
 
 	originalOpenAIFlag := p.Requester.IsOpenAI
 	p.Requester.IsOpenAI = false
