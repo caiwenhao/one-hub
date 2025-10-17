@@ -99,7 +99,7 @@ export const CHANNEL_OPTIONS = {
   },
   27: {
     key: 27,
-    text: 'MiniMax',
+    text: 'minimaxi',
     value: 27,
     color: 'orange',
     url: 'https://www.minimaxi.com/user-center/basic-information'

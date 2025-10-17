@@ -176,7 +176,7 @@ func GetDefaultModelOwnedBy() []*ModelOwnedBy {
 		{Id: config.ChannelTypeTencent, Name: "Tencent", Icon: "https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons/hunyuan-color.svg"},
 		{Id: config.ChannelTypeGemini, Name: "Google Gemini", Icon: "https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons/gemini-color.svg"},
 		{Id: config.ChannelTypeBaichuan, Name: "Baichuan", Icon: "https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons/baichuan-color.svg"},
-		{Id: config.ChannelTypeMiniMax, Name: "MiniMax", Icon: "https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons/minimax-color.svg"},
+        {Id: config.ChannelTypeMiniMax, Name: "minimaxi", Icon: "https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons/minimax-color.svg"},
 		{Id: config.ChannelTypeDeepseek, Name: "Deepseek", Icon: "https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons/deepseek-color.svg"},
 		{Id: config.ChannelTypeMoonshot, Name: "Moonshot", Icon: "https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons/moonshot.svg"},
 		{Id: config.ChannelTypeMistral, Name: "Mistral", Icon: "https://registry.npmmirror.com/@lobehub/icons-static-svg/latest/files/icons/mistral-color.svg"},

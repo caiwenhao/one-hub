@@ -159,21 +159,33 @@ func setKlingRouter(router *gin.Engine) {
 }
 
 func setMiniMaxRouter(router *gin.Engine) {
-	miniMaxRouter := router.Group("/minimax")
-	miniMaxRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-	{
-		miniMaxRouter.POST("/v1/videos/:action", task.RelayTaskSubmit)
-		miniMaxRouter.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
-		miniMaxRouter.GET("/v1/tasks", minimax.RelayTaskList)
-		miniMaxRouter.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
-	}
+    // 主推荐：/minimaxi 前缀（与品牌与域名一致）
+    minimaxiRouter := router.Group("/minimaxi")
+    minimaxiRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+    {
+        minimaxiRouter.POST("/v1/videos/:action", task.RelayTaskSubmit)
+        minimaxiRouter.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
+        minimaxiRouter.GET("/v1/tasks", minimax.RelayTaskList)
+        minimaxiRouter.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
+    }
 
-	miniMaxAlias := router.Group("")
-	miniMaxAlias.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-	{
-		miniMaxAlias.POST("/v1/video_generation", task.RelayTaskSubmit)
-		miniMaxAlias.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
-	}
+    // 兼容旧前缀：/minimax（保留一段时间，避免外部调用中断）
+    minimaxCompat := router.Group("/minimax")
+    minimaxCompat.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+    {
+        minimaxCompat.POST("/v1/videos/:action", task.RelayTaskSubmit)
+        minimaxCompat.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
+        minimaxCompat.GET("/v1/tasks", minimax.RelayTaskList)
+        minimaxCompat.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
+    }
+
+    // 官方兼容别名（完全对齐 MiniMax 官方 API 路径）
+    officialAlias := router.Group("")
+    officialAlias.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+    {
+        officialAlias.POST("/v1/video_generation", task.RelayTaskSubmit)
+        officialAlias.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
+    }
 }
 
 // setOfficialKlingRouter 设置完全兼容官方API的路由

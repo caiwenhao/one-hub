@@ -301,10 +301,21 @@ const typeConfig = {
   },
   27: {
     input: {
-      models: ['abab6.5s-chat', 'MiniMax-Text-01', 'speech-01-turbo', 'speech-01-240228', 'speech-01-turbo-240228'],
-      test_model: 'abab6.5s-chat'
+      models: [
+        // 文本（OpenAI 兼容 Chat）
+        'MiniMax-M1',
+        'MiniMax-Text-01',
+        // 语音（TTS）
+        'speech-2.5-hd-preview',
+        'speech-02-hd',
+        'speech-01-hd',
+        'speech-2.5-turbo-preview',
+        'speech-02-turbo',
+        'speech-01-turbo'
+      ],
+      test_model: 'MiniMax-M1'
     },
-    modelGroup: 'MiniMax'
+    modelGroup: 'minimaxi'
   },
   28: {
     input: {

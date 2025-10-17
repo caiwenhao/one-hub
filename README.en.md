@@ -84,7 +84,7 @@ If you find that a new model is missing, please update the newly added model in 
 | [智谱](https://open.bigmodel.cn/overview)                             | ✅                               | ✅         | -      | ⚠️ image | -                                                                |
 | [腾讯混元](https://cloud.tencent.com/product/hunyuan)                 | ✅                               | -          | -      | -        | -                                                                |
 | [百川](https://platform.baichuan-ai.com/console/apikey)               | ✅                               | ✅         | -      | -        | -                                                                |
-| [MiniMax](https://www.minimaxi.com/user-center/basic-information)     | ✅                               | ✅         | -      | -        | -                                                                |
+| [minimaxi](https://www.minimaxi.com/user-center/basic-information)    | ✅                               | ✅         | -      | -        | -                                                                |
 | [Deepseek](https://platform.deepseek.com/usage)                       | ✅                               | -          | -      | -        | -                                                                |
 | [Moonshot](https://moonshot.ai/)                                      | ✅                               | -          | -      | -        | -                                                                |
 | [Mistral](https://mistral.ai/)                                        | ✅                               | ✅         | -      | -        | -                                                                |

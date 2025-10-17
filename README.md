@@ -93,7 +93,7 @@ _本项目是基于[one-api](https://github.com/songquanpeng/one-api)二次开�
 | [智谱](https://open.bigmodel.cn/overview)                             | ✅                       | ✅         | -      | ⚠️ 图片生成 | -                                                                |
 | [腾讯混元](https://cloud.tencent.com/product/hunyuan)                 | ✅                       | -          | -      | -           | -                                                                |
 | [百川](https://platform.baichuan-ai.com/console/apikey)               | ✅                       | ✅         | -      | -           | -                                                                |
-| [MiniMax](https://www.minimaxi.com/user-center/basic-information)     | ✅                       | ✅         | -      | -           | -                                                                |
+| [minimaxi](https://www.minimaxi.com/user-center/basic-information)    | ✅                       | ✅         | -      | -           | -                                                                |
 | [Deepseek](https://platform.deepseek.com/usage)                       | ✅                       | -          | -      | -           | -                                                                |
 | [Moonshot](https://moonshot.ai/)                                      | ✅                       | -          | -      | -           | -                                                                |
 | [Mistral](https://mistral.ai/)                                        | ✅                       | ✅         | -      | -           | -                                                                |

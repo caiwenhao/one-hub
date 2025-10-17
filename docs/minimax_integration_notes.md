@@ -2,11 +2,11 @@
 
 ## 路由与接口
 
-- 主路径：`/minimax/v1/videos/:action`
+- 主路径：`/minimaxi/v1/videos/:action`
   - 支持 `text2video`、`image2video`、`start-end2video` 动作，通过 `task.RelayTaskSubmit` 统一处理。
 - 查询接口：
-  - `GET /minimax/v1/query/video_generation?task_id=xxx`
-  - `GET /minimax/v1/tasks`、`GET /minimax/v1/tasks/:task_id`
+  - `GET /minimaxi/v1/query/video_generation?task_id=xxx`
+  - `GET /minimaxi/v1/tasks`、`GET /minimaxi/v1/tasks/:task_id`
 - 官方兼容别名：
   - `POST /v1/video_generation`
   - `GET /v1/query/video_generation`
@@ -56,10 +56,10 @@
 
 ## 测试建议
 
-1. 文生视频：`POST /minimax/v1/videos/text2video`
-2. 图生视频：`POST /minimax/v1/videos/image2video`
-3. 首尾帧：`POST /minimax/v1/videos/start-end2video`
-4. 查询：`GET /minimax/v1/query/video_generation?task_id=xxx`（PPInfra 会调用 `/v3/async/task-result` 并解析 `videos[]/task.status` 等字段）
+1. 文生视频：`POST /minimaxi/v1/videos/text2video`
+2. 图生视频：`POST /minimaxi/v1/videos/image2video`
+3. 首尾帧：`POST /minimaxi/v1/videos/start-end2video`
+4. 查询：`GET /minimaxi/v1/query/video_generation?task_id=xxx`（PPInfra 会调用 `/v3/async/task-result` 并解析 `videos[]/task.status` 等字段）
 5. 别名：`POST /v1/video_generation`（带首尾帧字段，自动识别动作）
 6. 若接入 PPInfra，上述每项需再验证一次，确认路径模板与鉴权无误。
 
