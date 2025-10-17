@@ -56,15 +56,17 @@ const (
 )
 
 type OpenAIResponsesRequest struct {
-	Input              any              `json:"input,omitempty"`
-	Model              string           `json:"model" binding:"required"`
-	Include            any              `json:"include,omitempty"`
-	Instructions       string           `json:"instructions,omitempty"`
-	MaxOutputTokens    int              `json:"max_output_tokens,omitempty"`
-	MaxToolCalls       *int             `json:"max_tool_calls,omitempty"`
-	ParallelToolCalls  bool             `json:"parallel_tool_calls,omitempty"`
-	PreviousResponseID string           `json:"previous_response_id,omitempty"`
-	Reasoning          *ReasoningEffort `json:"reasoning,omitempty"`
+    Input              any              `json:"input,omitempty"`
+    Model              string           `json:"model" binding:"required"`
+    Include            any              `json:"include,omitempty"`
+    Instructions       string           `json:"instructions,omitempty"`
+    // 对齐官方 Responses：会话归属（字符串 ID 或对象），透传至上游
+    Conversation       any              `json:"conversation,omitempty"`
+    MaxOutputTokens    int              `json:"max_output_tokens,omitempty"`
+    MaxToolCalls       *int             `json:"max_tool_calls,omitempty"`
+    ParallelToolCalls  bool             `json:"parallel_tool_calls,omitempty"`
+    PreviousResponseID string           `json:"previous_response_id,omitempty"`
+    Reasoning          *ReasoningEffort `json:"reasoning,omitempty"`
 	Store              *bool            `json:"store,omitempty"` // 是否存储响应结果
 	Stream             bool             `json:"stream,omitempty"`
 	Temperature        *float64         `json:"temperature,omitempty"`

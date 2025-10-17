@@ -176,16 +176,26 @@ func (p *OpenAIProvider) GetFullRequestURL(requestURL string, modelName string) 
 
 // 获取请求头
 func (p *OpenAIProvider) GetRequestHeaders() (headers map[string]string) {
-	headers = make(map[string]string)
-	p.CommonRequestHeaders(headers)
-	if p.IsAzure {
-		headers["api-key"] = p.Channel.Key
-		headers["Authorization"] = fmt.Sprintf("Bearer %s", p.Channel.Key)
-	} else {
-		headers["Authorization"] = fmt.Sprintf("Bearer %s", p.Channel.Key)
-	}
+    headers = make(map[string]string)
+    p.CommonRequestHeaders(headers)
+    if p.IsAzure {
+        headers["api-key"] = p.Channel.Key
+        headers["Authorization"] = fmt.Sprintf("Bearer %s", p.Channel.Key)
+    } else {
+        headers["Authorization"] = fmt.Sprintf("Bearer %s", p.Channel.Key)
+    }
 
-	return headers
+    // 透传 OpenAI 组织/项目/Beta 头，确保与官方 API 的计费/项目归属与预览能力一致
+    if p.Context != nil && p.Context.Request != nil {
+        src := p.Context.Request.Header
+        for _, k := range []string{"OpenAI-Organization", "OpenAI-Project", "OpenAI-Beta"} {
+            if v := src.Get(k); v != "" {
+                headers[k] = v
+            }
+        }
+    }
+
+    return headers
 }
 
 // mergeCustomParams 将自定义参数合并到请求体中
