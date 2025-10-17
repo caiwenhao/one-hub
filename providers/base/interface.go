@@ -140,3 +140,10 @@ type ResponsesInterface interface {
 	CreateResponses(request *types.OpenAIResponsesRequest) (*types.OpenAIResponsesResponses, *types.OpenAIErrorWithStatusCode)
 	CreateResponsesStream(request *types.OpenAIResponsesRequest) (requester.StreamReaderInterface[string], *types.OpenAIErrorWithStatusCode)
 }
+
+type VideoInterface interface {
+	ProviderInterface
+	CreateVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode)
+	RetrieveVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode)
+	DownloadVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode)
+}

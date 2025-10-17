@@ -326,6 +326,7 @@ const (
 	RelayModeChatRealtime
 	RelayModeKling
 	RelayModeResponses
+	RelayModeOpenAIVideo
 	RelayModeVolcArkVideo
 	RelayModeVidu
 	RelayModeMiniMaxVideo

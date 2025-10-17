@@ -67,6 +67,7 @@ func getOpenAIConfig(baseURL string, channel *model.Channel) base.ProviderConfig
 		Completions:         "/v1/completions",
 		ChatCompletions:     "/v1/chat/completions",
 		Embeddings:          "/v1/embeddings",
+		Videos:              "/v1/videos",
 		Moderation:          "/v1/moderations",
 		AudioSpeech:         "/v1/audio/speech",
 		AudioTranscriptions: "/v1/audio/transcriptions",

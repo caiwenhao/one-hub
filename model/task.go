@@ -13,6 +13,7 @@ const (
 	TaskPlatformVidu     = "vidu"
 	TaskPlatformVolcArk  = "volcark"
 	TaskPlatformMiniMax  = "minimax"
+	TaskPlatformSora     = "sora"
 )
 
 type TaskStatus string

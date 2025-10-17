@@ -958,6 +958,33 @@ func GetDefaultPrice() []*Price {
 		prices = append(prices, price)
 	}
 
+	var defaultSoraVideoPrice = map[string]map[string]float64{
+		"sora-2": {
+			"1280x720": 0.10,
+			"720x1280": 0.10,
+		},
+		"sora-2-pro": {
+			"1280x720":  0.30,
+			"720x1280":  0.30,
+			"1792x1024": 0.50,
+			"1024x1792": 0.50,
+		},
+	}
+
+	for model, resolutionPrices := range defaultSoraVideoPrice {
+		for resolution, usdPrice := range resolutionPrices {
+			base := usdPrice / DollarRate
+			price := &Price{
+				Model:       model + "-" + resolution,
+				Type:        TokensPriceType,
+				ChannelType: config.ChannelTypeOpenAI,
+				Input:       base,
+			}
+			price.Normalize()
+			prices = append(prices, price)
+		}
+	}
+
 	// 可灵AI 默认价格配置 (按次计费)
 	var DefaultKlingPrice = map[string]float64{
 		// 视频生成模型

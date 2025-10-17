@@ -54,6 +54,9 @@ func setOpenAIRouter(router *gin.Engine) {
 		relayV1Router.POST("/moderations", relay.Relay)
 		relayV1Router.POST("/rerank", relay.RelayRerank)
 		relayV1Router.GET("/realtime", relay.ChatRealtime)
+		relayV1Router.POST("/videos", relay.VideoCreate)
+		relayV1Router.GET("/videos/:id", relay.VideoRetrieve)
+		relayV1Router.GET("/videos/:id/content", relay.VideoDownload)
 
 		relayV1Router.Use(middleware.SpecifiedChannel())
 		{
