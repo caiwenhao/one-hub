@@ -1,5 +1,46 @@
 # MiniMax 视频渠道集成说明
 
+## 模型输入与映射（文本 / 语音 / 视频）
+
+本节说明 One Hub 中“输入的模型名”与“上游调用/计费键”的关系，便于前后端统一与排查。
+
+- 文本（OpenAI 兼容 Chat）
+  - 输入模型：`MiniMax-M1`（推荐）、`MiniMax-Text-01`
+  - 对外接口：`POST /v1/chat/completions`
+  - 价格（人民币/1k tokens，已内置，可后台覆盖）：
+    - MiniMax-M1（默认采用 0–32k 档）：输入 0.0008，输出 0.008
+    - MiniMax-Text-01：输入 0.001，输出 0.008
+
+- 语音（TTS）
+  - 输入模型：
+    - HD 档：`speech-2.5-hd-preview`、`speech-02-hd`、`speech-01-hd`
+    - Turbo 档：`speech-2.5-turbo-preview`、`speech-02-turbo`、`speech-01-turbo`
+  - 对外接口：`POST /v1/audio/speech`（Provider 内部映射 minimaxi `/v1/t2a_v2`；如需异步请改走 `/v1/t2a_async_v2`）
+  - 价格（人民币/1k 字符，已内置，可后台覆盖）：HD=0.35；Turbo=0.2
+
+- 视频（Video Generation）
+  - 动作与自动识别：
+    - `text2video`：仅提供 `prompt`
+    - `image2video`：提供 `first_frame_image`（可带 `prompt`）
+    - `start-end2video`：同时提供 `first_frame_image` 与 `last_frame_image`
+  - 官方上游（默认）
+    - 输入模型：`MiniMax-Hailuo-02`
+    - 提交：`POST /v1/video_generation`；查询：`GET /v1/query/video_generation`
+    - 计费键模式：`minimax-<action>-minimax-hailuo-02-<resolution>-<duration>s`
+      - 例：`minimax-text2video-minimax-hailuo-02-768p-10s`
+    - 建议分辨率/时长：512P/768P/1080P × 6s/10s（1080P 支持 10s 档）
+  - PPInfra 上游（需在渠道自定义参数中将 `video.upstream` 设为 `ppinfra`）
+    - 输入模型与用途：
+      - `T2V-01` / `T2V-01-Director`（文生视频）
+      - `I2V-01` / `I2V-01-live`（图生视频）
+      - `S2V-01`（首尾帧）
+    - 提交路径模板：`/v3/async/%s`（其中 `%s` 为模型段，如 `t2v-01`）
+    - 查询：`/v3/async/task-result`
+    - 计费键模式：`minimax-<action>-<model-seg>-<resolution>-<duration>s`
+      - 例：`minimax-text2video-t2v-01-720p-6s`、`minimax-start-end2video-s2v-01-720p-6s`
+
+> 说明：计费键由系统运行时根据“动作 + 输入模型 + 分辨率 + 时长”自动生成，无需前端传入。
+
 ## 路由与接口
 
 - 主路径：`/minimaxi/v1/videos/:action`
@@ -28,6 +69,10 @@
   }
 }
 ```
+
+- 模型字段（后台→渠道→模型）建议包含：
+  - 文本/语音：`MiniMax-M1, MiniMax-Text-01, speech-02-turbo`（或你的常用项）
+  - 视频（强烈推荐）：`minimax-*`（一条通配即可覆盖所有 minimaxi 视频计费键），以及 `MiniMax-Hailuo-02, T2V-01, I2V-01, S2V-01` 等常用名，方便筛选与统计。
 
 - `upstream=ppinfra` 时：
 - 默认 `submit_path_template=/v3/async/%s`（模型名会自动转小写并拼到路径尾）。

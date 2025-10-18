@@ -1,4 +1,4 @@
-package minimax
+package minimaxi
 
 import (
 	"encoding/json"
@@ -30,6 +30,7 @@ type MiniMaxVideoConfig struct {
 	QueryPath             string            `json:"query_path,omitempty"`
 	QueryPathTemplate     string            `json:"query_path_template,omitempty"`
 	TemplatePath          string            `json:"template_path,omitempty"`
+	FileRetrievePath      string            `json:"file_retrieve_path,omitempty"`
 	AuthHeader            string            `json:"auth_header,omitempty"`
 	AuthScheme            string            `json:"auth_scheme,omitempty"`
 	DefaultCallbackURL    string            `json:"callback_url,omitempty"`
@@ -77,6 +78,7 @@ func loadMiniMaxVideoConfig(channel *model.Channel) MiniMaxVideoConfig {
 		SubmitPath:         "/v1/video_generation",
 		QueryPath:          "/v1/query/video_generation",
 		TemplatePath:       "/v1/video_template_generation",
+		FileRetrievePath:   "/v1/files/retrieve",
 		AuthHeader:         "Authorization",
 		AuthScheme:         "Bearer",
 		ExtraHeaders:       map[string]string{},
@@ -133,6 +135,9 @@ func mergeMiniMaxVideoConfig(dst, src *MiniMaxVideoConfig) {
 	}
 	if src.TemplatePath != "" {
 		dst.TemplatePath = src.TemplatePath
+	}
+	if src.FileRetrievePath != "" {
+		dst.FileRetrievePath = src.FileRetrievePath
 	}
 	if src.AuthHeader != "" {
 		dst.AuthHeader = src.AuthHeader
@@ -245,6 +250,13 @@ func (c *MiniMaxVideoClient) buildQueryPath(model, taskID string) string {
 	return "/v1/query/video_generation"
 }
 
+func (c *MiniMaxVideoClient) buildFileRetrievePath() string {
+	if c.config.FileRetrievePath != "" {
+		return c.config.FileRetrievePath
+	}
+	return "/v1/files/retrieve"
+}
+
 // SubmitVideoTask 创建视频生成任务
 func (c *MiniMaxVideoClient) SubmitVideoTask(req *MiniMaxVideoCreateRequest) (*MiniMaxVideoCreateResponse, *types.OpenAIError) {
 	payload := c.prepareSubmitPayload(req)
@@ -293,6 +305,29 @@ func (c *MiniMaxVideoClient) QueryVideoTask(taskID, model string) (*MiniMaxVideo
 	}
 
 	resp.Normalize()
+
+	return &resp, nil
+}
+
+// RetrieveFile 获取文件下载信息
+func (c *MiniMaxVideoClient) RetrieveFile(fileID string) (*MiniMaxFileRetrieveResponse, *types.OpenAIError) {
+	filePath := c.buildFileRetrievePath()
+	values := url.Values{}
+	values.Set("file_id", fileID)
+	fullURL := c.GetFullRequestURL(fmt.Sprintf("%s?%s", filePath, values.Encode()), "")
+
+	headers := c.buildHeaders()
+
+	httpReq, err := c.Requester.NewRequest(http.MethodGet, fullURL, c.Requester.WithHeader(headers))
+	if err != nil {
+		return nil, &types.OpenAIError{Message: fmt.Sprintf("create request failed: %s", err.Error()), Type: "minimax_file_request_error"}
+	}
+
+	var resp MiniMaxFileRetrieveResponse
+	_, errWithCode := c.Requester.SendRequest(httpReq, &resp, false)
+	if errWithCode != nil {
+		return nil, &errWithCode.OpenAIError
+	}
 
 	return &resp, nil
 }
@@ -416,6 +451,20 @@ type MiniMaxVideoQueryResponse struct {
 	Videos     []MiniMaxPPInfraVideo `json:"videos,omitempty"`
 	Images     []MiniMaxPPInfraImage `json:"images,omitempty"`
 	Audios     []MiniMaxPPInfraAudio `json:"audios,omitempty"`
+}
+
+type MiniMaxFileRetrieveResponse struct {
+	File     MiniMaxFileObject `json:"file"`
+	BaseResp BaseResp          `json:"base_resp"`
+}
+
+type MiniMaxFileObject struct {
+	FileID      StringOrNumber `json:"file_id,omitempty"`
+	Bytes       int64          `json:"bytes,omitempty"`
+	CreatedAt   int64          `json:"created_at,omitempty"`
+	Filename    string         `json:"filename,omitempty"`
+	Purpose     string         `json:"purpose,omitempty"`
+	DownloadURL string         `json:"download_url,omitempty"`
 }
 
 type MiniMaxPPInfraExtra struct {

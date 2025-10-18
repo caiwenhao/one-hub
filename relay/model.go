@@ -1,22 +1,23 @@
 package relay
 
 import (
-	"fmt"
-	"net/http"
-	"one-api/common"
-	"one-api/common/config"
-	"one-api/common/utils"
-	"one-api/model"
-	"one-api/providers/claude"
-	"one-api/providers/gemini"
-	"one-api/types"
-	"sort"
-	"strings"
+    "fmt"
+    "net/http"
+    "one-api/common"
+    "one-api/common/config"
+    "one-api/common/utils"
+    "one-api/model"
+    "one-api/providers/claude"
+    "one-api/providers/gemini"
+    "one-api/types"
+    "sort"
+    "strings"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
+    "github.com/shopspring/decimal"
 )
 
 // https://platform.openai.com/docs/api-reference/models/list
@@ -193,6 +194,18 @@ func inferOwnedBy(modelName string, price *model.Price) *string {
 		}
 		return &name
 	}
+	// minimaxi 视频基础模型归属推断
+	if strings.Contains(lower, "minimax-hailuo-02") ||
+		lower == "t2v-01" || lower == "t2v-01-director" ||
+		lower == "i2v-01" || lower == "i2v-01-live" ||
+		lower == "s2v-01" {
+		name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeMiniMax)
+		if name == model.UnknownOwnedBy || name == "" {
+			fallback := "minimaxi"
+			return &fallback
+		}
+		return &name
+	}
 	return getModelOwnedBy(channelType)
 }
 
@@ -277,11 +290,95 @@ type ModelPrice struct {
 }
 
 type AvailableModelResponse struct {
-	Groups      []string     `json:"groups"`
-	OwnedBy     string       `json:"owned_by"`
-	OwnedByType int          `json:"owned_by_type"`
-	ChannelType int          `json:"channel_type"`
-	Price       *model.Price `json:"price"`
+    Groups      []string     `json:"groups"`
+    OwnedBy     string       `json:"owned_by"`
+    OwnedByType int          `json:"owned_by_type"`
+    ChannelType int          `json:"channel_type"`
+    Price       *model.Price `json:"price"`
+    PriceDisplay *PriceDisplay `json:"price_display,omitempty"`
+    Variants    []VariantDisplay `json:"variants,omitempty"`
+}
+
+// PriceDisplay 为用户端展示的非侵入式价格提示（人民币），不包含敏感渠道信息
+type PriceDisplay struct {
+    Type      string `json:"type"`                  // tokens | times
+    Unit      string `json:"unit"`                  // USD/1k tokens 或 USD/each
+    // 美元展示（面向用户展示）
+    InputUSD  string `json:"input_usd,omitempty"`
+    OutputUSD string `json:"output_usd,omitempty"`
+    // 兼容旧字段（可能被前端历史逻辑使用）
+    InputRMB  string `json:"input_rmb,omitempty"`
+    OutputRMB string `json:"output_rmb,omitempty"`
+}
+
+type VariantDisplay struct {
+    Model        string        `json:"model"`
+    PriceDisplay *PriceDisplay `json:"price_display,omitempty"`
+}
+
+func buildPriceDisplay(p *model.Price) *PriceDisplay {
+    if p == nil {
+        return nil
+    }
+    d := &PriceDisplay{Type: p.Type}
+    // 主展示改为美元
+    if p.Type == model.TimesPriceType {
+        d.Unit = "USD/each"
+    } else {
+        d.Unit = "USD/1k tokens"
+    }
+    // 计算美元展示（统一保留 6 位小数，避免长尾差异）
+    din := decimal.NewFromFloat(p.GetInput()).Mul(decimal.NewFromFloat(model.DollarRate)).Round(6)
+    dout := decimal.NewFromFloat(p.GetOutput()).Mul(decimal.NewFromFloat(model.DollarRate)).Round(6)
+    d.InputUSD = din.StringFixed(6)
+    d.OutputUSD = dout.StringFixed(6)
+    // 兼容保留人民币字段（前端历史逻辑回退使用，不作为主展示）
+    rin := decimal.NewFromFloat(p.GetInput()).Mul(decimal.NewFromFloat(model.RMBRate)).Round(6)
+    rout := decimal.NewFromFloat(p.GetOutput()).Mul(decimal.NewFromFloat(model.RMBRate)).Round(6)
+    d.InputRMB = rin.StringFixed(6)
+    d.OutputRMB = rout.StringFixed(6)
+    return d
+}
+
+func shouldAttachVariants(base string) (bool, string) {
+    lower := strings.ToLower(strings.TrimSpace(base))
+    m := map[string]string{
+        "minimax-hailuo-02": "minimax-hailuo-02",
+        "t2v-01":             "t2v-01",
+        "t2v-01-director":    "t2v-01-director",
+        "i2v-01":             "i2v-01",
+        "i2v-01-live":        "i2v-01-live",
+        "s2v-01":             "s2v-01",
+    }
+    for k, seg := range m {
+        if strings.Contains(lower, k) || lower == k {
+            return true, seg
+        }
+    }
+    return false, ""
+}
+
+func collectMiniMaxVariants(baseSegment string, allPrices map[string]*model.Price) []VariantDisplay {
+    var variants []VariantDisplay
+    needle := "-" + baseSegment + "-"
+    for name, pr := range allPrices {
+        lower := strings.ToLower(name)
+        if pr == nil || pr.ChannelType != config.ChannelTypeMiniMax || pr.Type != model.TimesPriceType {
+            continue
+        }
+        if !strings.HasPrefix(lower, "minimax-") {
+            continue
+        }
+        if !strings.Contains(lower, needle) {
+            continue
+        }
+        variants = append(variants, VariantDisplay{
+            Model:        name,
+            PriceDisplay: buildPriceDisplay(pr),
+        })
+    }
+    sort.Slice(variants, func(i, j int) bool { return variants[i].Model < variants[j].Model })
+    return variants
 }
 
 func AvailableModel(c *gin.Context) {
@@ -319,22 +416,36 @@ func getAvailableModels(groupName string) map[string]*AvailableModelResponse {
 			continue
 		}
 
-		if _, ok := availableModels[modelName]; !ok {
-			price := model.PricingInstance.GetPrice(modelName)
-			owned := inferOwnedBy(modelName, price)
-			ownedName := model.UnknownOwnedBy
-			if owned != nil && *owned != "" {
-				ownedName = *owned
-			}
-			availableModels[modelName] = &AvailableModelResponse{
-				Groups:      groups,
-				OwnedBy:     ownedName,
-				OwnedByType: price.GetOwnedByType(),
-				ChannelType: price.ChannelType,
-				Price:       price,
-			}
-		}
-	}
+        if _, ok := availableModels[modelName]; !ok {
+            price := model.PricingInstance.GetPrice(modelName)
+            owned := inferOwnedBy(modelName, price)
+            ownedName := model.UnknownOwnedBy
+            if owned != nil && *owned != "" {
+                ownedName = *owned
+            }
+            // 计算人民币展示（不改变内部定价基准）；仅在已知渠道类型下展示，避免默认价误导
+            var disp *PriceDisplay
+            if price.ChannelType != config.ChannelTypeUnknown {
+                disp = buildPriceDisplay(price)
+            }
+
+            // 精确计费组合（仅对 minimaxi 视频基础模型等进行展开）
+            var variants []VariantDisplay
+            if ok, seg := shouldAttachVariants(modelName); ok {
+                variants = collectMiniMaxVariants(seg, model.PricingInstance.GetAllPrices())
+            }
+
+            availableModels[modelName] = &AvailableModelResponse{
+                Groups:      groups,
+                OwnedBy:     ownedName,
+                OwnedByType: price.GetOwnedByType(),
+                ChannelType: price.ChannelType,
+                Price:        price,
+                PriceDisplay: disp,
+                Variants:     variants,
+            }
+        }
+    }
 
 	return availableModels
 }

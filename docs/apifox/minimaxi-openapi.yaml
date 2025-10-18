@@ -1,0 +1,456 @@
+openapi: 3.0.3
+info:
+  title: One Hub - minimaxi 渠道 API
+  version: 1.0.0
+  description: |
+    One Hub 提供的 minimaxi 渠道代理接口（OpenAI 兼容 + 视频官方路径）。
+    - 认证：使用 One Hub 的用户 Token（非 minimaxi 平台 Key）
+    - 域名：导入后可在 Apifox 环境中替换为你的 One Hub 地址
+
+servers:
+  - url: https://onehub.example.com
+    description: 你的 One Hub 服务地址（导入后可在 Apifox 环境改成实际值）
+
+security:
+  - bearerAuth: []
+
+paths:
+  /minimaxi/v1/videos/{action}:
+    post:
+      summary: minimaxi 文/图/首尾帧生视频
+      description: |
+        - action=text2video：文生视频，需传 prompt
+        - action=image2video：图生视频，需传 first_frame_image（可选 prompt）
+        - action=start-end2video：首尾帧视频，需传 first_frame_image + last_frame_image
+        - 默认模型：MiniMax-Hailuo-02
+      parameters:
+        - in: path
+          name: action
+          required: true
+          schema:
+            type: string
+            enum: [text2video, image2video, start-end2video]
+          description: 动作类型
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MiniMaxVideoCreateRequest'
+            examples:
+              text2video:
+                summary: 文生视频示例
+                value:
+                  model: MiniMax-Hailuo-02
+                  prompt: a cinematic drone shot over a sunset beach, UHD
+                  resolution: 768P
+                  duration: 6
+              image2video:
+                summary: 图生视频示例
+                value:
+                  model: MiniMax-Hailuo-02
+                  first_frame_image: https://example.com/first.jpg
+                  prompt: cinematic camera fly-through
+                  resolution: 1080P
+                  duration: 10
+              startEnd2video:
+                summary: 首尾帧视频示例
+                value:
+                  model: MiniMax-Hailuo-02
+                  first_frame_image: https://example.com/first.jpg
+                  last_frame_image: https://example.com/last.jpg
+                  resolution: 768P
+                  duration: 6
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxVideoCreateResponse'
+
+  /minimaxi/v1/query/video_generation:
+    get:
+      summary: 查询 minimaxi 视频任务状态
+      description: |
+        与官方一致：仅需 `task_id`，无需 `channel_id`。平台会优先根据提交时写入的映射定位渠道。
+        若任务非本平台创建或不在当前分组/账号，可能查询不到；此时可联系管理员将对应 MiniMax Key 加入当前分组。
+      parameters:
+        - in: query
+          name: task_id
+          required: true
+          schema:
+            type: string
+          description: 提交任务返回的 task_id
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxVideoQueryResponse'
+
+  /minimaxi/v1/tasks:
+    get:
+      summary: 查询当前用户 minimaxi 视频任务列表
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MiniMaxVideoQueryResponse'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+
+  /minimaxi/v1/tasks/{task_id}:
+    get:
+      summary: 查询单个 minimaxi 视频任务详情
+      parameters:
+        - in: path
+          name: task_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxVideoQueryResponse'
+
+  # 官方兼容别名（完全对齐 minimaxi 文档）
+  /v1/video_generation:
+    post:
+      summary: 官方别名 - 创建 minimaxi 视频任务
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MiniMaxVideoCreateRequest'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxVideoCreateResponse'
+
+  /v1/query/video_generation:
+    get:
+      summary: 官方别名 - 查询 minimaxi 视频任务
+      parameters:
+        - in: query
+          name: task_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxVideoQueryResponse'
+
+  /minimaxi/v1/files/retrieve:
+    get:
+      summary: 获取文件下载信息（MiniMax 渠道）
+      description: |
+        根据 `file_id` 获取可用的下载链接。平台优先使用历史查询回填的映射定位渠道；
+        首次命中后会自动建立映射，后续同一 `file_id` 可直接命中。
+      parameters:
+        - in: query
+          name: file_id
+          required: true
+          schema:
+            type: string
+          description: 需要下载的文件 ID，通常来源于任务查询接口返回的 `file_id`
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxFileRetrieveResponse'
+
+  /minimaxi/v1/files/retrieve_content:
+    get:
+      summary: 下载文件内容（MiniMax 渠道）
+      description: 根据 `file_id` 直接下载视频或其它生成文件，可与 `/minimaxi/v1/files/retrieve` 返回的 `download_url` 联动使用。
+      parameters:
+        - in: query
+          name: file_id
+          required: true
+          schema:
+            type: string
+          description: 需要下载的文件 ID
+      responses:
+        '200':
+          description: 成功，返回二进制文件流
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  # OpenAI 兼容 - 文本（minimaxi: MiniMax-M1 / MiniMax-Text-01）
+  /v1/chat/completions:
+    post:
+      summary: OpenAI 兼容 - 文本生成（minimaxi）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionsRequest'
+            example:
+              model: MiniMax-M1
+              messages:
+                - role: system
+                  content: 你是一个有帮助的助手
+                - role: user
+                  content: 你好，介绍一下你自己
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionsResponse'
+
+  # OpenAI 兼容 - 语音（TTS）
+  /v1/audio/speech:
+    post:
+      summary: OpenAI 兼容 - 文本转语音（minimaxi）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpeechRequest'
+            example:
+              model: speech-02-turbo
+              input: "你好，今天天气不错"
+              voice: alloy
+              speed: 1.0
+              response_format: mp3-1-32000-128000
+      responses:
+        '200':
+          description: 成功，返回音频
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    MiniMaxVideoCreateRequest:
+      type: object
+      properties:
+        model:
+          type: string
+          description: 默认 MiniMax-Hailuo-02
+          example: MiniMax-Hailuo-02
+        prompt:
+          type: string
+          description: 文生/图生可选提示词
+        first_frame_image:
+          type: string
+          format: uri
+          description: 图生/首尾帧-首帧
+        last_frame_image:
+          type: string
+          format: uri
+          description: 首尾帧-尾帧
+        reference_image:
+          type: string
+          format: uri
+        duration:
+          type: integer
+          enum: [6, 10]
+          description: 视频时长（Hailuo-02 常用 6/10 秒）
+          example: 6
+        resolution:
+          type: string
+          enum: [512P, 768P, 1080P]
+          example: 768P
+        callback_url:
+          type: string
+          format: uri
+        enable_prompt_expansion:
+          type: boolean
+        external_task_id:
+          type: string
+
+    MiniMaxVideoCreateResponse:
+      type: object
+      properties:
+        task_id:
+          type: string
+        base_resp:
+          type: object
+          properties:
+            status_code:
+              type: integer
+            status_msg:
+              type: string
+
+    MiniMaxVideoQueryResponse:
+      type: object
+      properties:
+        task_id:
+          type: string
+        status:
+          type: string
+          description: QUEUED/IN_PROGRESS/SUCCESS/FAILURE
+        video_url:
+          type: string
+          format: uri
+        cover_image:
+          type: string
+          format: uri
+        watermarked_url:
+          type: string
+          format: uri
+        progress_percent:
+          type: number
+          format: float
+        eta:
+          type: integer
+        error_code:
+          type: string
+        error_message:
+          type: string
+        base_resp:
+          type: object
+          properties:
+            status_code:
+              type: integer
+            status_msg:
+              type: string
+
+    MiniMaxFileRetrieveResponse:
+      type: object
+      properties:
+        file:
+          $ref: '#/components/schemas/MiniMaxFileObject'
+        base_resp:
+          type: object
+          properties:
+            status_code:
+              type: integer
+            status_msg:
+              type: string
+
+    MiniMaxFileObject:
+      type: object
+      properties:
+        file_id:
+          type: string
+        bytes:
+          type: integer
+          format: int64
+        created_at:
+          type: integer
+          format: int64
+          description: 文件创建时间的 Unix 时间戳（秒）
+        filename:
+          type: string
+        purpose:
+          type: string
+        download_url:
+          type: string
+          format: uri
+
+    ChatCompletionsRequest:
+      type: object
+      properties:
+        model:
+          type: string
+          enum: [MiniMax-M1, MiniMax-Text-01]
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [system, user, assistant]
+              content:
+                type: string
+
+    ChatCompletionsResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          example: chat.completion
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                type: object
+                properties:
+                  role:
+                    type: string
+                  content:
+                    type: string
+
+    SpeechRequest:
+      type: object
+      properties:
+        model:
+          type: string
+          enum: [
+            speech-2.5-hd-preview, speech-02-hd, speech-01-hd,
+            speech-2.5-turbo-preview, speech-02-turbo, speech-01-turbo
+          ]
+        input:
+          type: string
+        voice:
+          type: string
+          description: One Hub 会将 openai 声音映射到 minimaxi 音色
+          example: alloy
+        speed:
+          type: number
+          format: float
+          example: 1.0
+        response_format:
+          type: string
+          description: 例如 mp3-1-32000-128000

@@ -58,20 +58,20 @@ func setOpenAIRouter(router *gin.Engine) {
 		relayV1Router.GET("/videos/:id", relay.VideoRetrieve)
 		relayV1Router.GET("/videos/:id/content", relay.VideoDownload)
 
-	relayV1Router.Use(middleware.SpecifiedChannel())
-	{
-		relayV1Router.Any("/files", relay.RelayOnly)
-		relayV1Router.Any("/files/*any", relay.RelayOnly)
-		// 对齐 OpenAI 平台 API：透传 uploads 与 conversations（使用 RelayOnly 直传）
-		relayV1Router.Any("/uploads", relay.RelayOnly)
-		relayV1Router.Any("/uploads/*any", relay.RelayOnly)
-		relayV1Router.Any("/conversations", relay.RelayOnly)
-		relayV1Router.Any("/conversations/*any", relay.RelayOnly)
-		relayV1Router.Any("/fine_tuning/*any", relay.RelayOnly)
-		relayV1Router.Any("/assistants", relay.RelayOnly)
-		relayV1Router.Any("/assistants/*any", relay.RelayOnly)
-		relayV1Router.Any("/threads", relay.RelayOnly)
-		relayV1Router.Any("/threads/*any", relay.RelayOnly)
+		relayV1Router.Use(middleware.SpecifiedChannel())
+		{
+			relayV1Router.Any("/files", relay.RelayOnly)
+			relayV1Router.Any("/files/*any", relay.RelayOnly)
+			// 对齐 OpenAI 平台 API：透传 uploads 与 conversations（使用 RelayOnly 直传）
+			relayV1Router.Any("/uploads", relay.RelayOnly)
+			relayV1Router.Any("/uploads/*any", relay.RelayOnly)
+			relayV1Router.Any("/conversations", relay.RelayOnly)
+			relayV1Router.Any("/conversations/*any", relay.RelayOnly)
+			relayV1Router.Any("/fine_tuning/*any", relay.RelayOnly)
+			relayV1Router.Any("/assistants", relay.RelayOnly)
+			relayV1Router.Any("/assistants/*any", relay.RelayOnly)
+			relayV1Router.Any("/threads", relay.RelayOnly)
+			relayV1Router.Any("/threads/*any", relay.RelayOnly)
 			relayV1Router.Any("/batches/*any", relay.RelayOnly)
 			relayV1Router.Any("/vector_stores/*any", relay.RelayOnly)
 			relayV1Router.DELETE("/models/:model", relay.RelayOnly)
@@ -159,30 +159,32 @@ func setKlingRouter(router *gin.Engine) {
 }
 
 func setMiniMaxRouter(router *gin.Engine) {
-    // 主推荐：/minimaxi 前缀（与品牌与域名一致）
-    minimaxiRouter := router.Group("/minimaxi")
-    minimaxiRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-    {
-        minimaxiRouter.POST("/v1/videos/:action", task.RelayTaskSubmit)
-        minimaxiRouter.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
-        minimaxiRouter.GET("/v1/tasks", minimax.RelayTaskList)
-        minimaxiRouter.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
-    }
+	// 主推荐：/minimaxi 前缀（与品牌与域名一致）
+	minimaxiRouter := router.Group("/minimaxi")
+	minimaxiRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+	{
+		minimaxiRouter.POST("/v1/videos/:action", task.RelayTaskSubmit)
+		minimaxiRouter.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
+		minimaxiRouter.GET("/v1/files/retrieve", minimax.RelayFileRetrieve)
+		minimaxiRouter.GET("/v1/tasks", minimax.RelayTaskList)
+		minimaxiRouter.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
+	}
 
-    // 兼容旧前缀：/minimax（保留一段时间，避免外部调用中断）
-    minimaxCompat := router.Group("/minimax")
-    minimaxCompat.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-    {
-        minimaxCompat.POST("/v1/videos/:action", task.RelayTaskSubmit)
-        minimaxCompat.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
-        minimaxCompat.GET("/v1/tasks", minimax.RelayTaskList)
-        minimaxCompat.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
-    }
+	// 兼容旧前缀：/minimax（保留一段时间，避免外部调用中断）
+	minimaxCompat := router.Group("/minimax")
+	minimaxCompat.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+	{
+		minimaxCompat.POST("/v1/videos/:action", task.RelayTaskSubmit)
+		minimaxCompat.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
+		minimaxCompat.GET("/v1/files/retrieve", minimax.RelayFileRetrieve)
+		minimaxCompat.GET("/v1/tasks", minimax.RelayTaskList)
+		minimaxCompat.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
+	}
 
-    // 官方兼容别名（完全对齐 MiniMax 官方 API 路径）
-    officialAlias := router.Group("")
-    officialAlias.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-    {
+	// 官方兼容别名（完全对齐 MiniMax 官方 API 路径）
+	officialAlias := router.Group("")
+	officialAlias.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+	{
         officialAlias.POST("/v1/video_generation", task.RelayTaskSubmit)
         officialAlias.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
     }

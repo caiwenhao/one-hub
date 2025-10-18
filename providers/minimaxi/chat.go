@@ -1,4 +1,4 @@
-package minimax
+package minimaxi
 
 import (
 	"encoding/json"

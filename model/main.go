@@ -169,6 +169,11 @@ func InitDB() (err error) {
 		if err != nil {
 			return err
 		}
+
+		err = db.AutoMigrate(&TaskArtifact{})
+		if err != nil {
+			return err
+		}
 		err = db.AutoMigrate(&Statistics{})
 		if err != nil {
 			return err

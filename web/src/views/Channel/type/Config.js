@@ -300,6 +300,9 @@ const typeConfig = {
     }
   },
   27: {
+    inputLabel: {
+      provider_models_list: '从minimaxi获取模型列表'
+    },
     input: {
       models: [
         // 文本（OpenAI 兼容 Chat）
@@ -311,7 +314,14 @@ const typeConfig = {
         'speech-01-hd',
         'speech-2.5-turbo-preview',
         'speech-02-turbo',
-        'speech-01-turbo'
+        'speech-01-turbo',
+        // 视频（匹配所有 minimaxi 视频计费键）
+        'MiniMax-Hailuo-02',
+        'T2V-01', 'T2V-01-Director', 'I2V-01', 'I2V-01-live', 'S2V-01',
+        'minimax-*',
+        // 音乐/图像
+        'music-1.5',
+        'image-01', 'image-01-live'
       ],
       test_model: 'MiniMax-M1'
     },

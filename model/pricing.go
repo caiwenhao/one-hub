@@ -50,20 +50,27 @@ func NewPricing() {
 		Match:  make([]string, 0),
 	}
 
-	err := PricingInstance.Init()
+    err := PricingInstance.Init()
 
 	if err != nil {
 		logger.SysError("Failed to initialize Pricing:" + err.Error())
 		return
 	}
 
-	// 初始化时，需要检测是否有更新
-	if viper.GetString("auto_price_updates_mode") == "system" && (viper.GetBool("auto_price_updates") || len(PricingInstance.Prices) == 0) {
-		logger.SysLog("Checking for pricing updates")
-		prices := GetDefaultPrice()
-		PricingInstance.SyncPricing(prices, "system")
-		logger.SysLog("Pricing initialized")
-	}
+    // 初始化时，需要检测是否有更新
+    if viper.GetString("auto_price_updates_mode") == "system" && (viper.GetBool("auto_price_updates") || len(PricingInstance.Prices) == 0) {
+        logger.SysLog("Checking for pricing updates")
+        prices := GetDefaultPrice()
+        PricingInstance.SyncPricing(prices, "system")
+        logger.SysLog("Pricing initialized")
+    }
+
+    // 无论是否启用自动更新，都尝试“仅新增”一次系统内置价格，确保新加的精确计费模型（例如 minimaxi 视频组合）被补齐；不覆盖已有配置
+    // 这一步是幂等的（SyncPriceWithoutOverwrite），不会影响已存在或 locked 的价格
+    func() {
+        defer func() { recover() }()
+        _ = PricingInstance.SyncPricing(GetDefaultPrice(), string(PriceUpdateModeAdd))
+    }()
 }
 
 // initializes the Pricing instance

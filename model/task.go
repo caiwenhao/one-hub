@@ -8,12 +8,12 @@ import (
 )
 
 const (
-	TaskPlatformSuno     = "suno"
-	TaskPlatformKling    = "kling"
-	TaskPlatformVidu     = "vidu"
-	TaskPlatformVolcArk  = "volcark"
-	TaskPlatformMiniMax  = "minimax"
-	TaskPlatformSora     = "sora"
+	TaskPlatformSuno    = "suno"
+	TaskPlatformKling   = "kling"
+	TaskPlatformVidu    = "vidu"
+	TaskPlatformVolcArk = "volcark"
+	TaskPlatformMiniMax = "minimax"
+	TaskPlatformSora    = "sora"
 )
 
 type TaskStatus string
@@ -105,6 +105,25 @@ func GetTaskByTaskIdAndActions(platform string, userId int, taskId string, actio
 		return nil, nil
 	}
 	return task, err
+}
+
+// GetMiniMaxTaskByFileID 根据文件ID定位 MiniMax 任务
+func GetMiniMaxTaskByFileID(userId int, fileID string) (*Task, error) {
+	if fileID == "" {
+		return nil, nil
+	}
+
+	pattern := "%\"file_id\":\"" + fileID + "\"%"
+	var task Task
+	err := DB.Where("platform = ? and user_id = ? and data LIKE ?", TaskPlatformMiniMax, userId, pattern).
+		Order("updated_at DESC").First(&task).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
 }
 
 func (Task *Task) Insert() error {

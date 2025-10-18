@@ -32,6 +32,7 @@ import { useTheme } from '@mui/material/styles';
 import Label from 'ui-component/Label';
 import ToggleButtonGroup from 'ui-component/ToggleButton';
 import { alpha } from '@mui/material/styles';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { getUnitPreference, setUnitPreference, PAGE_KEYS, UNIT_OPTIONS } from 'utils/unitPreferences';
 
 // ----------------------------------------------------------------------
@@ -55,6 +56,7 @@ export default function ModelPrice() {
   // 渠道列表与选择
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState('all');
+  const [expanded, setExpanded] = useState({}); // model -> bool
 
   const parseChannelModels = (modelsStr) => {
     if (!modelsStr) return [];
@@ -166,6 +168,12 @@ export default function ModelPrice() {
           return value;
         };
 
+        // 规范化 variants 的字段命名（price_display -> priceDisplay）
+        const normVariants = (model.variants || []).map((v) => ({
+          model: v.model,
+          priceDisplay: v.price_display
+        }));
+
         return {
           id: index + 1,
           model: modelName,
@@ -174,7 +182,9 @@ export default function ModelPrice() {
           type: model.price.type,
           input: formatPrice(price.input, model.price.type),
           output: formatPrice(price.output, model.price.type),
-          extraRatios: model.price?.extra_ratios
+          extraRatios: model.price?.extra_ratios,
+          priceDisplay: model.price_display,
+          variants: normVariants
         };
       });
 
@@ -217,6 +227,10 @@ export default function ModelPrice() {
     if (name === 'all') return null;
     const owner = ownedby.find((item) => item.name === name);
     return owner?.icon;
+  };
+
+  const toggleExpand = (model) => {
+    setExpanded((prev) => ({ ...prev, [model]: !prev[model] }));
   };
 
   const clearSearch = () => {
@@ -714,16 +728,54 @@ export default function ModelPrice() {
             <TableBody>
               {filteredRows.length > 0 ? (
                 filteredRows.map((row) => (
+                  <>
                   <TableRow key={row.id}>
                     <TableCell sx={{ py: 1.5 }}>
-                      <Stack direction="row" justifyContent="center" alignItems="center" spacing={1}>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {row.model}
-                        </Typography>
-                        <IconButton size="small" onClick={() => copy(row.model)}>
-                          <Icon icon="eva:copy-outline" width={16} height={16} />
-                        </IconButton>
-                      </Stack>
+                      {(() => {
+                        // 构造非侵入式价格提示
+                        const p = row.priceDisplay;
+                        let tip;
+                        if (p) {
+                          tip = p.type === 'times'
+                            ? `单价：$${p.input_usd ?? p.input_rmb} / 次`
+                            : `基础单价：输入 $${p.input_usd ?? p.input_rmb} / 1k，输出 $${p.output_usd ?? p.output_rmb} / 1k`;
+                        } else {
+                          const lower = row.model.toLowerCase();
+                          const isMiniMaxVideoBase =
+                            lower.includes('minimax-hailuo-02') ||
+                            lower === 't2v-01' ||
+                            lower === 't2v-01-director' ||
+                            lower === 'i2v-01' ||
+                            lower === 'i2v-01-live' ||
+                            lower === 's2v-01' ||
+                            lower.startsWith('minimax-');
+                          if (isMiniMaxVideoBase) {
+                            tip = '视频按分辨率/时长精确计费，提交时自动匹配组合价格';
+                          }
+                        }
+                        const content = (
+                          <Stack direction="row" justifyContent="center" alignItems="center" spacing={1}>
+                            {row.variants && row.variants.length > 0 && (
+                              <IconButton size="small" onClick={() => toggleExpand(row.model)}>
+                                {expanded[row.model] ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                              </IconButton>
+                            )}
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {row.model}
+                            </Typography>
+                            <IconButton size="small" onClick={() => copy(row.model)}>
+                              <Icon icon="eva:copy-outline" width={16} height={16} />
+                            </IconButton>
+                          </Stack>
+                        );
+                        return tip ? (
+                          <Tooltip title={tip} placement="top">
+                            <span>{content}</span>
+                          </Tooltip>
+                        ) : (
+                          content
+                        );
+                      })()}
                     </TableCell>
                     <TableCell sx={{ py: 1.5 }}>
                       <Box sx={{ display: 'flex',  alignItems: 'center', gap: 1, justifyContent: 'center' }}>
@@ -746,7 +798,20 @@ export default function ModelPrice() {
                       </Box>
                     </TableCell>
                     <TableCell sx={{ py: 1.5 }}>
-                      {row.type === 'tokens' ? (
+                      {row.variants && row.variants.length > 0 ? (
+                        <Label
+                          color="warning"
+                          sx={{
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                            fontSize: '0.75rem',
+                            py: 0.25,
+                            px: 0.75
+                          }}
+                        >
+                          按组合计费
+                        </Label>
+                      ) : row.type === 'tokens' ? (
                         <Label
                           color="primary"
                           sx={{
@@ -775,37 +840,103 @@ export default function ModelPrice() {
                       )}
                     </TableCell>
                     <TableCell sx={{ py: 1.5 }}>
-                      <Label
-                        color="info"
-                        variant="outlined"
-                        sx={{
-                          borderRadius: '4px',
-                          fontWeight: 500,
-                          fontSize: '0.75rem',
-                          py: 0.25,
-                          px: 0.75
-                        }}
-                      >
-                        {row.input}
-                      </Label>
+                      {row.variants && row.variants.length > 0 ? (
+                        <Typography variant="body2" color="text.disabled">—</Typography>
+                      ) : (
+                        <Label
+                          color="info"
+                          variant="outlined"
+                          sx={{
+                            borderRadius: '4px',
+                            fontWeight: 500,
+                            fontSize: '0.75rem',
+                            py: 0.25,
+                            px: 0.75
+                          }}
+                        >
+                          {row.input}
+                        </Label>
+                      )}
                     </TableCell>
                     <TableCell sx={{ py: 1.5 }}>
-                      <Label
-                        color="info"
-                        variant="outlined"
-                        sx={{
-                          borderRadius: '4px',
-                          fontWeight: 500,
-                          fontSize: '0.75rem',
-                          py: 0.25,
-                          px: 0.75
-                        }}
-                      >
-                        {row.output}
-                      </Label>
+                      {row.variants && row.variants.length > 0 ? (
+                        <Typography variant="body2" color="text.disabled">—</Typography>
+                      ) : (
+                        <Label
+                          color="info"
+                          variant="outlined"
+                          sx={{
+                            borderRadius: '4px',
+                            fontWeight: 500,
+                            fontSize: '0.75rem',
+                            py: 0.25,
+                            px: 0.75
+                          }}
+                        >
+                          {row.output}
+                        </Label>
+                      )}
                     </TableCell>
                     <TableCell sx={{ py: 1.5 }}>{getOther(t, row.extraRatios)}</TableCell>
                   </TableRow>
+                  {row.variants && row.variants.length > 0 && expanded[row.model] && (
+                    <TableRow>
+                      <TableCell colSpan={6} sx={{ py: 1 }}>
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell sx={{ fontWeight: 600 }}>精确计费模型</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>收费类型</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>输入价格</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>输出价格</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {row.variants.map((v) => {
+                              const vp = v.priceDisplay || {};
+                              const typeText = vp.type === 'times' ? '按次' : '按 Tokens';
+                              return (
+                                <TableRow key={v.model}>
+                                  <TableCell>
+                                    <Stack direction="row" alignItems="center" spacing={1}>
+                                      <Typography variant="body2">{v.model}</Typography>
+                                      <IconButton size="small" onClick={() => copy(v.model)}>
+                                        <Icon icon="eva:copy-outline" width={16} height={16} />
+                                      </IconButton>
+                                    </Stack>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Label color="secondary" variant="soft" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
+                                      {typeText}
+                                    </Label>
+                                  </TableCell>
+                                  <TableCell>
+                                    {vp.input_usd || vp.input_rmb ? (
+                                      <Label color="info" variant="outlined" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
+                                        {vp.type === 'times' ? `$${vp.input_usd ?? vp.input_rmb} / 次` : `$${vp.input_usd ?? vp.input_rmb} / 1k`}
+                                      </Label>
+                                    ) : (
+                                      <Typography variant="body2" color="text.disabled">—</Typography>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {vp.output_usd || vp.output_rmb ? (
+                                      <Label color="info" variant="outlined" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
+                                        {vp.type === 'times' ? `$${vp.output_usd ?? vp.output_rmb} / 次` : `$${vp.output_usd ?? vp.output_rmb} / 1k`}
+                                      </Label>
+                                    ) : (
+                                      <Typography variant="body2" color="text.disabled">—</Typography>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </>
                 ))
               ) : (
                 <TableRow>

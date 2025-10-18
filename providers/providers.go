@@ -25,7 +25,7 @@ import (
 	"one-api/providers/kling"
 	"one-api/providers/lingyi"
 	"one-api/providers/midjourney"
-	"one-api/providers/minimax"
+    minimaxi "one-api/providers/minimaxi"
 	"one-api/providers/mistral"
 	"one-api/providers/moonshot"
 	"one-api/providers/ollama"
@@ -71,7 +71,7 @@ func init() {
 		config.ChannelTypeAzureSpeech:     azurespeech.AzureSpeechProviderFactory{},
 		config.ChannelTypeGemini:          gemini.GeminiProviderFactory{},
 		config.ChannelTypeBaichuan:        baichuan.BaichuanProviderFactory{},
-		config.ChannelTypeMiniMax:         minimax.MiniMaxProviderFactory{},
+        config.ChannelTypeMiniMax:         minimaxi.MiniMaxProviderFactory{},
 		config.ChannelTypeDeepseek:        deepseek.DeepseekProviderFactory{},
 		config.ChannelTypeMistral:         mistral.MistralProviderFactory{},
 		config.ChannelTypeGroq:            groq.GroqProviderFactory{},

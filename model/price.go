@@ -245,6 +245,9 @@ var ownedByKeywordRules = []struct {
 	{config.ChannelTypeZhipu, []string{"glm", "cogview"}},
 	{config.ChannelTypeBaichuan, []string{"baichuan"}},
 	{config.ChannelTypeMiniMax, []string{"abab", "minimax"}},
+	// MiniMax 视频 01 系列模型：默认归属 MiniMax 品牌
+	// 这些型号名本身不包含“minimax”前缀，需通过关键字规则显式归类
+	{config.ChannelTypeMiniMax, []string{"t2v-01", "t2v-01-director", "i2v-01", "i2v-01-director", "i2v-01-live", "s2v-01"}},
 	{config.ChannelTypeGroq, []string{"groq"}},
 	{config.ChannelTypeKling, []string{"kling"}},
 	{config.ChannelTypeVidu, []string{"vidu"}},
@@ -969,6 +972,28 @@ func GetDefaultPrice() []*Price {
 
 	for model, miniMaxPrice := range defaultMiniMaxVideoPrice {
 		base := miniMaxPrice / RMBRate
+		price := &Price{
+			Model:       model,
+			Type:        TimesPriceType,
+			ChannelType: config.ChannelTypeMiniMax,
+			Input:       base,
+			Output:      base,
+		}
+		price.Normalize()
+		prices = append(prices, price)
+	}
+
+	// minimaxi 其他能力（音乐/图像）— 人民币定价
+	var defaultMiniMaxOthers = map[string]float64{
+		// 音乐生成
+		"music-1.5": 0.25, // 元/首
+		// 图像生成
+		"image-01":      0.025, // 元/张
+		"image-01-live": 0.025, // 元/张
+	}
+
+	for model, priceYuan := range defaultMiniMaxOthers {
+		base := priceYuan / RMBRate
 		price := &Price{
 			Model:       model,
 			Type:        TimesPriceType,

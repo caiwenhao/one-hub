@@ -10,6 +10,7 @@ import IconWrapper from 'ui-component/IconWrapper';
 
 const SupportModels = () => {
   const [modelList, setModelList] = useState([]);
+  const [priceMap, setPriceMap] = useState({}); // model -> price_display
   const [expanded, setExpanded] = useState(false);
   const { t } = useTranslation();
   const ownedby = useSelector((state) => state.siteInfo?.ownedby);
@@ -29,6 +30,14 @@ const SupportModels = () => {
         return acc;
       }, {});
 
+      // build price map for tooltip
+      const map = {};
+      Object.entries(data).forEach(([modelId, modelInfo]) => {
+        if (modelInfo?.price_display) {
+          map[modelId] = modelInfo.price_display;
+        }
+      });
+
       Object.values(modelGroup).forEach((models) => models.sort());
 
       const sortedModelGroup = Object.keys(modelGroup)
@@ -39,6 +48,7 @@ const SupportModels = () => {
         }, {});
 
       setModelList(sortedModelGroup);
+      setPriceMap(map);
     } catch (error) {
       showError(error.message);
     }
@@ -104,23 +114,53 @@ const SupportModels = () => {
                       >
                         {provider}:
                       </Typography>
-                      {models.map((model) => (
-                        <Label
-                          key={model}
-                          variant="soft"
-                          color="primary"
-                          onClick={() => copy(model, t('dashboard_index.model_name'))}
-                          sx={{
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            '&:hover': {
-                              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16)
-                            }
-                          }}
-                        >
-                          {model}
-                        </Label>
-                      ))}
+                      {models.map((model) => {
+                        const p = priceMap[model];
+                        let tip = p
+                          ? p.type === 'times'
+                            ? `单价：$${p.input_usd ?? p.input_rmb} / 次`
+                            : `输入：$${p.input_usd ?? p.input_rmb} / 1k，输出：$${p.output_usd ?? p.output_rmb} / 1k`
+                          : undefined;
+                        // minimaxi 视频模型为“组合计费”，基础模型可能无单价，给出友好提示
+                        if (!tip) {
+                          const lower = model.toLowerCase();
+                          const isMiniMaxVideoBase =
+                            lower.includes('minimax-hailuo-02') ||
+                            lower === 't2v-01' ||
+                            lower === 't2v-01-director' ||
+                            lower === 'i2v-01' ||
+                            lower === 'i2v-01-live' ||
+                            lower === 's2v-01' ||
+                            lower.startsWith('minimax-');
+                          if (isMiniMaxVideoBase) {
+                            tip = '视频按分辨率/时长精确计费，提交时自动匹配组合价格';
+                          }
+                        }
+                        const label = (
+                          <Label
+                            key={model}
+                            variant="soft"
+                            color="primary"
+                            onClick={() => copy(model, t('dashboard_index.model_name'))}
+                            sx={{
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              '&:hover': {
+                                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16)
+                              }
+                            }}
+                          >
+                            {model}
+                          </Label>
+                        );
+                        return tip ? (
+                          <Tooltip key={model} title={tip} placement="top">
+                            <span>{label}</span>
+                          </Tooltip>
+                        ) : (
+                          label
+                        );
+                      })}
                     </Box>
                   ))}
               </Box>
@@ -180,22 +220,51 @@ const SupportModels = () => {
                     pl: 1
                   }}
                 >
-                  {models.map((model) => (
-                    <Label
-                      key={model}
-                      variant="soft"
-                      color="primary"
-                      onClick={() => copy(model, t('dashboard_index.model_name'))}
-                      sx={{
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16)
-                        }
-                      }}
-                    >
-                      {model}
-                    </Label>
-                  ))}
+                  {models.map((model) => {
+                    const p = priceMap[model];
+                    let tip = p
+                      ? p.type === 'times'
+                        ? `单价：$${p.input_usd ?? p.input_rmb} / 次`
+                        : `输入：$${p.input_usd ?? p.input_rmb} / 1k，输出：$${p.output_usd ?? p.output_rmb} / 1k`
+                      : undefined;
+                    if (!tip) {
+                      const lower = model.toLowerCase();
+                      const isMiniMaxVideoBase =
+                        lower.includes('minimax-hailuo-02') ||
+                        lower === 't2v-01' ||
+                        lower === 't2v-01-director' ||
+                        lower === 'i2v-01' ||
+                        lower === 'i2v-01-live' ||
+                        lower === 's2v-01' ||
+                        lower.startsWith('minimax-');
+                      if (isMiniMaxVideoBase) {
+                        tip = '视频按分辨率/时长精确计费，提交时自动匹配组合价格';
+                      }
+                    }
+                    const label = (
+                      <Label
+                        key={model}
+                        variant="soft"
+                        color="primary"
+                        onClick={() => copy(model, t('dashboard_index.model_name'))}
+                        sx={{
+                          cursor: 'pointer',
+                          '&:hover': {
+                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.16)
+                          }
+                        }}
+                      >
+                        {model}
+                      </Label>
+                    );
+                    return tip ? (
+                      <Tooltip key={model} title={tip} placement="top">
+                        <span>{label}</span>
+                      </Tooltip>
+                    ) : (
+                      label
+                    );
+                  })}
                 </Box>
               </Box>
             ))}

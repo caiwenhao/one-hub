@@ -1,4 +1,4 @@
-package minimax
+package minimaxi
 
 import (
     "bytes"
@@ -65,7 +65,8 @@ func getConfig() base.ProviderConfig {
         // 同步 TTS：/v1/t2a_v2；异步长文本：/v1/t2a_async_v2（如需可在渠道自定义路径覆盖）
         AudioSpeech:     "/v1/t2a_v2",
         // Embeddings:      "/v1/embeddings",
-        // ModelList:       "/v1/models",
+        // OpenAI 兼容的模型列举（若上游不支持，将在 GetModelList 内降级到本地静态列表）
+        ModelList:       "/v1/models",
     }
 }
 

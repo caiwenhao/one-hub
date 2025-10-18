@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"one-api/model"
-	miniProvider "one-api/providers/minimax"
+    miniProvider "one-api/providers/minimaxi"
 	"one-api/types"
 
 	"github.com/gin-gonic/gin"

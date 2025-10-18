@@ -1,15 +1,16 @@
 package task
 
 import (
-	"errors"
-	"one-api/common/config"
-	"one-api/model"
-	"one-api/relay/task/base"
-	"one-api/relay/task/kling"
-	"one-api/relay/task/minimax"
-	"one-api/relay/task/suno"
-	"one-api/relay/task/vidu"
-	"one-api/relay/task/volcark"
+    "errors"
+    "one-api/common/config"
+    "one-api/model"
+    "one-api/relay/task/base"
+    "one-api/relay/task/kling"
+    "one-api/relay/task/minimax"
+    "one-api/relay/task/sora"
+    "one-api/relay/task/suno"
+    "one-api/relay/task/vidu"
+    "one-api/relay/task/volcark"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,10 +33,8 @@ func GetTaskAdaptor(relayType int, c *gin.Context) (base.TaskInterface, error) {
 		return &volcark.VolcArkTask{
 			TaskBase: getTaskBase(c, model.TaskPlatformVolcArk),
 		}, nil
-	case config.RelayModeMiniMaxVideo:
-		return &minimax.MiniMaxTask{
-			TaskBase: getTaskBase(c, model.TaskPlatformMiniMax),
-		}, nil
+    case config.RelayModeMiniMaxVideo:
+        return &minimax.MiniMaxTask{TaskBase: getTaskBase(c, model.TaskPlatformMiniMax)}, nil
 	default:
 		return nil, errors.New("adaptor not found")
 	}
@@ -55,6 +54,9 @@ func GetTaskAdaptorByPlatform(platform string) (base.TaskInterface, error) {
 		relayType = config.RelayModeVolcArkVideo
 	case model.TaskPlatformMiniMax:
 		relayType = config.RelayModeMiniMaxVideo
+	case model.TaskPlatformSora:
+		// 使用 OpenAI 视频路由，单独实现 Sora 任务适配器
+		return &sora.SoraTask{TaskBase: getTaskBase(nil, model.TaskPlatformSora)}, nil
 	}
 
 	return GetTaskAdaptor(relayType, nil)

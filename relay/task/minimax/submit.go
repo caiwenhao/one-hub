@@ -7,14 +7,18 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"one-api/common"
+	"one-api/common/config"
 	"one-api/common/logger"
 	"one-api/model"
 	"one-api/providers"
-	miniProvider "one-api/providers/minimax"
+	pbase "one-api/providers/base"
+	miniProvider "one-api/providers/minimaxi"
+	"one-api/relay"
 	"one-api/relay/task/base"
 
 	"github.com/gin-gonic/gin"
@@ -129,9 +133,32 @@ func (t *MiniMaxTask) normalizeRequest(action string, req *miniProvider.MiniMaxV
 }
 
 func (t *MiniMaxTask) SetProvider() *base.TaskError {
-	provider, err := t.GetProviderByModel()
-	if err != nil {
-		return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", err.Error(), true)
+	// 限定渠道类型为 minimaxi，避免误选其他视频渠道
+	if t.C != nil {
+		t.C.Set("allow_channel_type", []int{config.ChannelTypeMiniMax})
+	}
+
+	// 优先按“请求模型”选渠道（例如 MiniMax-Hailuo-02）
+	var provider pbase.ProviderInterface
+	var mapped string
+	var fail error
+	if t.C != nil {
+		provider, mapped, fail = relay.GetProvider(t.C, t.Request.Model)
+	}
+	if fail != nil || provider == nil {
+		// 回退：按常见 minimaxi 文本/语音模型尝试，保证老渠道（未添加视频模型名）也可复用
+		fallbacks := []string{"MiniMax-M1", "MiniMax-Text-01", "speech-02-turbo"}
+		for _, m := range fallbacks {
+			if t.C != nil {
+				provider, mapped, fail = relay.GetProvider(t.C, m)
+				if fail == nil && provider != nil {
+					break
+				}
+			}
+		}
+	}
+	if provider == nil || fail != nil {
+		return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", "no available minimaxi channel for video", true)
 	}
 
 	mini, ok := provider.(*miniProvider.MiniMaxProvider)
@@ -147,6 +174,7 @@ func (t *MiniMaxTask) SetProvider() *base.TaskError {
 	t.Provider = mini
 	t.VideoClient = videoClient
 	t.BaseProvider = provider
+	t.ModelName = mapped
 	if t.C != nil {
 		t.C.Set("billing_original_model", true)
 	}
@@ -323,7 +351,59 @@ func applyQueryResult(task *model.Task, resp *miniProvider.MiniMaxVideoQueryResp
 		task.FailReason = failureReason
 	}
 
+	// 在任务更新前，尝试写入/更新 artifact（若包含 file_id 或视频直链）
+	_ = upsertMiniMaxArtifacts(task, resp)
+
 	return task.Update()
+}
+
+// upsertMiniMaxArtifacts 将查询结果中的文件信息入库，建立 file_id → channel_id 映射
+func upsertMiniMaxArtifacts(task *model.Task, resp *miniProvider.MiniMaxVideoQueryResponse) error {
+	if task == nil || resp == nil {
+		return nil
+	}
+	userID := task.UserId
+	channelID := task.ChannelId
+	taskID := task.TaskID
+
+	// 仅当有 file_id 时入库（与官方 /files/retrieve 对齐）
+	fileID := strings.TrimSpace(resp.FileID)
+	if fileID == "" {
+		return nil
+	}
+
+	// 选取一个最有代表性的下载链接
+	download := strings.TrimSpace(resp.VideoURL)
+	if download == "" {
+		download = strings.TrimSpace(resp.WatermarkedURL)
+	}
+	if download == "" && len(resp.Videos) > 0 {
+		download = strings.TrimSpace(resp.Videos[0].VideoURL)
+	}
+
+	// TTL 解析（如果上游有 TTL 字段）
+	var ttlAt int64 = 0
+	if len(resp.Videos) > 0 {
+		// VideoURLTTL 可能是字符串秒数；忽略解析错误
+		if t := strings.TrimSpace(resp.Videos[0].VideoURLTTL); t != "" {
+			if secs, err := strconv.ParseInt(t, 10, 64); err == nil && secs > 0 {
+				ttlAt = time.Now().Unix() + secs
+			}
+		}
+	}
+
+	artifact := &model.TaskArtifact{
+		Platform:     model.TaskPlatformMiniMax,
+		UserId:       userID,
+		ChannelId:    channelID,
+		TaskID:       taskID,
+		FileID:       fileID,
+		ArtifactType: "video",
+		DownloadURL:  download,
+		TTLAt:        ttlAt,
+	}
+
+	return model.UpsertTaskArtifact(model.DB, artifact)
 }
 
 func defaultMiniMaxModel(action string) string {
