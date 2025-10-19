@@ -43,8 +43,9 @@ type Channel struct {
 
 	DisabledStream *datatypes.JSONSlice[string] `json:"disabled_stream,omitempty" gorm:"type:json"`
 
-	Plugin    *datatypes.JSONType[PluginType] `json:"plugin" form:"plugin" gorm:"type:json"`
-	DeletedAt gorm.DeletedAt                  `json:"-" gorm:"index"`
+	Plugin          *datatypes.JSONType[PluginType] `json:"plugin" form:"plugin" gorm:"type:json"`
+	MiniMaxUpstream string                          `json:"minimax_upstream,omitempty" form:"minimax_upstream" gorm:"-"`
+	DeletedAt       gorm.DeletedAt                  `json:"-" gorm:"index"`
 }
 
 func (c *Channel) AllowStream(modelName string) bool {

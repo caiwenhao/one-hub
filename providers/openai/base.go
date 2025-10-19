@@ -62,36 +62,51 @@ func CreateOpenAIProvider(channel *model.Channel, baseURL string) *OpenAIProvide
 }
 
 func getOpenAIConfig(baseURL string, channel *model.Channel) base.ProviderConfig {
-	providerConfig := base.ProviderConfig{
-		BaseURL:             baseURL,
-		Completions:         "/v1/completions",
-		ChatCompletions:     "/v1/chat/completions",
-		Embeddings:          "/v1/embeddings",
-		Videos:              "/v1/videos",
-		Moderation:          "/v1/moderations",
-		AudioSpeech:         "/v1/audio/speech",
-		AudioTranscriptions: "/v1/audio/transcriptions",
-		AudioTranslations:   "/v1/audio/translations",
-		ImagesGenerations:   "/v1/images/generations",
-		ImagesEdit:          "/v1/images/edits",
-		ImagesVariations:    "/v1/images/variations",
-		ModelList:           "/v1/models",
-		ChatRealtime:        "/v1/realtime",
-		Responses:           "/v1/responses",
-	}
+    providerConfig := base.ProviderConfig{
+        BaseURL:             baseURL,
+        Completions:         "/v1/completions",
+        ChatCompletions:     "/v1/chat/completions",
+        Embeddings:          "/v1/embeddings",
+        Videos:              "/v1/videos",
+        Moderation:          "/v1/moderations",
+        AudioSpeech:         "/v1/audio/speech",
+        AudioTranscriptions: "/v1/audio/transcriptions",
+        AudioTranslations:   "/v1/audio/translations",
+        ImagesGenerations:   "/v1/images/generations",
+        ImagesEdit:          "/v1/images/edits",
+        ImagesVariations:    "/v1/images/variations",
+        ModelList:           "/v1/models",
+        ChatRealtime:        "/v1/realtime",
+        Responses:           "/v1/responses",
+    }
 
-	if channel.Type != config.ChannelTypeCustom || channel.Plugin == nil {
-		return providerConfig
-	}
+    // 读取 custom_parameter 顶层 upstream，首批仅支持 openrouter：切换 BaseURL（低成本）
+    if channel.CustomParameter != nil && *channel.CustomParameter != "" {
+        var custom map[string]any
+        if err := json.Unmarshal([]byte(*channel.CustomParameter), &custom); err == nil {
+            if v, ok := custom["upstream"]; ok {
+                if up, ok2 := v.(string); ok2 {
+                    switch strings.ToLower(strings.TrimSpace(up)) {
+                    case "openrouter":
+                        providerConfig.BaseURL = "https://openrouter.ai/api"
+                    }
+                }
+            }
+        }
+    }
 
-	customMapping, ok := channel.Plugin.Data()["customize"]
-	if !ok {
-		return providerConfig
-	}
+    if channel.Type != config.ChannelTypeCustom || channel.Plugin == nil {
+        return providerConfig
+    }
 
-	providerConfig.SetAPIUri(customMapping)
+    customMapping, ok := channel.Plugin.Data()["customize"]
+    if !ok {
+        return providerConfig
+    }
 
-	return providerConfig
+    providerConfig.SetAPIUri(customMapping)
+
+    return providerConfig
 }
 
 // 请求错误处理

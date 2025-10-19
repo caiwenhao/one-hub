@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"math"
 	"net/http"
 	"strconv"
@@ -366,20 +367,26 @@ func upsertMiniMaxArtifacts(task *model.Task, resp *miniProvider.MiniMaxVideoQue
 	channelID := task.ChannelId
 	taskID := task.TaskID
 
-	// 仅当有 file_id 时入库（与官方 /files/retrieve 对齐）
-	fileID := strings.TrimSpace(resp.FileID)
-	if fileID == "" {
-		return nil
-	}
+    // 提取代表性直链（用于 PPInfra 等上游无 file_id 的场景）
+    download := strings.TrimSpace(resp.VideoURL)
+    if download == "" {
+        download = strings.TrimSpace(resp.WatermarkedURL)
+    }
+    if download == "" && len(resp.Videos) > 0 {
+        download = strings.TrimSpace(resp.Videos[0].VideoURL)
+    }
 
-	// 选取一个最有代表性的下载链接
-	download := strings.TrimSpace(resp.VideoURL)
-	if download == "" {
-		download = strings.TrimSpace(resp.WatermarkedURL)
-	}
-	if download == "" && len(resp.Videos) > 0 {
-		download = strings.TrimSpace(resp.Videos[0].VideoURL)
-	}
+    // 如果 response 未提供 file_id，但有直链，则生成一个稳定的伪 file_id（便于 /v1/files/retrieve 对齐）
+    fileID := strings.TrimSpace(resp.FileID)
+    if fileID == "" && download != "" {
+        sum := crc32.ChecksumIEEE([]byte(taskID + "|" + download))
+        // 加上偏移，避免过短
+        fileID = strconv.FormatUint(uint64(sum)+1000000000, 10)
+        resp.FileID = fileID
+    }
+    if fileID == "" {
+        return nil
+    }
 
 	// TTL 解析（如果上游有 TTL 字段）
 	var ttlAt int64 = 0

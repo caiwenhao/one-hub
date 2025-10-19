@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { CHANNEL_OPTIONS } from 'constants/ChannelConstants';
 import { useTheme } from '@mui/material/styles';
 import { API } from 'utils/api';
@@ -72,6 +72,13 @@ const getValidationSchema = (t) =>
     custom_parameter: Yup.string().nullable()
   });
 
+// MiniMax 上游供应商选项（后续可按渠道类型扩展）
+const MINIMAX_UPSTREAM_OPTIONS = [
+  { value: '', label: '默认（官方）' },
+  { value: 'official', label: '官方（直连）' },
+  { value: 'ppinfra', label: 'PPInfra（聚合）' }
+];
+
 const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, modelOptions, prices }) => {
   const { t } = useTranslation();
   const { t: customizeT } = useCustomizeT();
@@ -91,6 +98,47 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const [tempFormikValues, setTempFormikValues] = useState(null);
   const [tempSetFieldValue, setTempSetFieldValue] = useState(null);
+
+  // 供应商关键词（最小必要别名，便于搜索）
+  const PROVIDER_KEYWORDS = useMemo(
+    () => ({
+      1: ['openai', 'gpt'],
+      3: ['azure', 'azure openai', 'aoai'],
+      55: ['azure v1', 'azure openai v1'],
+      14: ['anthropic', 'claude'],
+      15: ['baidu', '文心', '千帆'],
+      16: ['zhipu', '智谱', 'glm'],
+      17: ['ali', '阿里', '通义', 'qwen'],
+      20: ['openrouter', 'router', 'or'],
+      25: ['google', 'gemini', 'palm'],
+      27: ['minimax', 'mini max', '海螺', 'hailuo', 'ppinfra'],
+      31: ['groq'],
+      36: ['cohere'],
+      37: ['stability', 'sd3', 'stable'],
+      39: ['ollama'],
+      40: ['hunyuan', '混元', 'tencent'],
+      41: ['suno'],
+      42: ['vertex', 'vertexai', 'google'],
+      45: ['siliconflow', '硅基'],
+      47: ['jina'],
+      49: ['github', 'gh models'],
+      51: ['recraft'],
+      52: ['replicate'],
+      53: ['kling'],
+      56: ['xai', 'grok'],
+      57: ['vidu'],
+      58: ['volc', 'ark', '火山', '方舟', 'doubao']
+    }),
+    []
+  );
+
+  const providerOptions = useMemo(() =>
+    Object.values(CHANNEL_OPTIONS).map((opt) => ({
+      label: opt.text,
+      value: opt.value,
+      keywords: PROVIDER_KEYWORDS[opt.value] || []
+    })),
+  [PROVIDER_KEYWORDS]);
 
   const initChannel = (typeValue) => {
     if (typeConfig[typeValue]?.inputLabel) {
@@ -249,12 +297,15 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
       }
     }
 
+    // 合并“上游供应商”到 custom_parameter 顶层（仅当有选择时写入；为空则不写入/移除）
     if (values.custom_parameter) {
       try {
-        // Validate that the custom_parameter is valid JSON
         JSON.parse(values.custom_parameter);
       } catch (error) {
         showError('Error parsing custom_parameter: ' + error.message);
+        setStatus({ success: false });
+        setErrors({ submit: error.message });
+        setSubmitting(false);
         return;
       }
     }
@@ -281,6 +332,8 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
     if (isTag) {
       baseApiUrl = '/api/channel_tag/' + encodeURIComponent(channelId);
     }
+
+    // 删除前端临时字段，避免传给后端
 
     try {
       if (channelId) {
@@ -391,6 +444,25 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
         if (data.plugin === null) {
           data.plugin = {};
         }
+        // 解析 custom_parameter 顶层 upstream 作为 UI 展示的上游选项
+        if (!data.minimax_upstream && data.custom_parameter) {
+          try {
+            const obj = JSON.parse(data.custom_parameter);
+            if (obj && typeof obj === 'object') {
+              if (obj.video && typeof obj.video === 'object' && obj.video.upstream) {
+                data.minimax_upstream = obj.video.upstream;
+              } else if (obj.upstream) {
+                data.minimax_upstream = obj.upstream;
+              }
+            }
+          } catch (e) {
+            // ignore parse error, 交给原有校验
+          }
+        }
+        if (!data.minimax_upstream) {
+          data.minimax_upstream = 'official';
+        }
+
         initChannel(data.type);
         setInitialInput(data);
 
@@ -440,43 +512,74 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
               <form noValidate onSubmit={handleSubmit}>
                 {!isTag && (
                   <FormControl fullWidth error={Boolean(touched.type && errors.type)} sx={{ ...theme.typography.otherInput }}>
-                    <InputLabel htmlFor="channel-type-label">{customizeT(inputLabel.type)}</InputLabel>
-                    <Select
-                      id="channel-type-label"
-                      label={customizeT(inputLabel.type)}
-                      value={values.type}
-                      name="type"
-                      onBlur={handleBlur}
-                      onChange={(e) => {
-                        handleChange(e);
-                        handleTypeChange(setFieldValue, e.target.value, values);
+                    <Autocomplete
+                      id="channel-type-autocomplete"
+                      options={providerOptions}
+                      value={providerOptions.find((o) => o.value === values.type) || null}
+                      getOptionLabel={(o) => (o?.label ? o.label : '')}
+                      isOptionEqualToValue={(o, v) => o.value === v.value}
+                      onChange={(_, option) => {
+                        if (!option) return;
+                        setFieldValue('type', option.value);
+                        handleTypeChange(setFieldValue, option.value, values);
                       }}
+                      filterOptions={(opts, state) => {
+                        const q = (state.inputValue || '').trim().toLowerCase();
+                        if (!q) return opts;
+                        return opts.filter((o) => {
+                          const hay = (o.label + ' ' + (o.keywords || []).join(' ')).toLowerCase();
+                          return hay.includes(q);
+                        });
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label={customizeT(inputLabel.type)}
+                          error={Boolean(touched.type && errors.type)}
+                          helperText={touched.type && errors.type ? errors.type : customizeT(inputPrompt.type)}
+                          onBlur={handleBlur}
+                        />
+                      )}
+                      autoHighlight
+                      disableClearable
+                      openOnFocus
                       disabled={hasTag}
-                      MenuProps={{
-                        PaperProps: {
-                          style: {
-                            maxHeight: 200
-                          }
+                    />
+                  </FormControl>
+                )}
+
+                {/* MiniMax 专用：上游供应商选择（顶层 upstream） */}
+                {!isTag && values.type === 27 && (
+                  <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
+                    <InputLabel id="minimax-upstream-label">上游供应商</InputLabel>
+                    <Select
+                      labelId="minimax-upstream-label"
+                      id="minimax-upstream"
+                      name="minimax_upstream"
+                      value={values.minimax_upstream || ''}
+                      label="上游供应商"
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setFieldValue('minimax_upstream', next);
+                        if (next === 'ppinfra') {
+                          setFieldValue('base_url', 'https://api.ppinfra.com');
+                        } else if (next === 'official' || next === '') {
+                          setFieldValue('base_url', 'https://api.minimaxi.com');
                         }
                       }}
                     >
-                      {Object.values(CHANNEL_OPTIONS).map((option) => {
-                        return (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.text}
-                          </MenuItem>
-                        );
-                      })}
+                      {MINIMAX_UPSTREAM_OPTIONS.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </MenuItem>
+                      ))}
                     </Select>
-                    {touched.type && errors.type ? (
-                      <FormHelperText error id="helper-tex-channel-type-label">
-                        {errors.type}
-                      </FormHelperText>
-                    ) : (
-                      <FormHelperText id="helper-tex-channel-type-label"> {customizeT(inputPrompt.type)} </FormHelperText>
-                    )}
+                    <FormHelperText id="helper-tex-minimax-upstream-label">
+                      仅影响 MiniMax 视频/文本/语音的上游请求入口，默认官方直连；高级按能力覆盖可在下方“额外参数”JSON中配置。
+                    </FormHelperText>
                   </FormControl>
                 )}
+
 
                 <FormControl fullWidth error={Boolean(touched.tag && errors.tag)} sx={{ ...theme.typography.otherInput }}>
                   <InputLabel htmlFor="channel-tag-label">{customizeT(inputLabel.tag)}</InputLabel>

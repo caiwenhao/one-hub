@@ -17,7 +17,8 @@ const defaultConfig = {
     only_chat: false,
     pre_cost: 1,
     disabled_stream: [],
-    compatible_response: false
+    compatible_response: false,
+    minimax_upstream: 'official'
   },
   inputLabel: {
     name: '渠道名称',

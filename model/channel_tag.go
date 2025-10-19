@@ -80,6 +80,8 @@ func UpdateChannelsTag(tag string, channel *Channel) error {
 		return errors.New("key不能为空")
 	}
 
+	channel.ApplyMiniMaxUpstreamConfig()
+
 	addKeys := []string{}
 	delIds := []int{}
 
@@ -132,6 +134,7 @@ func UpdateChannelsTag(tag string, channel *Channel) error {
 			addChannel.ResponseTime = 0
 			addChannel.CreatedTime = time.Now().Unix()
 			addChannel.TestTime = 0
+			addChannel.ApplyMiniMaxUpstreamConfig()
 			addChannels = append(addChannels, addChannel)
 			maxKey++
 		}

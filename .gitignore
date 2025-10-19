@@ -21,3 +21,5 @@ _output
 # Go cache directories
 .gocache
 .gocache-mod
+.DS_Store
+.DS_Store

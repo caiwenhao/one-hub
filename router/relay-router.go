@@ -166,6 +166,7 @@ func setMiniMaxRouter(router *gin.Engine) {
 		minimaxiRouter.POST("/v1/videos/:action", task.RelayTaskSubmit)
 		minimaxiRouter.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
 		minimaxiRouter.GET("/v1/files/retrieve", minimax.RelayFileRetrieve)
+		minimaxiRouter.GET("/v1/files/retrieve_content", minimax.RelayFileRetrieveContent)
 		minimaxiRouter.GET("/v1/tasks", minimax.RelayTaskList)
 		minimaxiRouter.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
 	}
@@ -177,6 +178,7 @@ func setMiniMaxRouter(router *gin.Engine) {
 		minimaxCompat.POST("/v1/videos/:action", task.RelayTaskSubmit)
 		minimaxCompat.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
 		minimaxCompat.GET("/v1/files/retrieve", minimax.RelayFileRetrieve)
+		minimaxCompat.GET("/v1/files/retrieve_content", minimax.RelayFileRetrieveContent)
 		minimaxCompat.GET("/v1/tasks", minimax.RelayTaskList)
 		minimaxCompat.GET("/v1/tasks/:task_id", minimax.RelayTaskFetch)
 	}
@@ -185,9 +187,10 @@ func setMiniMaxRouter(router *gin.Engine) {
 	officialAlias := router.Group("")
 	officialAlias.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
 	{
-        officialAlias.POST("/v1/video_generation", task.RelayTaskSubmit)
-        officialAlias.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
-    }
+		officialAlias.POST("/v1/video_generation", task.RelayTaskSubmit)
+		officialAlias.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
+		// /v1/files/* 路径在通用 OpenAI 兼容路由中以 /v1/files/*any 注册，禁止在此再挂静态子路径，避免 Gin 路由冲突。
+	}
 }
 
 // setOfficialKlingRouter 设置完全兼容官方API的路由

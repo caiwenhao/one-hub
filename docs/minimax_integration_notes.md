@@ -29,7 +29,7 @@
     - 计费键模式：`minimax-<action>-minimax-hailuo-02-<resolution>-<duration>s`
       - 例：`minimax-text2video-minimax-hailuo-02-768p-10s`
     - 建议分辨率/时长：512P/768P/1080P × 6s/10s（1080P 支持 10s 档）
-  - PPInfra 上游（需在渠道自定义参数中将 `video.upstream` 设为 `ppinfra`）
+  - PPInfra 上游（推荐：前端“上游供应商”选择 PPInfra；或在渠道自定义参数顶层设置 `{"upstream":"ppinfra"}`；如需仅视频覆盖，使用 `{"video":{"upstream":"ppinfra"}}`）
     - 输入模型与用途：
       - `T2V-01` / `T2V-01-Director`（文生视频）
       - `I2V-01` / `I2V-01-live`（图生视频）
@@ -55,31 +55,38 @@
 
 ## 渠道配置（Custom Parameter → video）
 
+
+> 当前前端会根据“上游供应商”选项自动生成以下 `video` 配置，并复用渠道通用密钥。通常无需手动编辑 JSON，除非要覆盖更多细粒度参数。
+
 ```json
 {
   "video": {
-    "upstream": "official",        // official | ppinfra
-    "api_key": "",                // 可选，缺省使用渠道主 key
-    "base_url": "https://api.minimaxi.com",
-    "submit_path_template": "/v3/async/%s",  // ppinfra 时可覆盖
-    "query_path_template": "/v3/async/%s/%s",
-    "enable_prompt_expansion": false,
-    "callback_url": "",
-    "extra_headers": {}
+    "upstream": "official",
+    "base_url": "https://api.minimaxi.com"
   }
 }
+```
+
+### 顶层 upstream 快捷配置
+
+如不需要分能力细化，建议使用顶层 `upstream` 直接切换：
+
+```json
+{"upstream": "ppinfra"}
 ```
 
 - 模型字段（后台→渠道→模型）建议包含：
   - 文本/语音：`MiniMax-M1, MiniMax-Text-01, speech-02-turbo`（或你的常用项）
   - 视频（强烈推荐）：`minimax-*`（一条通配即可覆盖所有 minimaxi 视频计费键），以及 `MiniMax-Hailuo-02, T2V-01, I2V-01, S2V-01` 等常用名，方便筛选与统计。
 
+- 也可以直接在顶层设置：`{"upstream":"ppinfra","api_key":"Bearer ppinfra_xxx"}`（默认会使用渠道密钥，一般无需单独写 `api_key`）。
+
 - `upstream=ppinfra` 时：
-- 默认 `submit_path_template=/v3/async/%s`（模型名会自动转小写并拼到路径尾）。
-- 默认 `query_path=/v3/async/task-result`，请求会自动携带 `task_id` 查询参数。
-- 如上游返回结构包含 `videos`/`images`/`audios` 等字段，会写入任务数据并自动映射状态与失败原因。
-- `enable_prompt_expansion` 未显式设置时，统一走渠道默认；入参仍可覆盖。
-- 默认计费表已按 PPInfra 最新报价（0.6/1/2/4/6 元）写入 `model/price.go`，如果官方调价，可在后台“模型价格”中覆盖或直接修改该映射表。
+  - 默认 `submit_path_template=/v3/async/%s`（模型名会自动转小写并拼到路径尾）。
+  - 默认 `query_path=/v3/async/task-result`，请求会自动携带 `task_id` 查询参数。
+  - 如上游返回结构包含 `videos`/`images`/`audios` 等字段，会写入任务数据并自动映射状态与失败原因。
+  - `enable_prompt_expansion` 未显式设置时，统一走渠道默认；入参仍可覆盖。
+  - 默认计费表已按 PPInfra 最新报价（0.6/1/2/4/6 元）写入 `model/price.go`，如果官方调价，可在后台“模型价格”中覆盖或直接修改该映射表。
 
 ## 计费模型键
 
@@ -104,9 +111,9 @@
 1. 文生视频：`POST /minimaxi/v1/videos/text2video`
 2. 图生视频：`POST /minimaxi/v1/videos/image2video`
 3. 首尾帧：`POST /minimaxi/v1/videos/start-end2video`
-4. 查询：`GET /minimaxi/v1/query/video_generation?task_id=xxx`（PPInfra 会调用 `/v3/async/task-result` 并解析 `videos[]/task.status` 等字段）
+4. 查询：`GET /minimaxi/v1/query/video_generation?task_id=xxx`（若上游为 PPInfra，会调用 `/v3/async/task-result` 并解析 `videos[]/task.status` 等字段）
 5. 别名：`POST /v1/video_generation`（带首尾帧字段，自动识别动作）
-6. 若接入 PPInfra，上述每项需再验证一次，确认路径模板与鉴权无误。
+6. 若接入 PPInfra，上述每项需再验证一次，确认路径模板与鉴权无误。也可直接在前端下拉选择 PPInfra，系统会自动写入 `{"upstream":"ppinfra"}`。
 
 ## 运维提示
 

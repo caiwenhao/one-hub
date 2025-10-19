@@ -2,9 +2,12 @@ package minimax
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"one-api/common/config"
 	"one-api/model"
@@ -23,69 +26,110 @@ func RelayFileRetrieve(c *gin.Context) {
 		return
 	}
 
-	// 可选：用户上下文校验（保持与其他接口一致）。因该接口仅转发，可放宽为无需任务表。
+	resp, ok := retrieveMiniMaxFileMetadata(c, fileID)
+	if !ok {
+		return
+	}
 
-	// 1) 若传入 channel_id，则直接使用该渠道
+	writeJSONNoEscape(c, http.StatusOK, resp)
+}
+
+func RelayFileRetrieveContent(c *gin.Context) {
+	fileID := strings.TrimSpace(c.Query("file_id"))
+	if fileID == "" {
+		StringError(c, http.StatusBadRequest, "invalid_request", "file_id is required")
+		return
+	}
+
+	resp, ok := retrieveMiniMaxFileMetadata(c, fileID)
+	if !ok {
+		return
+	}
+
+	downloadURL := strings.TrimSpace(resp.File.DownloadURL)
+	if downloadURL == "" {
+		StringError(c, http.StatusNotFound, "download_url_missing", "上游未返回下载地址，可重试或稍后再试")
+		return
+	}
+
+	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, downloadURL, nil)
+	if err != nil {
+		StringError(c, http.StatusInternalServerError, "download_request_failed", err.Error())
+		return
+	}
+
+	client := &http.Client{Timeout: 120 * time.Second}
+	upstreamResp, err := client.Do(req)
+	if err != nil {
+		StringError(c, http.StatusBadGateway, "download_failed", err.Error())
+		return
+	}
+	defer upstreamResp.Body.Close()
+
+	if upstreamResp.StatusCode < http.StatusOK || upstreamResp.StatusCode >= http.StatusMultipleChoices {
+		body, _ := io.ReadAll(io.LimitReader(upstreamResp.Body, 4<<20))
+		StringError(c, http.StatusBadGateway, "download_failed", fmt.Sprintf("上游返回状态 %d: %s", upstreamResp.StatusCode, strings.TrimSpace(string(body))))
+		return
+	}
+
+	if ct := upstreamResp.Header.Get("Content-Type"); ct != "" {
+		c.Header("Content-Type", ct)
+	} else {
+		c.Header("Content-Type", "application/octet-stream")
+	}
+	if cl := upstreamResp.Header.Get("Content-Length"); cl != "" {
+		c.Header("Content-Length", cl)
+	}
+
+	if filename := strings.TrimSpace(resp.File.Filename); filename != "" {
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	}
+
+	c.Status(http.StatusOK)
+	io.Copy(c.Writer, upstreamResp.Body)
+}
+
+func retrieveMiniMaxFileMetadata(c *gin.Context, fileID string) (*miniProvider.MiniMaxFileRetrieveResponse, bool) {
+	userID := c.GetInt("id")
+
 	if chStr := strings.TrimSpace(c.Query("channel_id")); chStr != "" {
 		if chID, err := strconv.Atoi(chStr); err == nil && chID > 0 {
 			if channel, err := model.GetChannelById(chID); err == nil && channel != nil {
-				provider := providers.GetProvider(channel, c)
-				if mini, ok := provider.(*miniProvider.MiniMaxProvider); ok && mini.GetVideoClient() != nil {
-					if resp, errWithCode := mini.GetVideoClient().RetrieveFile(fileID); errWithCode == nil {
-						// 命中后补写 artifact，后续可直接定位渠道
-						_ = model.UpsertTaskArtifact(model.DB, &model.TaskArtifact{
-							Platform:     model.TaskPlatformMiniMax,
-							UserId:       c.GetInt("id"),
-							ChannelId:    channel.Id,
-							TaskID:       "",
-							FileID:       fileID,
-							ArtifactType: "video",
-							DownloadURL:  resp.File.DownloadURL,
-							TTLAt:        0,
-						})
-						writeJSONNoEscape(c, http.StatusOK, resp)
-						return
-					}
+				if resp, ok := retrieveFileViaChannel(c, channel, userID, fileID, true); ok {
+					return resp, true
 				}
 			}
 		}
 	}
 
-	// 2) 若传 task_id，则按任务反查渠道（增强命中率）
 	taskID := strings.TrimSpace(c.Query("task_id"))
 	var task *model.Task
 	var err error
 	if taskID != "" {
-		task, err = model.GetTaskByTaskId(model.TaskPlatformMiniMax, c.GetInt("id"), taskID)
+		task, err = model.GetTaskByTaskId(model.TaskPlatformMiniMax, userID, taskID)
 		if err != nil {
 			StringError(c, http.StatusInternalServerError, "task_query_failed", err.Error())
-			return
+			return nil, false
 		}
 	}
 
 	if task == nil {
-		// 2.1 优先从 artifact 表定位渠道
-		if a, err := model.GetArtifactByFileID(c.GetInt("id"), model.TaskPlatformMiniMax, fileID); err == nil && a != nil && a.ChannelId > 0 {
+		if a, err := model.GetArtifactByFileID(userID, model.TaskPlatformMiniMax, fileID); err == nil && a != nil && a.ChannelId > 0 {
 			if channel, err := model.GetChannelById(a.ChannelId); err == nil && channel != nil {
-				provider := providers.GetProvider(channel, c)
-				if mini, ok := provider.(*miniProvider.MiniMaxProvider); ok && mini.GetVideoClient() != nil {
-					if resp, errWithCode := mini.GetVideoClient().RetrieveFile(fileID); errWithCode == nil {
-						writeJSONNoEscape(c, http.StatusOK, resp)
-						return
-					}
+				if resp, ok := retrieveFileViaChannel(c, channel, userID, fileID, false); ok {
+					return resp, true
 				}
 			}
 		}
-		// 2.2 否则再用老的 data LIKE 反查（兼容历史数据）
-		task, err = model.GetMiniMaxTaskByFileID(c.GetInt("id"), fileID)
+
+		task, err = model.GetMiniMaxTaskByFileID(userID, fileID)
 		if err != nil {
 			StringError(c, http.StatusInternalServerError, "task_query_failed", err.Error())
-			return
+			return nil, false
 		}
 	}
 
 	if task == nil {
-		// 回退方案 A：在当前分组下遍历所有可用的 MiniMax 渠道逐一直查（官方优先：api.minimaxi.com > 其他），命中即返回
 		group := strings.TrimSpace(c.GetString("token_group"))
 		if channels, err := model.GetAllChannels(); err == nil {
 			var official []*model.Channel
@@ -113,90 +157,101 @@ func RelayFileRetrieve(c *gin.Context) {
 				}
 			}
 			for _, ch := range official {
-				provider := providers.GetProvider(ch, c)
-				if mini, ok := provider.(*miniProvider.MiniMaxProvider); ok && mini.GetVideoClient() != nil {
-					if resp, errWithCode := mini.GetVideoClient().RetrieveFile(fileID); errWithCode == nil {
-						_ = model.UpsertTaskArtifact(model.DB, &model.TaskArtifact{
-							Platform:     model.TaskPlatformMiniMax,
-							UserId:       c.GetInt("id"),
-							ChannelId:    ch.Id,
-							TaskID:       "",
-							FileID:       fileID,
-							ArtifactType: "video",
-							DownloadURL:  resp.File.DownloadURL,
-							TTLAt:        0,
-						})
-						writeJSONNoEscape(c, http.StatusOK, resp)
-						return
-					}
+				if resp, ok := retrieveFileViaChannel(c, ch, userID, fileID, true); ok {
+					return resp, true
 				}
 			}
 			for _, ch := range others {
-				provider := providers.GetProvider(ch, c)
-				if mini, ok := provider.(*miniProvider.MiniMaxProvider); ok && mini.GetVideoClient() != nil {
-					if resp, errWithCode := mini.GetVideoClient().RetrieveFile(fileID); errWithCode == nil {
-						_ = model.UpsertTaskArtifact(model.DB, &model.TaskArtifact{
-							Platform:     model.TaskPlatformMiniMax,
-							UserId:       c.GetInt("id"),
-							ChannelId:    ch.Id,
-							TaskID:       "",
-							FileID:       fileID,
-							ArtifactType: "video",
-							DownloadURL:  resp.File.DownloadURL,
-							TTLAt:        0,
-						})
-						writeJSONNoEscape(c, http.StatusOK, resp)
-						return
-					}
+				if resp, ok := retrieveFileViaChannel(c, ch, userID, fileID, true); ok {
+					return resp, true
 				}
 			}
 		}
 
-		// 回退方案 B：限定 MiniMax 后随机选择一个渠道直查（作为兜底）
 		c.Set("allow_channel_type", []int{config.ChannelTypeMiniMax})
 		if provider, _, fail := relay.GetProvider(c, "MiniMax-M1"); fail == nil && provider != nil {
 			if mini, ok := provider.(*miniProvider.MiniMaxProvider); ok && mini.GetVideoClient() != nil {
 				if resp, errWithCode := mini.GetVideoClient().RetrieveFile(fileID); errWithCode == nil {
-					_ = model.UpsertTaskArtifact(model.DB, &model.TaskArtifact{
-						Platform:     model.TaskPlatformMiniMax,
-						UserId:       c.GetInt("id"),
-						ChannelId:    provider.GetChannel().Id,
-						TaskID:       "",
-						FileID:       fileID,
-						ArtifactType: "video",
-						DownloadURL:  resp.File.DownloadURL,
-						TTLAt:        0,
-					})
-					writeJSONNoEscape(c, http.StatusOK, resp)
-					return
+					upsertMiniMaxArtifact(userID, provider.GetChannel().Id, fileID, resp.File.DownloadURL)
+					return resp, true
 				}
 			}
 		}
 
 		StringError(c, http.StatusNotFound, "task_not_found", "未找到包含该文件的任务（可加 channel_id 或 task_id 重试）")
-		return
+		return nil, false
 	}
 
 	channel, channelErr := model.GetChannelById(task.ChannelId)
 	if channelErr != nil {
 		StringError(c, http.StatusServiceUnavailable, "channel_not_found", channelErr.Error())
-		return
+		return nil, false
 	}
 
 	provider := providers.GetProvider(channel, c)
 	mini, ok := provider.(*miniProvider.MiniMaxProvider)
 	if !ok || mini.GetVideoClient() == nil {
 		StringError(c, http.StatusServiceUnavailable, "provider_not_found", "provider not found")
-		return
+		return nil, false
 	}
 
 	resp, errWithCode := mini.GetVideoClient().RetrieveFile(fileID)
 	if errWithCode != nil {
 		StringError(c, http.StatusInternalServerError, "file_retrieve_failed", errWithCode.Message)
-		return
+		return nil, false
 	}
 
-	writeJSONNoEscape(c, http.StatusOK, resp)
+	return resp, true
+}
+
+func retrieveFileViaChannel(c *gin.Context, channel *model.Channel, userID int, fileID string, upsert bool) (*miniProvider.MiniMaxFileRetrieveResponse, bool) {
+    // 若为 PPInfra 上游，优先使用 artifact 中的直链构造响应，避免请求不存在的 /v1/files/retrieve
+    if !isMiniMaxOfficialChannelForFile(channel) {
+        if a, err := model.GetArtifactByFileID(userID, model.TaskPlatformMiniMax, fileID); err == nil && a != nil && strings.TrimSpace(a.DownloadURL) != "" {
+            resp := &miniProvider.MiniMaxFileRetrieveResponse{
+                File: miniProvider.MiniMaxFileObject{
+                    FileID:      miniProvider.StringOrNumber(fileID),
+                    Bytes:       0,
+                    CreatedAt:   time.Now().Unix(),
+                    Filename:    "video.mp4",
+                    Purpose:     "video",
+                    DownloadURL: a.DownloadURL,
+                },
+                BaseResp: miniProvider.BaseResp{StatusCode: 0, StatusMsg: "success"},
+            }
+            return resp, true
+        }
+    }
+
+    provider := providers.GetProvider(channel, c)
+    mini, ok := provider.(*miniProvider.MiniMaxProvider)
+    if !ok || mini.GetVideoClient() == nil {
+        return nil, false
+    }
+    resp, errWithCode := mini.GetVideoClient().RetrieveFile(fileID)
+    if errWithCode != nil {
+        return nil, false
+    }
+    if upsert {
+        upsertMiniMaxArtifact(userID, channel.Id, fileID, resp.File.DownloadURL)
+    }
+    return resp, true
+}
+
+func upsertMiniMaxArtifact(userID, channelID int, fileID, downloadURL string) {
+	if userID <= 0 || channelID <= 0 {
+		return
+	}
+	_ = model.UpsertTaskArtifact(model.DB, &model.TaskArtifact{
+		Platform:     model.TaskPlatformMiniMax,
+		UserId:       userID,
+		ChannelId:    channelID,
+		TaskID:       "",
+		FileID:       fileID,
+		ArtifactType: "video",
+		DownloadURL:  downloadURL,
+		TTLAt:        0,
+	})
 }
 
 // isMiniMaxOfficialChannel 判断渠道的视频上游是否为官方 api.minimaxi.com

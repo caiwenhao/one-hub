@@ -24,6 +24,11 @@ func GetChannelsList(c *gin.Context) {
 		common.APIRespondWithError(c, http.StatusOK, err)
 		return
 	}
+	if channels != nil && channels.Data != nil {
+		for _, ch := range *channels.Data {
+			ch.PopulateMiniMaxUpstream()
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -48,6 +53,7 @@ func GetChannel(c *gin.Context) {
 		})
 		return
 	}
+	channel.PopulateMiniMaxUpstream()
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -89,6 +95,7 @@ func AddChannel(c *gin.Context) {
 			localChannel.BaseURL = &baseUrls[0]
 		}
 
+		localChannel.ApplyMiniMaxUpstreamConfig()
 		channels = append(channels, localChannel)
 	}
 	err = model.BatchInsertChannels(channels)
@@ -164,6 +171,7 @@ func UpdateChannel(c *gin.Context) {
 		})
 		return
 	}
+	channel.ApplyMiniMaxUpstreamConfig()
 	if channel.Models == "" {
 		err = channel.Update(false)
 	} else {
