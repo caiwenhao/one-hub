@@ -74,7 +74,8 @@ paths:
       summary: 查询 minimaxi 视频任务状态
       description: |
         与官方一致：仅需 `task_id`，无需 `channel_id`。平台会优先根据提交时写入的映射定位渠道。
-        若任务非本平台创建或不在当前分组/账号，可能查询不到；此时可联系管理员将对应 MiniMax Key 加入当前分组。
+        - 当上游为 PPInfra 时，系统已对响应体进行“官方字段对齐”与状态映射，返回体不包含 `extra/task/videos/images/audios` 等上游专有字段。
+        - 若任务非本平台创建或不在当前分组/账号，可能查询不到；此时可联系管理员将对应 MiniMax Key 加入当前分组。
       parameters:
         - in: query
           name: task_id
@@ -186,6 +187,18 @@ paths:
           schema:
             type: string
           description: 需要下载的文件 ID，通常来源于任务查询接口返回的 `file_id`
+        - in: query
+          name: channel_id
+          required: false
+          schema:
+            type: integer
+          description: 可选，强制指定渠道（排查/特殊路由使用）
+        - in: query
+          name: task_id
+          required: false
+          schema:
+            type: string
+          description: 可选，按任务反查渠道（兼容历史数据）
       responses:
         '200':
           description: 成功
@@ -205,6 +218,68 @@ paths:
           schema:
             type: string
           description: 需要下载的文件 ID
+        - in: query
+          name: channel_id
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: task_id
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功，返回二进制文件流
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  # OpenAI 兼容别名 - 文件接口（仅下载/检索，服务端已做官方字段对齐与上游差异吸收）
+  /v1/files/retrieve:
+    get:
+      summary: 官方别名 - 获取文件下载信息
+      parameters:
+        - in: query
+          name: file_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: channel_id
+          schema:
+            type: integer
+        - in: query
+          name: task_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxFileRetrieveResponse'
+
+  /v1/files/retrieve_content:
+    get:
+      summary: 官方别名 - 下载文件内容
+      parameters:
+        - in: query
+          name: file_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: channel_id
+          schema:
+            type: integer
+        - in: query
+          name: task_id
+          schema:
+            type: string
       responses:
         '200':
           description: 成功，返回二进制文件流
@@ -330,7 +405,9 @@ components:
           type: string
         status:
           type: string
-          description: QUEUED/IN_PROGRESS/SUCCESS/FAILURE
+          description: Queueing/Processing/Success/Fail（已对齐官方枚举）
+        file_id:
+          type: string
         video_url:
           type: string
           format: uri

@@ -644,4 +644,11 @@ func (r *MiniMaxVideoQueryResponse) Normalize() {
     case "TASK_STATUS_QUEUED":
         r.Status = "Queueing"
     }
+
+    // 对齐官方响应体：移除上游（PPInfra）特有的字段，避免干扰调用方
+    r.Extra = nil
+    r.TaskDetail = nil
+    r.Videos = nil
+    r.Images = nil
+    r.Audios = nil
 }

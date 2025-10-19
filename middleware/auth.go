@@ -229,14 +229,21 @@ func MjAuth() func(c *gin.Context) {
 }
 
 func SpecifiedChannel() func(c *gin.Context) {
-	return func(c *gin.Context) {
-		channelId := c.GetInt("specific_channel_id")
-		c.Set("specific_channel_id_ignore", false)
+    return func(c *gin.Context) {
+        channelId := c.GetInt("specific_channel_id")
+        c.Set("specific_channel_id_ignore", false)
 
-		if channelId <= 0 {
-			abortWithMessage(c, http.StatusForbidden, "必须指定渠道")
-			return
-		}
-		c.Next()
-	}
+        // 放行部分标准文件接口，交由业务逻辑自行定位渠道（如根据 artifact/file_id 映射）
+        path := c.Request.URL.Path
+        if path == "/v1/files/retrieve" || path == "/v1/files/retrieve_content" {
+            c.Next()
+            return
+        }
+
+        if channelId <= 0 {
+            abortWithMessage(c, http.StatusForbidden, "必须指定渠道")
+            return
+        }
+        c.Next()
+    }
 }
