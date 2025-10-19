@@ -60,8 +60,9 @@ func setOpenAIRouter(router *gin.Engine) {
 
 		relayV1Router.Use(middleware.SpecifiedChannel())
 		{
-			relayV1Router.Any("/files", relay.RelayOnly)
-			relayV1Router.Any("/files/*any", relay.RelayOnly)
+				// 通用 OpenAI 兼容文件接口（其余文件相关路径直透上游）
+				relayV1Router.Any("/files", relay.RelayOnly)
+				relayV1Router.Any("/files/*any", relay.RelayOnly)
 			// 对齐 OpenAI 平台 API：透传 uploads 与 conversations（使用 RelayOnly 直传）
 			relayV1Router.Any("/uploads", relay.RelayOnly)
 			relayV1Router.Any("/uploads/*any", relay.RelayOnly)

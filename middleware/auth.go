@@ -235,7 +235,7 @@ func SpecifiedChannel() func(c *gin.Context) {
 
         // 放行部分标准文件接口，交由业务逻辑自行定位渠道（如根据 artifact/file_id 映射）
         path := c.Request.URL.Path
-        if path == "/v1/files/retrieve" || path == "/v1/files/retrieve_content" {
+        if path == "/v1/files/retrieve" || path == "/v1/files/retrieve_content" || path == "/v1/files/resolve" {
             c.Next()
             return
         }
