@@ -1,0 +1,45 @@
+/**
+ * Do not edit directly, this file was auto-generated.
+ */
+
+:root {
+  --color-brand-primary: #1677ff;
+  --color-brand-primary-dark: #1554c5;
+  --color-brand-ink: #0f5bd3;
+  --color-brand-secondary: #0f172a;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-text-inverse: #ffffff;
+  --color-bg-page: #f7f9fc;
+  --color-bg-card: #ffffff;
+  --color-bg-subtle: #f3f4f6;
+  --color-border-default: #e5e7eb;
+  --color-border-strong: #d1d5db;
+  --color-semantic-success: #10B981;
+  --color-semantic-warning: #F59E0B;
+  --color-semantic-error: #EF4444;
+  --color-semantic-info: #3B82F6;
+  --motion-duration-fast: 150ms;
+  --motion-duration-normal: 200ms;
+  --motion-duration-slow: 300ms;
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --radii-xs: 6px;
+  --radii-sm: 8px;
+  --radii-md: 10px;
+  --radii-lg: 12px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.10);
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+  --type-font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --type-size-body: 14px;
+  --type-size-h1: 32px;
+  --type-size-h2: 24px;
+  --type-size-h3: 20px;
+}

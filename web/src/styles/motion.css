@@ -1,0 +1,30 @@
+/* 动效基线：统一进入/离开/状态切换，尊重 prefers-reduced-motion */
+:root {
+  --motion-fade-distance: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-fade-in,
+  .motion-pop-in {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.motion-fade-in {
+  animation: fadeIn var(--motion-duration-normal) var(--motion-easing-standard) both;
+}
+
+.motion-pop-in {
+  animation: popIn var(--motion-duration-normal) var(--motion-easing-standard) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(var(--motion-fade-distance)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}

@@ -7,11 +7,9 @@ const AdminContainer = styled(Container)(({ theme }) => ({
   paddingBottom: `${theme.spacing(4)} !important`,
   marginBottom: `${theme.spacing(4)} !important`,
   width: '100%',
-  [theme.breakpoints.up('lg')]: {
-    maxWidth: '1320px !important'
-  },
-  [theme.breakpoints.up('xl')]: {
-    maxWidth: '1440px !important'
+  // 流体布局：使用 clamp 在 1280–1440+ 之间平滑过渡
+  '&.MuiContainer-root': {
+    maxWidth: 'clamp(1200px, 90vw, 1440px)'
   }
 }));
 

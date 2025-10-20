@@ -43,9 +43,11 @@ const App = () => {
         <CssBaseline />
         <NavigationScroll>
           <SnackbarProvider
-            autoHideDuration={5000}
-            maxSnack={3}
+            autoHideDuration={3500}
+            maxSnack={2}
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            preventDuplicate
+            dense
             Components={{ copy: CopySnackbar }}
           >
             <StatusProvider>

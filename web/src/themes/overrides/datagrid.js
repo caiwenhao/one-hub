@@ -4,21 +4,21 @@ export default function datagrid(theme) {
       styleOverrides: {
         root: {
           border: 'none',
-          borderRadius: 0,
+          borderRadius: 'var(--radii-lg)',
           backgroundColor: theme.mode === 'dark' ? theme.paper : theme.colors?.paper,
           overflow: 'hidden',
           width: '100%',
           margin: 0,
           padding: 0,
-          '& .MuiPaper-root': { borderRadius: 0 },
-          '&.MuiPaper-root': { borderRadius: 0 },
+          '& .MuiPaper-root': { borderRadius: 'var(--radii-lg)' },
+          '&.MuiPaper-root': { borderRadius: 'var(--radii-lg)' },
           '& .MuiDataGrid-main': {
             width: '100%',
             margin: 0,
             padding: 0,
             '& .MuiDataGrid-columnHeaders': {
               borderBottom: `1px solid ${theme.tableBorderBottom}`,
-              borderRadius: 0,
+              borderRadius: 'var(--radii-lg)',
               backgroundColor: theme.headBackgroundColor,
               minHeight: '48px',
               width: '100%',
@@ -36,12 +36,19 @@ export default function datagrid(theme) {
               '& .MuiDataGrid-columnHeader': {
                 padding: 0,
                 margin: 0,
-                '& .MuiDataGrid-columnHeaderTitleContainer': { justifyContent: 'center', padding: '0 16px', margin: 0 },
+                '& .MuiDataGrid-columnHeaderTitleContainer': { justifyContent: 'center', padding: '0 var(--density-table-cell-px)', margin: 0 },
                 '&:first-of-type': { '& .MuiDataGrid-columnHeaderTitleContainer': { paddingLeft: '24px' } },
                 '&:last-of-type': { '& .MuiDataGrid-columnHeaderTitleContainer': { paddingRight: '24px' } }
               }
             },
-            '& .MuiDataGrid-cellContent': { justifyContent: 'center', width: '100%', display: 'flex' }
+            '& .MuiDataGrid-cellContent': { justifyContent: 'center', width: '100%', display: 'flex' },
+            '& .MuiDataGrid-toolbarContainer': {
+              position: 'sticky',
+              top: 0,
+              zIndex: 2,
+              backgroundColor: theme.headBackgroundColor,
+              borderBottom: `1px solid ${theme.tableBorderBottom}`
+            }
           },
           footerContainer: {
             borderTop: `1px solid ${theme.tableBorderBottom}`,
@@ -59,7 +66,7 @@ export default function datagrid(theme) {
           }
         },
         columnHeader: {
-          padding: '12px 16px',
+          padding: 'var(--density-table-head-py) var(--density-table-cell-px)',
           fontSize: '0.875rem',
           fontWeight: 600,
           color: theme.darkTextSecondary,
@@ -72,7 +79,7 @@ export default function datagrid(theme) {
         columnSeparator: { color: theme.divider },
         cell: {
           fontSize: '0.875rem',
-          padding: '12px 16px',
+          padding: 'var(--density-table-cell-py) var(--density-table-cell-px)',
           borderBottom: `1px solid ${theme.tableBorderBottom}`,
           textAlign: 'center',
           '&:focus': { outline: 'none' },
@@ -88,7 +95,7 @@ export default function datagrid(theme) {
         },
         rowCount: { color: theme.darkTextSecondary },
         selectedRowCount: { color: theme.colors?.primaryMain, fontWeight: 500 },
-        toolbarContainer: { backgroundColor: theme.mode === 'dark' ? theme.paper : theme.colors?.paper, padding: '12px 16px', '& .MuiButton-root': { marginRight: '8px' } },
+        toolbarContainer: { backgroundColor: theme.mode === 'dark' ? theme.paper : theme.colors?.paper, padding: 'var(--density-table-cell-py) var(--density-table-cell-px)', '& .MuiButton-root': { marginRight: 'var(--spacing-sm)' } },
         panelHeader: { backgroundColor: theme.mode === 'dark' ? theme.paper : theme.colors?.paper, padding: '16px 20px', borderBottom: `1px solid ${theme.divider}` },
         panelContent: { padding: '16px 20px' }
       }

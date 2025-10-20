@@ -32,23 +32,6 @@ const dashboard = {
       isAdmin: true
     },
     {
-      id: 'playground',
-      title: 'Playground',
-      type: 'item',
-      url: '/panel/playground',
-      icon: icons.IconBallFootball,
-      breadcrumbs: false
-    },
-    {
-      id: 'styleguide',
-      title: 'UI规范',
-      type: 'item',
-      url: '/panel/styleguide',
-      icon: icons.IconStyle,
-      breadcrumbs: false,
-      isAdmin: true
-    },
-    {
       id: 'systemInfo',
       title: '系统信息',
       type: 'item',

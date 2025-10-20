@@ -12,7 +12,7 @@ const withAlpha = (hex, alpha) => {
 
 export function buildColorsFromTokens(mode = 'light') {
   const brand = tokens.color.brand;
-  const grey = {
+  const grey = tokens.color?.grey || {
     50: '#FAFAFA',
     100: '#F5F5F5',
     200: '#EEEEEE',

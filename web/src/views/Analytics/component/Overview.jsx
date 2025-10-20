@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Grid, Typography, Divider, Box, TextField, Button, Select, MenuItem } from '@mui/material';
+import { Grid, Typography, Divider, Box, TextField, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { gridSpacing } from 'store/constant';
 import DateRangePicker from 'ui-component/DateRangePicker';
 import ApexCharts from 'ui-component/chart/ApexCharts';
+import FilterBar from 'ui-component/FilterBar';
 import { showError, calculateQuota } from 'utils/common';
 import dayjs from 'dayjs';
 import { API } from 'utils/api';
@@ -78,45 +79,39 @@ export default function Overview() {
 
   return (
     <Grid container spacing={gridSpacing}>
-      <Grid lg={12} xs={12}>
-        <Box sx={{ display: 'flex', gap: 2, m: 3 }}>
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid item xs={12} sm={6}>
+      {/* 筛选区：采用规范化 FilterBar 包裹，md+ 一行展示 */}
+      <Grid item xs={12}>
+        <FilterBar>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={3}>
               <DateRangePicker
                 defaultValue={dateRange}
                 onChange={handleDateRangeChange}
                 localeText={{ start: '开始时间', end: '结束时间' }}
+                size="small"
                 fullWidth
               />
             </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <Select value={groupType} onChange={(e) => setGroupType(e.target.value)} fullWidth>
-                <MenuItem value="model_type">Model Type</MenuItem>
-                <MenuItem value="model">Model</MenuItem>
-                <MenuItem value="channel">Channel</MenuItem>
-              </Select>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth size="small">
+                <InputLabel id="group-type-label">分组</InputLabel>
+                <Select labelId="group-type-label" label="分组" value={groupType} onChange={(e) => setGroupType(e.target.value)}>
+                  <MenuItem value="model_type">Model Type</MenuItem>
+                  <MenuItem value="model">Model</MenuItem>
+                  <MenuItem value="channel">Channel</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField type="number" label="用户ID" value={userId} onChange={(e) => setUserId(Number(e.target.value))} fullWidth />
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField type="number" label="用户ID" value={userId} onChange={(e) => setUserId(Number(e.target.value))} fullWidth size="small" />
             </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <Button variant="contained" style={{ height: '100%' }} onClick={handleSearch} fullWidth>
+            <Grid item xs={12} sm={6} md={3}>
+              <Button variant="contained" onClick={handleSearch} fullWidth size="medium">
                 搜索
               </Button>
             </Grid>
           </Grid>
-        </Box>
-      </Grid>
-      <Grid item xs={12}>
-        <Typography variant="h3">
-          {dateRange.start.format('YYYY-MM-DD')} - {dateRange.end.format('YYYY-MM-DD')}
-        </Typography>
-      </Grid>
-      <Grid item xs={12}>
-        <Divider />
+        </FilterBar>
       </Grid>
       <Grid item xs={12}>
         <ApexCharts
@@ -154,15 +149,15 @@ export default function Overview() {
           unit=""
         />
       </Grid>
-      <Grid item xs={12} md={6}>
+      {/* 三张统计图整合为一行（md 及以上三列） */}
+      <Grid item xs={12} md={4}>
         <ApexCharts isLoading={redemptionLoading} chartDatas={redemptionData} title={t('analytics_index.redemptionStatistics')} />
       </Grid>
-      <Grid item xs={12} md={6}>
+      <Grid item xs={12} md={4}>
         <ApexCharts isLoading={usersLoading} chartDatas={usersData} title={t('analytics_index.registrationStatistics')} />
       </Grid>
-
-      <Grid item xs={12} md={6}>
-        <ApexCharts isLoading={orderLoading} chartDatas={orderData} title="充值" />
+      <Grid item xs={12} md={4}>
+        <ApexCharts isLoading={orderLoading} chartDatas={orderData} title="topup" />
       </Grid>
     </Grid>
   );

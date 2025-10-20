@@ -18,7 +18,6 @@ const Telegram = Loadable(lazy(() => import('views/Telegram')));
 const Pricing = Loadable(lazy(() => import('views/Pricing')));
 const Midjourney = Loadable(lazy(() => import('views/Midjourney')));
 const ModelPrice = Loadable(lazy(() => import('views/ModelPrice')));
-const Playground = Loadable(lazy(() => import('views/Playground')));
 const Payment = Loadable(lazy(() => import('views/Payment')));
 const Task = Loadable(lazy(() => import('views/Task')));
 const UserGroup = Loadable(lazy(() => import('views/UserGroup')));
@@ -29,7 +28,6 @@ const InvoiceDetail = Loadable(lazy(() => import('views/Invoice/detail')));
 const Dashboard = Loadable(lazy(() => import('views/Dashboard')));
 
 const SystemInfo = Loadable(lazy(() => import('views/SystemInfo')));
-const Styleguide = Loadable(lazy(() => import('views/Styleguide')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -110,10 +108,6 @@ const MainRoutes = {
       element: <ModelPrice />
     },
     {
-      path: 'playground',
-      element: <Playground />
-    },
-    {
       path: 'payment',
       element: <Payment />
     },
@@ -128,10 +122,6 @@ const MainRoutes = {
     {
       path: 'model_ownedby',
       element: <ModelOwnedby />
-    },
-    {
-      path: 'styleguide',
-      element: <Styleguide />
     },
     {
       path: 'system_info',

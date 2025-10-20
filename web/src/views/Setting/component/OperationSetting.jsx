@@ -21,6 +21,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import ChatLinksDataGrid from './ChatLinksDataGrid';
 import dayjs from 'dayjs';
+import FormErrorSummary from 'ui-component/FormErrorSummary';
 import { LoadStatusContext } from 'contexts/StatusContext';
 import { useTranslation } from 'react-i18next';
 import 'dayjs/locale/zh-cn';
@@ -74,6 +75,7 @@ const OperationSetting = () => {
   let [invoiceMonth, setInvoiceMonth] = useState(now.getTime()); // a month ago new Date().getTime() / 1000 + 3600
   const loadStatus = useContext(LoadStatusContext);
   const [safeToolsLoading, setSafeToolsLoading] = useState(true);
+  const [errors, setErrors] = useState({});
 
   const getOptions = async () => {
     try {
@@ -183,6 +185,22 @@ const OperationSetting = () => {
   };
 
   const submitConfig = async (group) => {
+    // 简易校验：数值需 >= 0
+    const newErrors = {};
+    if (group === 'monitor') {
+      if (isNaN(Number(inputs.ChannelDisableThreshold)) || Number(inputs.ChannelDisableThreshold) < 0) {
+        newErrors.ChannelDisableThreshold = '通道禁用阈值需为非负数';
+      }
+      if (isNaN(Number(inputs.QuotaRemindThreshold)) || Number(inputs.QuotaRemindThreshold) < 0) {
+        newErrors.QuotaRemindThreshold = '额度提醒阈值需为非负数';
+      }
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    } else {
+      setErrors({});
+    }
     setLoading(true);
     try {
       switch (group) {
@@ -379,6 +397,16 @@ const OperationSetting = () => {
 
   return (
     <Stack spacing={2}>
+      <FormErrorSummary
+        errors={errors}
+        onJump={(name) => {
+          const el = document.querySelector(`[name="${name}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (el.focus) el.focus();
+          }
+        }}
+      />
       <SubCard title={t('setting_index.operationSettings.generalSettings.title')}>
         <Stack justifyContent="flex-start" alignItems="flex-start" spacing={2}>
           <Stack direction={{ sm: 'column', md: 'row' }} spacing={{ xs: 3, sm: 2, md: 4 }}>

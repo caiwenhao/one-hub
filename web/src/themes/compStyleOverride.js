@@ -10,6 +10,7 @@ export default function componentStyleOverrides(theme) {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
+          font-variant-numeric: tabular-nums;
         }
         /* 无障碍与性能：尊重系统“减少动态效果”设置 */
         @media (prefers-reduced-motion: reduce) {
@@ -55,11 +56,24 @@ export default function componentStyleOverrides(theme) {
           background: linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6);
           background-size: 400% 400%;
         }
+        /* 统一焦点环：可访问性友好 */
+        :where(button, [role="button"], a, input, select, textarea, [tabindex]) :focus-visible {
+          outline: 2px solid var(--color-brand-primary);
+          outline-offset: 2px;
+        }
       `
     },
+    // 幽灵按钮（轻背景、无边框）
+    // 用法：<Button className="btn-ghost" color="primary">幽灵按钮</Button>
     MuiButton: {
       styleOverrides: {
         root: {
+          '&.btn-ghost': {
+            backgroundColor: 'rgba(0,0,0,0.04)',
+            color: theme.colors?.primaryMain,
+            border: 'none',
+            '&:hover': { backgroundColor: 'rgba(0,0,0,0.06)' }
+          },
           fontWeight: 600,
           borderRadius: '10px',
           textTransform: 'none',
@@ -128,6 +142,16 @@ export default function componentStyleOverrides(theme) {
         sizeSmall: {
           padding: '4px'
         }
+      }
+    },
+    MuiSvgIcon: {
+      styleOverrides: {
+        root: {
+          fontSize: '20px',
+          verticalAlign: 'middle'
+        },
+        fontSizeSmall: { fontSize: '16px' },
+        fontSizeLarge: { fontSize: '24px' }
       }
     },
     MuiPaper: {
@@ -302,25 +326,25 @@ export default function componentStyleOverrides(theme) {
       styleOverrides: {
         root: {
           background: bgColor,
-          borderRadius: '12px',
+          borderRadius: 'var(--radii-lg)',
           '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : theme.colors?.grey300,
+            borderColor: 'var(--color-border-strong)',
             borderWidth: '1px',
             transition: 'border-color 0.2s ease-in-out'
           },
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: theme.colors?.primaryMain,
+            borderColor: 'var(--color-brand-primary)',
             borderWidth: '1px'
           },
           '&.Mui-focused': {
             '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: theme.colors?.primaryMain,
+              borderColor: 'var(--color-brand-primary)',
               borderWidth: '1.5px'
             }
           },
           '&.Mui-error': {
             '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: theme.colors?.errorMain
+              borderColor: 'var(--color-semantic-error)'
             }
           },
           '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
@@ -332,7 +356,7 @@ export default function componentStyleOverrides(theme) {
           }
         },
         input: {
-          padding: '14px 16px',
+          padding: 'var(--density-control-py) var(--density-control-px)',
           height: 'auto',
           fontSize: '0.9375rem'
         },
@@ -341,7 +365,7 @@ export default function componentStyleOverrides(theme) {
         },
         sizeSmall: {
           '& input': {
-            padding: '10px 14px'
+            padding: '10px var(--density-control-px)'
           }
         }
       }
@@ -350,13 +374,13 @@ export default function componentStyleOverrides(theme) {
       styleOverrides: {
         root: {
           fontSize: '0.9375rem',
-          color: theme.darkTextSecondary,
+          color: 'var(--color-text-secondary)',
           transform: 'translate(16px, 16px) scale(1)',
           '&.Mui-focused': {
-            color: theme.colors?.primaryMain
+            color: 'var(--color-brand-primary)'
           },
           '&.Mui-error': {
-            color: theme.colors?.errorMain
+            color: 'var(--color-semantic-error)'
           },
           '&.MuiInputLabel-shrink': {
             transform: 'translate(16px, -9px) scale(0.75)'
@@ -368,8 +392,10 @@ export default function componentStyleOverrides(theme) {
       styleOverrides: {
         root: {
           fontSize: '0.75rem',
-          marginLeft: '4px',
-          marginTop: '4px'
+          marginLeft: 'var(--spacing-xs)',
+          marginTop: 'var(--spacing-xs)',
+          color: 'var(--color-text-secondary)',
+          '&.Mui-error': { color: 'var(--color-semantic-error)' }
         }
       }
     },
@@ -394,6 +420,54 @@ export default function componentStyleOverrides(theme) {
         positionEnd: {
           marginLeft: 0,
           paddingLeft: 0
+        }
+      }
+    },
+    MuiCheckbox: {
+      styleOverrides: {
+        root: {
+          color: 'var(--color-text-secondary)',
+          '&.Mui-checked': { color: 'var(--color-brand-primary)' }
+        }
+      }
+    },
+    MuiRadio: {
+      styleOverrides: {
+        root: {
+          color: 'var(--color-text-secondary)',
+          '&.Mui-checked': { color: 'var(--color-brand-primary)' }
+        }
+      }
+    },
+    MuiSwitch: {
+      styleOverrides: {
+        root: { padding: 8 },
+        switchBase: {
+          '&.Mui-checked': {
+            color: 'var(--color-text-inverse)'
+          },
+          '&.Mui-checked + .MuiSwitch-track': {
+            backgroundColor: 'var(--color-brand-primary)',
+            opacity: 1
+          }
+        },
+        track: {
+          backgroundColor: 'var(--color-border-strong)',
+          opacity: 1
+        },
+        thumb: {
+          boxShadow: 'var(--shadow-sm)'
+        }
+      }
+    },
+    MuiFormControlLabel: {
+      styleOverrides: {
+        root: {
+          marginLeft: 0,
+          gap: 'var(--spacing-sm)'
+        },
+        label: {
+          color: 'var(--color-text-primary)'
         }
       }
     },
@@ -841,22 +915,18 @@ export default function componentStyleOverrides(theme) {
     MuiSelect: {
       styleOverrides: {
         select: {
-          padding: '14px 16px',
+          padding: 'var(--density-control-py) var(--density-control-px)',
           display: 'flex',
           alignItems: 'center'
         },
         icon: {
           top: 'calc(50% - 12px)',
-          right: '12px',
-          color: theme.darkTextSecondary,
-          transition: 'transform 0.2s ease-in-out',
-          '.Mui-focused &': {
-            transform: 'rotate(180deg)'
-          }
+          right: 'var(--density-control-px)',
+          color: 'var(--color-text-secondary)',
+          transition: 'transform var(--motion-duration-normal) var(--motion-easing-standard)',
+          '.Mui-focused &': { transform: 'rotate(180deg)' }
         },
-        iconOpen: {
-          transform: 'rotate(180deg)'
-        }
+        iconOpen: { transform: 'rotate(180deg)' }
       }
     },
     MuiMenuItem: {

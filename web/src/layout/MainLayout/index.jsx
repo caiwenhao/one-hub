@@ -114,6 +114,8 @@ const MainLayout = () => {
         backgroundColor: theme.palette.background.default
       }}
     >
+      {/* 跳到主内容（可访问性） */}
+      <Box component="a" href="#main-content" className="skip-link">跳到主内容</Box>
       <CssBaseline />
       {/* header */}
       <AppBar
@@ -140,7 +142,7 @@ const MainLayout = () => {
       <Sidebar drawerOpen={leftDrawerOpened} drawerToggle={handleLeftDrawerToggle} />
 
       {/* main content */}
-      <Main theme={theme} open={leftDrawerOpened}>
+      <Main theme={theme} open={leftDrawerOpened} id="main-content">
         {/* breadcrumb */}
         <Breadcrumbs separator={<Icon icon="solar:arrow-right-linear" width="16" />} navigation={navigation} icon card={false} />
         <AuthGuard>

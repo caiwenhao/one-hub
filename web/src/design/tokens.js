@@ -8,6 +8,17 @@ export const tokens = {
       primaryDark: '#1554c5',
       secondary: '#0f172a' // 深石板
     },
+    // 中性色阶（符合 AA 对比度参考）
+    grey: {
+      50: '#FAFAFA',
+      100: '#F5F5F5',
+      200: '#EEEEEE',
+      300: '#E0E0E0',
+      500: '#9E9E9E',
+      600: '#757575',
+      700: '#616161',
+      900: '#212121'
+    },
     text: {
       primary: '#1f2937',
       secondary: '#6b7280',

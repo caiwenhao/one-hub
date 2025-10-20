@@ -4,13 +4,14 @@ export default function button(theme) {
       styleOverrides: {
         root: {
           fontWeight: 600,
-          borderRadius: '10px',
+          // 使用 Design Tokens 导出的 CSS 变量
+          borderRadius: 'var(--radii-md)',
           textTransform: 'none',
           boxShadow: 'none',
           minHeight: '36px',
-          padding: '6px 16px',
+          padding: 'var(--density-button-py) var(--density-button-px)',
           letterSpacing: '0.01em',
-          transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
+          transition: 'background-color var(--motion-duration-normal) var(--motion-easing-standard), box-shadow var(--motion-duration-normal) var(--motion-easing-standard)',
           '&.Mui-disabled': {
             color: theme.colors?.grey600
           },
@@ -19,18 +20,33 @@ export default function button(theme) {
           }
         },
         containedPrimary: {
-          background: theme.colors?.primaryMain,
-          color: '#fff',
+          background: 'var(--color-brand-primary)',
+          color: 'var(--color-text-inverse)',
           '&:hover': {
-            background: theme.colors?.primaryDark
+            background: 'var(--color-brand-primary-dark)'
           }
         },
         outlinedPrimary: {
-          borderColor: theme.colors?.primaryMain,
-          color: theme.colors?.primaryMain,
+          borderColor: 'var(--color-brand-primary)',
+          color: 'var(--color-brand-primary)',
           '&:hover': {
-            backgroundColor: 'rgba(14, 165, 255, 0.06)'
+            backgroundColor: 'rgba(22, 119, 255, 0.06)'
           }
+        },
+        containedSecondary: {
+          background: 'var(--color-brand-secondary)',
+          color: 'var(--color-text-inverse)',
+          '&:hover': { filter: 'brightness(0.9)' }
+        },
+        containedError: {
+          background: 'var(--color-semantic-error)',
+          color: 'var(--color-text-inverse)',
+          '&:hover': { filter: 'brightness(0.92)' }
+        },
+        outlinedError: {
+          borderColor: 'var(--color-semantic-error)',
+          color: 'var(--color-semantic-error)',
+          '&:hover': { backgroundColor: 'rgba(239, 68, 68, 0.06)' }
         },
         text: {
           '&:hover': {
@@ -38,13 +54,13 @@ export default function button(theme) {
           }
         },
         sizeSmall: {
-          padding: '6px 16px',
+          padding: 'var(--density-button-py) var(--density-button-px)',
           fontSize: '0.8125rem',
           minHeight: '32px',
-          borderRadius: '8px'
+          borderRadius: 'var(--radii-sm)'
         },
         sizeLarge: {
-          padding: '10px 24px',
+          padding: 'calc(var(--density-button-py) + 4px) calc(var(--density-button-px) + 4px)',
           fontSize: '1rem',
           minHeight: '48px'
         }
@@ -52,4 +68,3 @@ export default function button(theme) {
     }
   };
 }
-

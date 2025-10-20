@@ -5,26 +5,26 @@ export default function paperCard(theme) {
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          borderRadius: '12px',
+          borderRadius: 'var(--radii-lg)',
           background: theme.paper,
           border: `1px solid ${theme.divider}`,
-          boxShadow: theme.mode === 'dark' ? 'none' : '0 2px 8px rgba(0,0,0,0.06)'
+          boxShadow: theme.mode === 'dark' ? 'none' : 'var(--shadow-md)'
         },
         rounded: { borderRadius: `${theme?.customization?.borderRadius || 12}px` },
-        elevation1: { boxShadow: theme.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.08)' },
-        elevation2: { boxShadow: theme.mode === 'dark' ? 'none' : '0 3px 12px rgba(0,0,0,0.10)' }
+        elevation1: { boxShadow: theme.mode === 'dark' ? 'none' : 'var(--shadow-sm)' },
+        elevation2: { boxShadow: theme.mode === 'dark' ? 'none' : 'var(--shadow-lg)' }
       }
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: '12px',
+          borderRadius: 'var(--radii-lg)',
           padding: 0,
-          boxShadow: theme.mode === 'dark' ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
-          transition: 'box-shadow 0.2s ease',
+          boxShadow: theme.mode === 'dark' ? 'none' : 'var(--shadow-md)',
+          transition: 'box-shadow var(--motion-duration-normal) var(--motion-easing-standard)',
           overflow: 'hidden',
           '&:hover': {
-            boxShadow: theme.mode === 'dark' ? 'none' : '0 6px 16px rgba(0,0,0,0.10)'
+            boxShadow: theme.mode === 'dark' ? 'none' : 'var(--shadow-lg)'
           },
           '& .MuiTableContainer-root': { borderRadius: 0 }
         }
@@ -32,4 +32,3 @@ export default function paperCard(theme) {
     }
   };
 }
-

@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
-import { Card, Stack, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box, InputBase, Paper, IconButton, Fade, useMediaQuery, Avatar, ButtonBase, Tooltip, FormControl, InputLabel, Select, MenuItem, Button, ButtonGroup } from '@mui/material';
+import { Card, Stack, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box, InputBase, Paper, IconButton, Fade, useMediaQuery, Avatar, ButtonBase, Tooltip, FormControl, InputLabel, Select, MenuItem, Grid } from '@mui/material';
 import FilterBar from 'ui-component/FilterBar';
-import ActionBar from 'ui-component/ActionBar';
 import { Icon } from '@iconify/react';
 import { API } from 'utils/api';
 import { showError, ValueFormatter, copy, useIsAdmin } from 'utils/common';
@@ -241,73 +240,89 @@ export default function ModelPrice() {
       </Box>
 
       <FilterBar sx={{ p: 0 }}>
-        {/* 搜索和单位选择 */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 2,
-            mb: 3
-          }}
-        >
-          <Paper
-            component="form"
-            sx={{
-              p: '2px 4px',
-              display: 'flex',
-              alignItems: 'center',
-              width: isMobile ? '100%' : 300,
-              borderRadius: '8px',
-              border: 'none',
-              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
-              backgroundColor:
-                theme.palette.mode === 'dark' ? alpha(theme.palette.background.default, 0.6) : theme.palette.background.default
-            }}
-          >
-            <IconButton sx={{ p: '8px' }} aria-label="search">
-              <Icon icon="eva:search-fill" width={18} height={18} />
-            </IconButton>
-            <InputBase sx={{ ml: 1, flex: 1 }} placeholder={t('modelpricePage.search')} value={searchQuery} onChange={handleSearchChange} />
-            {searchQuery && (
-              <IconButton sx={{ p: '8px' }} aria-label="clear" onClick={clearSearch}>
-                <Icon icon="eva:close-fill" width={16} height={16} />
-              </IconButton>
-            )}
-          </Paper>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              Unit:
-            </Typography>
-            <ToggleButtonGroup
-              value={unit}
-              onChange={handleUnitChange}
-              options={UNIT_OPTIONS}
-              aria-label="unit toggle"
-              size="small"
+        {/* 顶部：搜索 + Unit + 行为（重置/折叠全部） */}
+        <Grid container spacing={2} sx={{ p: 2, pb: 1 }} alignItems="center">
+          <Grid item xs={12} md={isAdmin ? 5 : 10}>
+            <Paper
+              component="form"
               sx={{
-                '& .MuiToggleButtonGroup-grouped': {
-                  borderRadius: '6px !important',
-                  mx: 0.5,
-                  border: 0,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 4px rgba(0,0,0,0.2)' : '0 1px 4px rgba(0,0,0,0.05)',
-                  '&.Mui-selected': {
-                    boxShadow: `0 0 0 1px ${theme.palette.primary.main}`
-                  }
-                }
+                p: '2px 4px',
+                display: 'flex',
+                alignItems: 'center',
+                width: '100%',
+                borderRadius: '8px',
+                border: 'none',
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
+                backgroundColor:
+                  theme.palette.mode === 'dark' ? alpha(theme.palette.background.default, 0.6) : theme.palette.background.default
               }}
-            />
-          </Box>
-        </Box>
+            >
+              <IconButton sx={{ p: '8px' }} aria-label="search">
+                <Icon icon="eva:search-fill" width={18} height={18} />
+              </IconButton>
+              <InputBase sx={{ ml: 1, flex: 1 }} placeholder={t('modelpricePage.search')} value={searchQuery} onChange={handleSearchChange} />
+              {searchQuery && (
+                <IconButton sx={{ p: '8px' }} aria-label="clear" onClick={clearSearch}>
+                  <Icon icon="eva:close-fill" width={16} height={16} />
+                </IconButton>
+              )}
+            </Paper>
+          </Grid>
+          {isAdmin && (
+            <Grid item xs={12} md={6}>
+              <FormControl size="small" fullWidth>
+                <InputLabel id="channel-filter-label">{t('channel')}</InputLabel>
+                <Select
+                  labelId="channel-filter-label"
+                  id="channel-filter"
+                  value={selectedChannel}
+                  label={t('channel')}
+                  onChange={(e) => setSelectedChannel(e.target.value)}
+                >
+                  <MenuItem value="all">{t('modelpricePage.all')}</MenuItem>
+                  {channels.map((ch) => (
+                    <MenuItem key={ch.id} value={ch.id}>
+                      {ch.name} (#{ch.id})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+          <Grid item xs={12} md={1}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Unit:
+              </Typography>
+              <ToggleButtonGroup
+                value={unit}
+                onChange={handleUnitChange}
+                options={UNIT_OPTIONS}
+                aria-label="unit toggle"
+                size="small"
+                sx={{
+                  '& .MuiToggleButtonGroup-grouped': {
+                    borderRadius: '6px !important',
+                    mx: 0.5,
+                    border: 0,
+                    boxShadow: theme.palette.mode === 'dark' ? '0 1px 4px rgba(0,0,0,0.2)' : '0 1px 4px rgba(0,0,0,0.05)',
+                    '&.Mui-selected': {
+                      boxShadow: `0 0 0 1px ${theme.palette.primary.main}`
+                    }
+                  }
+                }}
+              />
+            </Box>
+          </Grid>
+          {/* 操作按钮组（重置/折叠）已移除，避免冗余操作占位 */}
+        </Grid>
 
-        {/* 模型提供商标签 */}
-        <Box sx={{ mb: 3 }}>
+        {/* 模型提供商（品牌） */}
+        <Box sx={{ mb: 2, px: 2 }}>
           <Typography
             variant="subtitle1"
             sx={{
-              mb: 1.5,
+              mb: 1.0,
               fontWeight: 600,
               color: theme.palette.text.primary,
               display: 'flex',
@@ -402,51 +417,16 @@ export default function ModelPrice() {
           </Box>
         </Box>
 
-        {/* 渠道过滤 */}
-        {isAdmin && (
-          <Box sx={{ mb: 3 }}>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                mb: 1.5,
-                fontWeight: 600,
-                color: theme.palette.text.primary,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}
-            >
-              <Icon icon="eva:link-2-outline" width={18} height={18} />
-              {t('channel')}
-            </Typography>
-            <FormControl size="small" sx={{ minWidth: 240 }}>
-              <InputLabel id="channel-filter-label">{t('channel')}</InputLabel>
-              <Select
-                labelId="channel-filter-label"
-                id="channel-filter"
-                value={selectedChannel}
-                label={t('channel')}
-                onChange={(e) => setSelectedChannel(e.target.value)}
-              >
-                <MenuItem value="all">{t('modelpricePage.all')}</MenuItem>
-                {channels.map((ch) => (
-                  <MenuItem key={ch.id} value={ch.id}>
-                    {ch.name} (#{ch.id})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-        )}
+        {/* 渠道过滤：已移至顶部与搜索同行 */}
 
         {/* 用户组标签 */}
-        <Box sx={{ mb: 0 }}>
+        <Box sx={{ mb: 0, px: 2 }}>
           <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              mb: 1.5
+              mb: 1.0
             }}
           >
             <Typography
@@ -663,13 +643,6 @@ export default function ModelPrice() {
           </Box>
         </Box>
       </FilterBar>
-
-      <ActionBar>
-        <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
-          <Button onClick={clearSearch}>{t('common.reset')}</Button>
-          <Button onClick={() => setExpanded({})}>{t('common.collapseAll')}</Button>
-        </ButtonGroup>
-      </ActionBar>
 
       <Card
         sx={{

@@ -48,6 +48,7 @@ export default class DateRangePicker extends React.Component {
 
   render() {
     const { startOpen, endOpen, startDate, endDate, localeText } = this.state;
+    const { size = 'medium' } = this.props;
 
     return (
       <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
@@ -67,6 +68,7 @@ export default class DateRangePicker extends React.Component {
                 readOnly: true,
                 onClick: this.handleStartOpen,
                 fullWidth: true,
+                size,
                 sx: { flex: 1 }
               }
             }}
@@ -90,6 +92,7 @@ export default class DateRangePicker extends React.Component {
                 readOnly: true,
                 onClick: this.handleStartOpen,
                 fullWidth: true,
+                size,
                 sx: { flex: 1 }
               }
             }}
@@ -106,5 +109,7 @@ DateRangePicker.propTypes = {
   defaultValue: PropTypes.object,
   onChange: PropTypes.func,
   localeText: PropTypes.object,
-  views: PropTypes.array
+  views: PropTypes.array,
+  // 输入框尺寸：'small' | 'medium'
+  size: PropTypes.oneOf(['small', 'medium'])
 };

@@ -1,0 +1,14 @@
+/* 表格通用对齐与截断工具类（最小入侵） */
+/* 中文：通过 className 控制列对齐与文本省略，不侵入逻辑 */
+
+.table-col-right { text-align: right !important; }
+.table-col-center { text-align: center !important; }
+.table-col-left { text-align: left !important; }
+
+.table-text-ellipsis {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* DataGrid 单元格也可复用此类名（通过 renderCell 设置 className） */

@@ -1,20 +1,24 @@
-import { Grid, Box } from '@mui/material';
+import { Grid } from '@mui/material';
 import { gridSpacing } from 'store/constant';
+import PageHeader from 'ui-component/PageHeader';
+import { useTranslation } from 'react-i18next';
 
 // Import components
 import SystemLogs from './components/SystemLogs';
 
 // Main SystemInfo Component
 const SystemInfo = () => {
+  const { t } = useTranslation();
   return (
-    <Box sx={{ mt: 2 }}>
-      <Grid container spacing={gridSpacing}>
-        {/* System Logs */}
-        <Grid item xs={12}>
-          <SystemLogs />
-        </Grid>
+    <Grid container spacing={gridSpacing}>
+      <Grid item xs={12}>
+        <PageHeader title={t('systemInfo')} subtitle="System Info" />
       </Grid>
-    </Box>
+      {/* 系统日志卡片 */}
+      <Grid item xs={12}>
+        <SystemLogs />
+      </Grid>
+    </Grid>
   );
 };
 

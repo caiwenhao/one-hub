@@ -17,7 +17,8 @@ import {
   Select,
   MenuItem,
   IconButton,
-  FormHelperText
+  FormHelperText,
+  Grid
 } from '@mui/material';
 
 import Visibility from '@mui/icons-material/Visibility';
@@ -145,7 +146,9 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
         <Formik initialValues={inputs} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
           {({ errors, handleBlur, handleChange, handleSubmit, touched, values, isSubmitting }) => (
             <form noValidate onSubmit={handleSubmit}>
-              <FormControl fullWidth error={Boolean(touched.username && errors.username)} sx={{ ...theme.typography.otherInput }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={Boolean(touched.username && errors.username)} sx={{ ...theme.typography.otherInput }}>
                 <InputLabel htmlFor="channel-username-label">{t('userPage.username')}</InputLabel>
                 <OutlinedInput
                   id="channel-username-label"
@@ -156,6 +159,7 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                   onBlur={handleBlur}
                   onChange={handleChange}
                   inputProps={{ autoComplete: 'username' }}
+                  size="small"
                   aria-describedby="helper-text-channel-username-label"
                 />
                 {touched.username && errors.username && (
@@ -163,9 +167,10 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                     {t(errors.username)}
                   </FormHelperText>
                 )}
-              </FormControl>
-
-              <FormControl fullWidth error={Boolean(touched.display_name && errors.display_name)} sx={{ ...theme.typography.otherInput }}>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={Boolean(touched.display_name && errors.display_name)} sx={{ ...theme.typography.otherInput }}>
                 <InputLabel htmlFor="channel-display_name-label">{t('userPage.displayName')}</InputLabel>
                 <OutlinedInput
                   id="channel-display_name-label"
@@ -176,6 +181,7 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                   onBlur={handleBlur}
                   onChange={handleChange}
                   inputProps={{ autoComplete: 'display_name' }}
+                  size="small"
                   aria-describedby="helper-text-channel-display_name-label"
                 />
                 {touched.display_name && errors.display_name && (
@@ -183,9 +189,10 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                     {t(errors.display_name)}
                   </FormHelperText>
                 )}
-              </FormControl>
-
-              <FormControl fullWidth error={Boolean(touched.password && errors.password)} sx={{ ...theme.typography.otherInput }}>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth error={Boolean(touched.password && errors.password)} sx={{ ...theme.typography.otherInput }}>
                 <InputLabel htmlFor="channel-password-label">{t('userPage.password')}</InputLabel>
                 <OutlinedInput
                   id="channel-password-label"
@@ -196,6 +203,7 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                   onBlur={handleBlur}
                   onChange={handleChange}
                   inputProps={{ autoComplete: 'password' }}
+                  size="small"
                   endAdornment={
                     <InputAdornment position="end">
                       <IconButton
@@ -216,11 +224,12 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                     {t(errors.password)}
                   </FormHelperText>
                 )}
-              </FormControl>
-
-              {values.is_edit && (
-                <>
-                  <FormControl fullWidth error={Boolean(touched.group && errors.group)} sx={{ ...theme.typography.otherInput }}>
+                  </FormControl>
+                </Grid>
+                {/* 创建用户时需选择分组 */}
+                {!values.is_edit && (
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth error={Boolean(touched.group && errors.group)} sx={{ ...theme.typography.otherInput }}>
                     <InputLabel htmlFor="channel-group-label">{t('userPage.group')}</InputLabel>
                     <Select
                       id="channel-group-label"
@@ -229,6 +238,7 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                       name="group"
                       onBlur={handleBlur}
                       onChange={handleChange}
+                      size="small"
                       MenuProps={{
                         PaperProps: {
                           style: {
@@ -250,9 +260,10 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                         {t(errors.group)}
                       </FormHelperText>
                     )}
-                  </FormControl>
-                </>
-              )}
+                    </FormControl>
+                  </Grid>
+                )}
+              </Grid>
               <DialogActions>
                 <Button onClick={onCancel}>{t('userPage.cancel')}</Button>
                 <Button disableElevation disabled={isSubmitting} type="submit" variant="contained" color="primary">

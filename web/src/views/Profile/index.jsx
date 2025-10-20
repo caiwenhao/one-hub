@@ -16,6 +16,7 @@ import EmailModal from './component/EmailModal';
 import Turnstile from 'react-turnstile';
 import LarkIcon from 'assets/images/icons/lark.svg';
 import { useTheme } from '@mui/material/styles';
+import PageHeader from 'ui-component/PageHeader';
 
 const validationSchema = Yup.object().shape({
   username: Yup.string().required('用户名 不能为空').min(3, '用户名 不能小于 3 个字符').max(50, '用户名 不能超过 50 个字符'),
@@ -187,6 +188,7 @@ export default function Profile() {
 
   return (
     <>
+      <PageHeader title={t('profile')} subtitle="Profile" />
       <UserCard>
         <Card sx={{ paddingTop: '20px' }}>
           <Stack spacing={2}>

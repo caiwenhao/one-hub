@@ -55,6 +55,9 @@
     "dev": "vite",
     "start": "vite preview",
     "build": "vite build --outDir build",
+    "baseline:snap": "node scripts/baseline-screenshot.mjs",
+    "contrast:aa": "node scripts/contrast-check.mjs",
+    "tokens:build": "style-dictionary build -c style-dictionary.config.json",
     "i18n": "lobe-i18n",
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
     "lint:fix": "eslint --fix \"src/**/*.{js,jsx,ts,tsx}\"",
@@ -95,8 +98,10 @@
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "immutable": "^4.3.5",
+    "playwright": "^1.56.1",
     "prettier": "^3.2.4",
-    "sass": "^1.70.0"
+    "sass": "^1.70.0",
+    "style-dictionary": "^5.1.1"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

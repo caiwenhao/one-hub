@@ -12,6 +12,8 @@ import ButtonGroup from '@mui/material/ButtonGroup';
 import Toolbar from '@mui/material/Toolbar';
 
 import { Button, Card, Stack, Container, Typography, Box } from '@mui/material';
+import FilterChips from 'ui-component/FilterChips';
+import SearchInput from 'ui-component/SearchInput';
 import LogTableRow from './component/TableRow';
 import KeywordTableHead from 'ui-component/TableHead';
 import TableToolBar from './component/TableToolBar';
@@ -135,6 +137,24 @@ export default function Task() {
         </Stack>
       </Stack>
       <Card>
+        {/* 筛选区与标签化（UI 收敛，不改变原有工具条逻辑）*/}
+        <Box sx={{ p: 2 }}>
+          <Stack spacing={1.5}>
+            {/* 搜索关键词（映射 task_id）*/}
+            <Box>
+              <Typography variant="caption" color="text.secondary">搜索任务ID</Typography>
+              <SearchInput value={toolBarValue.task_id} onChange={(v) => setToolBarValue({ ...toolBarValue, task_id: v })} />
+            </Box>
+            {/* 已选条件标签化 */}
+            <FilterChips
+              items={Object.entries(toolBarValue)
+                .filter(([k, v]) => v && v !== 0 && v !== '' && !['p', 'start_timestamp', 'end_timestamp'].includes(k))
+                .map(([k, v]) => ({ key: k, value: v }))}
+              onRemove={(it) => setToolBarValue({ ...toolBarValue, [it.key]: '' })}
+              onClear={() => setToolBarValue({ ...originalKeyword, end_timestamp: toolBarValue.end_timestamp })}
+            />
+          </Stack>
+        </Box>
         <Box component="form" noValidate>
           <TableToolBar filterName={toolBarValue} handleFilterName={handleToolBarValue} userIsAdmin={userIsAdmin} />
         </Box>

@@ -10,21 +10,21 @@ export default function themeTypography(theme) {
       "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
     h1: {
       fontWeight: 600,
-      fontSize: '2rem',
+      fontSize: 'var(--type-size-h1)',
       lineHeight: 1.25,
       letterSpacing: '-0.01em',
       color: theme.heading
     },
     h2: {
       fontWeight: 600,
-      fontSize: '1.5rem',
+      fontSize: 'var(--type-size-h2)',
       lineHeight: 1.3,
       letterSpacing: '0em',
       color: theme.heading
     },
     h3: {
       fontWeight: 600,
-      fontSize: '1.25rem',
+      fontSize: 'var(--type-size-h3)',
       lineHeight: 1.4,
       color: theme.heading
     },
@@ -59,7 +59,7 @@ export default function themeTypography(theme) {
       color: theme.darkTextSecondary
     },
     body1: {
-      fontSize: '0.875rem',
+      fontSize: 'var(--type-size-body)',
       lineHeight: 1.5,
       color: theme.darkTextPrimary
     },

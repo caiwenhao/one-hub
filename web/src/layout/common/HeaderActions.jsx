@@ -5,6 +5,7 @@ import ThemeButton from 'ui-component/ThemeButton';
 import I18nButton from 'ui-component/i18nButton';
 import { NoticeButton } from 'ui-component/notice';
 import Profile from 'layout/MainLayout/Header/Profile';
+import DensityButton from 'ui-component/DensityButton';
 
 // 统一右侧操作区（通知/主题/语言/用户抽屉）
 export default function HeaderActions({
@@ -22,6 +23,8 @@ export default function HeaderActions({
       {showNotice && <NoticeButton />}
       {showTheme && <ThemeButton />}
       {showI18n && <I18nButton />}
+      {/* 密度切换按钮：方便在控制台快速验证紧凑效果 */}
+      <DensityButton />
       {showProfileWhenPanel && isConsoleRoute && <Profile toggleProfileDrawer={toggleProfileDrawer} />}
     </Stack>
   );

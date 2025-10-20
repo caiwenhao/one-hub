@@ -1,0 +1,16 @@
+{
+  "type": {
+    "fontFamily": {
+      "sans": {
+        "value": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+      }
+    },
+    "size": {
+      "body": { "value": "14px" },
+      "h1": { "value": "32px" },
+      "h2": { "value": "24px" },
+      "h3": { "value": "20px" }
+    }
+  }
+}
+

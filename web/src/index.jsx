@@ -9,8 +9,14 @@ import App from 'App';
 import { store } from 'store';
 
 // style + assets
+import './styles/tokens.css';
+import './styles/density.css';
+import './styles/table-helpers.css';
 import 'assets/scss/style.scss';
+import './styles/motion.css';
+import './styles/i18n.css';
 import { applyTokens } from 'design/applyTokens';
+import { applyDensity } from 'design/density';
 import config from './config';
 import reportWebVitals from 'reportWebVitals';
 // ==============================|| REACT DOM RENDER  ||============================== //
@@ -18,6 +24,8 @@ import reportWebVitals from 'reportWebVitals';
 const container = document.getElementById('root');
 // 注入设计令牌 CSS 变量（企业稳重风格）
 applyTokens();
+// 应用密度（本地持久化，默认 standard）
+applyDensity();
 const root = createRoot(container); // createRoot(container!) if you use TypeScript
 root.render(
   <Provider store={store}>

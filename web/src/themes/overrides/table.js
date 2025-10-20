@@ -5,7 +5,7 @@ export default function table(theme) {
         root: {
           overflowX: 'auto',
           overflowY: 'auto',
-          borderRadius: '12px',
+          borderRadius: 'var(--radii-lg)',
           boxShadow: 'none',
           ...(theme.breakpoints && {
             [theme.breakpoints.down('sm')]: { maxWidth: '100%', whiteSpace: 'nowrap' }
@@ -36,7 +36,7 @@ export default function table(theme) {
         root: {
           borderBottom: `1px solid ${theme.tableBorderBottom}`,
           fontSize: '0.875rem',
-          padding: '16px 12px',
+          padding: 'var(--density-table-cell-py) var(--density-table-cell-px)',
           textAlign: 'center',
           '&:first-of-type': { paddingLeft: '12px' },
           '&:last-of-type': { paddingRight: '12px' }
@@ -47,7 +47,7 @@ export default function table(theme) {
           color: theme.darkTextSecondary,
           borderBottom: 'none',
           whiteSpace: 'nowrap',
-          padding: '14px 12px',
+          padding: 'var(--density-table-head-py) var(--density-table-cell-px)',
           textAlign: 'center'
         },
         body: { color: theme.textDark }
