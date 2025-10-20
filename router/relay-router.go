@@ -163,34 +163,20 @@ func setKlingRouter(router *gin.Engine) {
 }
 
 func setMiniMaxRouter(router *gin.Engine) {
-	// 主推荐：/minimaxi 前缀（与品牌与域名一致）
-	minimaxiRouter := router.Group("/minimaxi")
-	minimaxiRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-	{
-		minimaxiRouter.POST("/v1/video_generation", task.RelayTaskSubmit)
-		minimaxiRouter.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
-		minimaxiRouter.GET("/v1/files/retrieve", minimax.RelayFileRetrieve)
-		minimaxiRouter.GET("/v1/files/retrieve_content", minimax.RelayFileRetrieveContent)
-	}
+    // 主推荐：/minimaxi 前缀（与品牌与域名一致）
+    minimaxiRouter := router.Group("/minimaxi")
+    minimaxiRouter.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+    {
+        minimaxiRouter.POST("/v1/video_generation", task.RelayTaskSubmit)
+        minimaxiRouter.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
+        minimaxiRouter.GET("/v1/files/retrieve", minimax.RelayFileRetrieve)
+        minimaxiRouter.GET("/v1/files/retrieve_content", minimax.RelayFileRetrieveContent)
 
-	// 兼容旧前缀：/minimax（保留一段时间，避免外部调用中断）
-	minimaxCompat := router.Group("/minimax")
-	minimaxCompat.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-	{
-		minimaxCompat.POST("/v1/video_generation", task.RelayTaskSubmit)
-		minimaxCompat.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
-		minimaxCompat.GET("/v1/files/retrieve", minimax.RelayFileRetrieve)
-		minimaxCompat.GET("/v1/files/retrieve_content", minimax.RelayFileRetrieveContent)
-	}
-
-	// 官方兼容别名（完全对齐 MiniMax 官方 API 路径）
-	officialAlias := router.Group("")
-	officialAlias.Use(middleware.RelayPanicRecover(), middleware.OpenaiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-	{
-		officialAlias.POST("/v1/video_generation", task.RelayTaskSubmit)
-		officialAlias.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
-		// /v1/files/* 路径在通用 OpenAI 兼容路由中以 /v1/files/*any 注册，禁止在此再挂静态子路径，避免 Gin 路由冲突。
-	}
+        // 其他能力：生文本/生图/生语音
+        minimaxiRouter.POST("/v1/chat/completions", relay.MiniMaxRelay)
+        minimaxiRouter.POST("/v1/images/generations", relay.MiniMaxRelay)
+        minimaxiRouter.POST("/v1/audio/speech", relay.MiniMaxRelay)
+    }
 }
 
 // setOfficialKlingRouter 设置完全兼容官方API的路由
