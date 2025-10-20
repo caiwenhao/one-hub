@@ -30,6 +30,7 @@ const (
 	miniMaxActionText2Video     = "text2video"
 	miniMaxActionImage2Video    = "image2video"
 	miniMaxActionStartEnd2Video = "start-end2video"
+	miniMaxActionSubject2Video  = "subject2video"
 )
 
 type MiniMaxTask struct {
@@ -45,6 +46,50 @@ type taskProperties struct {
 	Action     string `json:"action,omitempty"`
 	Duration   int    `json:"duration,omitempty"`
 	Resolution string `json:"resolution,omitempty"`
+}
+
+var miniMaxAllowedMatrix = map[string]map[string]map[string][]int{
+	miniMaxActionText2Video: {
+		"minimax-hailuo-02": {
+			"512p":  {6, 10},
+			"768p":  {6, 10},
+			"1080p": {6, 10},
+		},
+		"t2v-01": {
+			"720p": {6},
+		},
+		"t2v-01-director": {
+			"720p": {6},
+		},
+	},
+	miniMaxActionImage2Video: {
+		"minimax-hailuo-02": {
+			"512p":  {6, 10},
+			"768p":  {6, 10},
+			"1080p": {6, 10},
+		},
+		"i2v-01": {
+			"720p": {6},
+		},
+		"i2v-01-director": {
+			"720p": {6},
+		},
+		"i2v-01-live": {
+			"720p": {6},
+		},
+	},
+	miniMaxActionStartEnd2Video: {
+		"minimax-hailuo-02": {
+			"512p":  {6, 10},
+			"768p":  {6, 10},
+			"1080p": {6, 10},
+		},
+	},
+	miniMaxActionSubject2Video: {
+		"s2v-01": {
+			"720p": {6},
+		},
+	},
 }
 
 func (t *MiniMaxTask) HandleError(err *base.TaskError) {
@@ -65,7 +110,7 @@ func (t *MiniMaxTask) Init() *base.TaskError {
 	}
 
 	switch action {
-	case miniMaxActionText2Video, miniMaxActionImage2Video, miniMaxActionStartEnd2Video:
+	case miniMaxActionText2Video, miniMaxActionImage2Video, miniMaxActionStartEnd2Video, miniMaxActionSubject2Video:
 		// supported actions
 	default:
 		return base.StringTaskError(http.StatusBadRequest, "invalid_action", fmt.Sprintf("unsupported action %s", action), true)
@@ -102,6 +147,7 @@ func (t *MiniMaxTask) normalizeRequest(action string, req *miniProvider.MiniMaxV
 	req.CallbackURL = strings.TrimSpace(req.CallbackURL)
 	req.ExternalTaskID = strings.TrimSpace(req.ExternalTaskID)
 	req.Resolution = normalizeResolution(req.Resolution)
+	req.SubjectReference = sanitizeSubjectReference(req.SubjectReference)
 
 	if req.Duration <= 0 {
 		req.Duration = defaultMiniMaxDuration(req.Model)
@@ -116,6 +162,9 @@ func (t *MiniMaxTask) normalizeRequest(action string, req *miniProvider.MiniMaxV
 		if req.Prompt == "" {
 			return fmt.Errorf("prompt is required for text2video")
 		}
+		if len(req.SubjectReference) > 0 {
+			return fmt.Errorf("subject_reference is only supported for subject2video")
+		}
 	case miniMaxActionImage2Video:
 		if req.FirstFrameImage == "" {
 			return fmt.Errorf("first_frame_image is required for image2video")
@@ -124,10 +173,24 @@ func (t *MiniMaxTask) normalizeRequest(action string, req *miniProvider.MiniMaxV
 		if req.FirstFrameImage == "" || req.LastFrameImage == "" {
 			return fmt.Errorf("first_frame_image and last_frame_image are required for start-end2video")
 		}
+		if len(req.SubjectReference) > 0 {
+			return fmt.Errorf("subject_reference is only supported for subject2video")
+		}
+	case miniMaxActionSubject2Video:
+		if err := validateSubjectReference(req.SubjectReference); err != nil {
+			return err
+		}
+		if req.Prompt == "" {
+			return fmt.Errorf("prompt is required for subject2video")
+		}
 	}
 
 	if len(req.Prompt) > 0 && len([]rune(req.Prompt)) > 2000 {
 		return fmt.Errorf("prompt length cannot exceed 2000 characters")
+	}
+
+	if err := validateMiniMaxResolutionDuration(action, req.Model, req.Resolution, req.Duration); err != nil {
+		return err
 	}
 
 	return nil
@@ -367,26 +430,26 @@ func upsertMiniMaxArtifacts(task *model.Task, resp *miniProvider.MiniMaxVideoQue
 	channelID := task.ChannelId
 	taskID := task.TaskID
 
-    // 提取代表性直链（用于 PPInfra 等上游无 file_id 的场景）
-    download := strings.TrimSpace(resp.VideoURL)
-    if download == "" {
-        download = strings.TrimSpace(resp.WatermarkedURL)
-    }
-    if download == "" && len(resp.Videos) > 0 {
-        download = strings.TrimSpace(resp.Videos[0].VideoURL)
-    }
+	// 提取代表性直链（用于 PPInfra 等上游无 file_id 的场景）
+	download := strings.TrimSpace(resp.VideoURL)
+	if download == "" {
+		download = strings.TrimSpace(resp.WatermarkedURL)
+	}
+	if download == "" && len(resp.Videos) > 0 {
+		download = strings.TrimSpace(resp.Videos[0].VideoURL)
+	}
 
-    // 如果 response 未提供 file_id，但有直链，则生成一个稳定的伪 file_id（便于 /v1/files/retrieve 对齐）
-    fileID := strings.TrimSpace(resp.FileID)
-    if fileID == "" && download != "" {
-        sum := crc32.ChecksumIEEE([]byte(taskID + "|" + download))
-        // 加上偏移，避免过短
-        fileID = strconv.FormatUint(uint64(sum)+1000000000, 10)
-        resp.FileID = fileID
-    }
-    if fileID == "" {
-        return nil
-    }
+	// 如果 response 未提供 file_id，但有直链，则生成一个稳定的伪 file_id（便于 /v1/files/retrieve 对齐）
+	fileID := strings.TrimSpace(resp.FileID)
+	if fileID == "" && download != "" {
+		sum := crc32.ChecksumIEEE([]byte(taskID + "|" + download))
+		// 加上偏移，避免过短
+		fileID = strconv.FormatUint(uint64(sum)+1000000000, 10)
+		resp.FileID = fileID
+	}
+	if fileID == "" {
+		return nil
+	}
 
 	// TTL 解析（如果上游有 TTL 字段）
 	var ttlAt int64 = 0
@@ -417,12 +480,18 @@ func defaultMiniMaxModel(action string) string {
 	switch action {
 	case miniMaxActionText2Video, miniMaxActionImage2Video, miniMaxActionStartEnd2Video:
 		return "MiniMax-Hailuo-02"
+	case miniMaxActionSubject2Video:
+		return "S2V-01"
 	default:
 		return "MiniMax-Hailuo-02"
 	}
 }
 
 func inferMiniMaxAction(req *miniProvider.MiniMaxVideoCreateRequest) string {
+	modelLower := strings.ToLower(strings.TrimSpace(req.Model))
+	if len(req.SubjectReference) > 0 || strings.Contains(modelLower, "s2v-01") {
+		return miniMaxActionSubject2Video
+	}
 	first := strings.TrimSpace(req.FirstFrameImage)
 	last := strings.TrimSpace(req.LastFrameImage)
 
@@ -435,6 +504,88 @@ func inferMiniMaxAction(req *miniProvider.MiniMaxVideoCreateRequest) string {
 	return miniMaxActionText2Video
 }
 
+func sanitizeSubjectReference(refs []miniProvider.MiniMaxSubjectReference) []miniProvider.MiniMaxSubjectReference {
+	if len(refs) == 0 {
+		return nil
+	}
+	sanitized := make([]miniProvider.MiniMaxSubjectReference, 0, len(refs))
+	for _, item := range refs {
+		typ := strings.ToLower(strings.TrimSpace(item.Type))
+		images := make([]string, 0, len(item.Image))
+		for _, img := range item.Image {
+			trimmed := strings.TrimSpace(img)
+			if trimmed != "" {
+				images = append(images, trimmed)
+			}
+		}
+		sanitized = append(sanitized, miniProvider.MiniMaxSubjectReference{
+			Type:  typ,
+			Image: images,
+		})
+	}
+	return sanitized
+}
+
+func validateSubjectReference(refs []miniProvider.MiniMaxSubjectReference) error {
+	if len(refs) == 0 {
+		return fmt.Errorf("subject_reference is required for subject2video")
+	}
+	if len(refs) != 1 {
+		return fmt.Errorf("subject_reference currently supports exactly one subject")
+	}
+	ref := refs[0]
+	if ref.Type == "" {
+		return fmt.Errorf("subject_reference[0].type must be set to character")
+	}
+	if ref.Type != "character" {
+		return fmt.Errorf("subject_reference[0].type must be character")
+	}
+	if len(ref.Image) == 0 {
+		return fmt.Errorf("subject_reference[0].image requires one image URL")
+	}
+	if len(ref.Image) > 1 {
+		return fmt.Errorf("subject_reference[0].image currently supports only one image")
+	}
+	return nil
+}
+
+func validateMiniMaxResolutionDuration(action, model, resolution string, duration int) error {
+	if resolution == "" || duration <= 0 {
+		return nil
+	}
+	allowedByAction, ok := miniMaxAllowedMatrix[action]
+	if !ok {
+		return nil
+	}
+	modelKey := formatBillingSegment(model)
+	resKey := strings.ToLower(strings.TrimSpace(resolution))
+	allowedRes := allowedByAction[modelKey]
+	if allowedRes == nil {
+		if fallback, ok := allowedByAction["*"]; ok {
+			allowedRes = fallback
+		} else {
+			return nil
+		}
+	}
+	allowedDurations, ok := allowedRes[resKey]
+	if !ok {
+		return fmt.Errorf("model %s does not support resolution %s for %s", model, resolution, action)
+	}
+	if !containsInt(allowedDurations, duration) {
+		return fmt.Errorf("model %s does not support duration %ds at %s for %s", model, duration, resolution, action)
+	}
+	return nil
+}
+
+func containsInt(list []int, target int) bool {
+	for _, v := range list {
+		if v == target {
+			return true
+		}
+	}
+	return false
+}
+
 func defaultMiniMaxDuration(model string) int {
 	if strings.Contains(strings.ToLower(model), "02") {
 		return 6
@@ -445,10 +596,10 @@ func defaultMiniMaxDuration(model string) int {
 func defaultMiniMaxResolution(model string, duration int) string {
 	modelLower := strings.ToLower(model)
 	if strings.Contains(modelLower, "hailuo-02") {
-		if duration >= 10 {
-			return "768P"
-		}
-		return "1080P"
+		// 对齐官方文档：
+		// - MiniMax-Hailuo-02 在 6s 与 10s 的默认分辨率均为 768P
+		// - 6s 也支持 1080P，但默认值为 768P
+		return "768P"
 	}
 	return "720P"
 }

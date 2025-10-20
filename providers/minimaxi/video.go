@@ -41,8 +41,14 @@ type MiniMaxVideoConfig struct {
 // MiniMaxVideoClient 负责同 MiniMax 官方或第三方上游交互
 // 复用 BaseProvider 的能力，用于构造请求、注入上下文等。
 type MiniMaxVideoClient struct {
-    base.BaseProvider
-    config MiniMaxVideoConfig
+	base.BaseProvider
+	config MiniMaxVideoConfig
+}
+
+// MiniMaxSubjectReference 描述主体参考配置
+type MiniMaxSubjectReference struct {
+	Type  string   `json:"type,omitempty"`
+	Image []string `json:"image,omitempty"`
 }
 
 func newMiniMaxVideoClient(channel *model.Channel) *MiniMaxVideoClient {
@@ -72,90 +78,90 @@ func newMiniMaxVideoClient(channel *model.Channel) *MiniMaxVideoClient {
 
 // loadMiniMaxVideoConfig 读取渠道配置，合并默认值
 func loadMiniMaxVideoConfig(channel *model.Channel) MiniMaxVideoConfig {
-    cfg := MiniMaxVideoConfig{
-        Upstream:           MiniMaxVideoUpstreamOfficial,
-        BaseURL:            "https://api.minimaxi.com",
-        SubmitPath:         "/v1/video_generation",
-        QueryPath:          "/v1/query/video_generation",
-        TemplatePath:       "/v1/video_template_generation",
-        FileRetrievePath:   "/v1/files/retrieve",
-        AuthHeader:         "Authorization",
-        AuthScheme:         "Bearer",
-        ExtraHeaders:       map[string]string{},
-        DefaultCallbackURL: "",
-    }
+	cfg := MiniMaxVideoConfig{
+		Upstream:           MiniMaxVideoUpstreamOfficial,
+		BaseURL:            "https://api.minimaxi.com",
+		SubmitPath:         "/v1/video_generation",
+		QueryPath:          "/v1/query/video_generation",
+		TemplatePath:       "/v1/video_template_generation",
+		FileRetrievePath:   "/v1/files/retrieve",
+		AuthHeader:         "Authorization",
+		AuthScheme:         "Bearer",
+		ExtraHeaders:       map[string]string{},
+		DefaultCallbackURL: "",
+	}
 
-    cfg.APIKey = channel.Key
+	cfg.APIKey = channel.Key
 
-    raw := channel.GetCustomParameter()
-    if raw == "" {
-        return cfg
-    }
+	raw := channel.GetCustomParameter()
+	if raw == "" {
+		return cfg
+	}
 
-    var payload map[string]json.RawMessage
-    if err := json.Unmarshal([]byte(raw), &payload); err != nil {
-        logger.SysError(fmt.Sprintf("MiniMax video config decode failed: %v", err))
-        return cfg
-    }
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		logger.SysError(fmt.Sprintf("MiniMax video config decode failed: %v", err))
+		return cfg
+	}
 
-    // 顶层 upstream 兜底：如果 video 块未声明 upstream，则读取顶层 upstream
-    if topUpRaw, ok := payload["upstream"]; ok && len(topUpRaw) > 0 {
-        var topUp string
-        if err := json.Unmarshal(topUpRaw, &topUp); err == nil && strings.TrimSpace(topUp) != "" {
-            cfg.Upstream = strings.ToLower(strings.TrimSpace(topUp))
-        }
-    }
+	// 顶层 upstream 兜底：如果 video 块未声明 upstream，则读取顶层 upstream
+	if topUpRaw, ok := payload["upstream"]; ok && len(topUpRaw) > 0 {
+		var topUp string
+		if err := json.Unmarshal(topUpRaw, &topUp); err == nil && strings.TrimSpace(topUp) != "" {
+			cfg.Upstream = strings.ToLower(strings.TrimSpace(topUp))
+		}
+	}
 
-    if apiKeyRaw, ok := payload["api_key"]; ok && len(apiKeyRaw) > 0 {
-        var topKey string
-        if err := json.Unmarshal(apiKeyRaw, &topKey); err == nil && strings.TrimSpace(topKey) != "" {
-            cfg.APIKey = strings.TrimSpace(topKey)
-        }
-    }
+	if apiKeyRaw, ok := payload["api_key"]; ok && len(apiKeyRaw) > 0 {
+		var topKey string
+		if err := json.Unmarshal(apiKeyRaw, &topKey); err == nil && strings.TrimSpace(topKey) != "" {
+			cfg.APIKey = strings.TrimSpace(topKey)
+		}
+	}
 
-    if baseURLRaw, ok := payload["base_url"]; ok && len(baseURLRaw) > 0 {
-        var topBase string
-        if err := json.Unmarshal(baseURLRaw, &topBase); err == nil && strings.TrimSpace(topBase) != "" {
-            cfg.BaseURL = strings.TrimSpace(topBase)
-        }
-    }
+	if baseURLRaw, ok := payload["base_url"]; ok && len(baseURLRaw) > 0 {
+		var topBase string
+		if err := json.Unmarshal(baseURLRaw, &topBase); err == nil && strings.TrimSpace(topBase) != "" {
+			cfg.BaseURL = strings.TrimSpace(topBase)
+		}
+	}
 
-    if authHeaderRaw, ok := payload["auth_header"]; ok && len(authHeaderRaw) > 0 {
-        var topHeader string
-        if err := json.Unmarshal(authHeaderRaw, &topHeader); err == nil && strings.TrimSpace(topHeader) != "" {
-            cfg.AuthHeader = strings.TrimSpace(topHeader)
-        }
-    }
+	if authHeaderRaw, ok := payload["auth_header"]; ok && len(authHeaderRaw) > 0 {
+		var topHeader string
+		if err := json.Unmarshal(authHeaderRaw, &topHeader); err == nil && strings.TrimSpace(topHeader) != "" {
+			cfg.AuthHeader = strings.TrimSpace(topHeader)
+		}
+	}
 
-    if authSchemeRaw, ok := payload["auth_scheme"]; ok && len(authSchemeRaw) > 0 {
-        var topScheme string
-        if err := json.Unmarshal(authSchemeRaw, &topScheme); err == nil && strings.TrimSpace(topScheme) != "" {
-            cfg.AuthScheme = strings.TrimSpace(topScheme)
-        }
-    }
+	if authSchemeRaw, ok := payload["auth_scheme"]; ok && len(authSchemeRaw) > 0 {
+		var topScheme string
+		if err := json.Unmarshal(authSchemeRaw, &topScheme); err == nil && strings.TrimSpace(topScheme) != "" {
+			cfg.AuthScheme = strings.TrimSpace(topScheme)
+		}
+	}
 
-    if extraHeadersRaw, ok := payload["extra_headers"]; ok && len(extraHeadersRaw) > 0 {
-        var topHeaders map[string]string
-        if err := json.Unmarshal(extraHeadersRaw, &topHeaders); err == nil && len(topHeaders) > 0 {
-            if cfg.ExtraHeaders == nil {
-                cfg.ExtraHeaders = map[string]string{}
-            }
-            for k, v := range topHeaders {
-                cfg.ExtraHeaders[k] = v
-            }
-        }
-    }
+	if extraHeadersRaw, ok := payload["extra_headers"]; ok && len(extraHeadersRaw) > 0 {
+		var topHeaders map[string]string
+		if err := json.Unmarshal(extraHeadersRaw, &topHeaders); err == nil && len(topHeaders) > 0 {
+			if cfg.ExtraHeaders == nil {
+				cfg.ExtraHeaders = map[string]string{}
+			}
+			for k, v := range topHeaders {
+				cfg.ExtraHeaders[k] = v
+			}
+		}
+	}
 
-    if videoRaw, ok := payload["video"]; ok {
-        var custom MiniMaxVideoConfig
-        if err := json.Unmarshal(videoRaw, &custom); err != nil {
-            logger.SysError(fmt.Sprintf("MiniMax video custom config decode failed: %v", err))
-        } else {
-            mergeMiniMaxVideoConfig(&cfg, &custom)
-        }
-    }
+	if videoRaw, ok := payload["video"]; ok {
+		var custom MiniMaxVideoConfig
+		if err := json.Unmarshal(videoRaw, &custom); err != nil {
+			logger.SysError(fmt.Sprintf("MiniMax video custom config decode failed: %v", err))
+		} else {
+			mergeMiniMaxVideoConfig(&cfg, &custom)
+		}
+	}
 
-    return cfg
+	return cfg
 }
 
 // mergeMiniMaxVideoConfig 将用户配置合并到默认配置中
@@ -311,17 +317,17 @@ func (c *MiniMaxVideoClient) buildFileRetrievePath() string {
 
 // SubmitVideoTask 创建视频生成任务
 func (c *MiniMaxVideoClient) SubmitVideoTask(req *MiniMaxVideoCreateRequest) (*MiniMaxVideoCreateResponse, *types.OpenAIError) {
-    // 前置校验：必须配置有效的上游鉴权密钥（来自 channel.Key 或 video.api_key）
-    if v, ok := c.buildAuthorizationValue(); !ok || strings.TrimSpace(v) == "" {
-        return nil, &types.OpenAIError{
-            Message: "MiniMax video channel key is empty. Please set channel key or custom_parameter.video.api_key",
-            Type:    "channel_config_missing",
-            Code:    "invalid_config",
-        }
-    }
-    payload := c.prepareSubmitPayload(req)
-    submitPath := c.buildSubmitPath(req.Model)
-    fullURL := c.GetFullRequestURL(submitPath, "")
+	// 前置校验：必须配置有效的上游鉴权密钥（来自 channel.Key 或 video.api_key）
+	if v, ok := c.buildAuthorizationValue(); !ok || strings.TrimSpace(v) == "" {
+		return nil, &types.OpenAIError{
+			Message: "MiniMax video channel key is empty. Please set channel key or custom_parameter.video.api_key",
+			Type:    "channel_config_missing",
+			Code:    "invalid_config",
+		}
+	}
+	payload := c.prepareSubmitPayload(req)
+	submitPath := c.buildSubmitPath(req.Model)
+	fullURL := c.GetFullRequestURL(submitPath, "")
 
 	headers := c.buildHeaders()
 
@@ -341,15 +347,15 @@ func (c *MiniMaxVideoClient) SubmitVideoTask(req *MiniMaxVideoCreateRequest) (*M
 
 // QueryVideoTask 查询视频任务状态
 func (c *MiniMaxVideoClient) QueryVideoTask(taskID, model string) (*MiniMaxVideoQueryResponse, *types.OpenAIError) {
-    if v, ok := c.buildAuthorizationValue(); !ok || strings.TrimSpace(v) == "" {
-        return nil, &types.OpenAIError{
-            Message: "MiniMax video channel key is empty. Please set channel key or custom_parameter.video.api_key",
-            Type:    "channel_config_missing",
-            Code:    "invalid_config",
-        }
-    }
-    queryPath := c.buildQueryPath(model, taskID)
-    var fullURL string
+	if v, ok := c.buildAuthorizationValue(); !ok || strings.TrimSpace(v) == "" {
+		return nil, &types.OpenAIError{
+			Message: "MiniMax video channel key is empty. Please set channel key or custom_parameter.video.api_key",
+			Type:    "channel_config_missing",
+			Code:    "invalid_config",
+		}
+	}
+	queryPath := c.buildQueryPath(model, taskID)
+	var fullURL string
 	if c.config.QueryPathTemplate != "" && strings.Count(c.config.QueryPathTemplate, "%s") > 0 {
 		fullURL = c.GetFullRequestURL(queryPath, "")
 	} else {
@@ -378,15 +384,15 @@ func (c *MiniMaxVideoClient) QueryVideoTask(taskID, model string) (*MiniMaxVideo
 
 // RetrieveFile 获取文件下载信息
 func (c *MiniMaxVideoClient) RetrieveFile(fileID string) (*MiniMaxFileRetrieveResponse, *types.OpenAIError) {
-    if v, ok := c.buildAuthorizationValue(); !ok || strings.TrimSpace(v) == "" {
-        return nil, &types.OpenAIError{
-            Message: "MiniMax video channel key is empty. Please set channel key or custom_parameter.video.api_key",
-            Type:    "channel_config_missing",
-            Code:    "invalid_config",
-        }
-    }
-    filePath := c.buildFileRetrievePath()
-    values := url.Values{}
+	if v, ok := c.buildAuthorizationValue(); !ok || strings.TrimSpace(v) == "" {
+		return nil, &types.OpenAIError{
+			Message: "MiniMax video channel key is empty. Please set channel key or custom_parameter.video.api_key",
+			Type:    "channel_config_missing",
+			Code:    "invalid_config",
+		}
+	}
+	filePath := c.buildFileRetrievePath()
+	values := url.Values{}
 	values.Set("file_id", fileID)
 	fullURL := c.GetFullRequestURL(fmt.Sprintf("%s?%s", filePath, values.Encode()), "")
 
@@ -417,6 +423,7 @@ func (c *MiniMaxVideoClient) prepareSubmitPayload(req *MiniMaxVideoCreateRequest
 		clone.EnablePromptExpansion = &value
 	}
 
+	// PPInfra 上游：使用其兼容字段与命名
 	if c.config.Upstream == MiniMaxVideoUpstreamPPInfra {
 		payload := map[string]interface{}{}
 		if clone.Prompt != "" {
@@ -427,6 +434,12 @@ func (c *MiniMaxVideoClient) prepareSubmitPayload(req *MiniMaxVideoCreateRequest
 		}
 		if clone.LastFrameImage != "" {
 			payload["end_image"] = clone.LastFrameImage
+		}
+		if clone.ReferenceImage != "" {
+			payload["reference_image"] = clone.ReferenceImage
+		}
+		if len(clone.SubjectReference) > 0 {
+			payload["subject_reference"] = clone.SubjectReference
 		}
 		if clone.Duration > 0 {
 			payload["duration"] = clone.Duration
@@ -440,10 +453,59 @@ func (c *MiniMaxVideoClient) prepareSubmitPayload(req *MiniMaxVideoCreateRequest
 		if clone.CallbackURL != "" {
 			payload["callback_url"] = clone.CallbackURL
 		}
+		if clone.ExternalTaskID != "" {
+			payload["external_task_id"] = clone.ExternalTaskID
+		}
 		return payload
 	}
 
-	return &clone
+	// 官方上游：严格对齐 minimaxi 官方字段
+	payload := map[string]interface{}{}
+	if clone.Model != "" {
+		payload["model"] = clone.Model
+	}
+	if clone.Prompt != "" {
+		payload["prompt"] = clone.Prompt
+	}
+	if clone.FirstFrameImage != "" {
+		payload["first_frame_image"] = clone.FirstFrameImage
+	}
+	if clone.LastFrameImage != "" {
+		payload["last_frame_image"] = clone.LastFrameImage
+	}
+	if clone.ReferenceImage != "" {
+		payload["reference_image"] = clone.ReferenceImage
+	}
+	if len(clone.SubjectReference) > 0 {
+		payload["subject_reference"] = clone.SubjectReference
+	}
+	if clone.Duration > 0 {
+		payload["duration"] = clone.Duration
+	}
+	if clone.Resolution != "" {
+		payload["resolution"] = clone.Resolution
+	}
+	if clone.CallbackURL != "" {
+		payload["callback_url"] = clone.CallbackURL
+	}
+	if clone.ExternalTaskID != "" {
+		payload["external_task_id"] = clone.ExternalTaskID
+	}
+
+	// prompt_optimizer 优先：若未显式传入，则复用 enable_prompt_expansion
+	if clone.PromptOptimizer != nil {
+		payload["prompt_optimizer"] = *clone.PromptOptimizer
+	} else if clone.EnablePromptExpansion != nil {
+		payload["prompt_optimizer"] = *clone.EnablePromptExpansion
+	}
+	if clone.FastPretreatment != nil {
+		payload["fast_pretreatment"] = *clone.FastPretreatment
+	}
+	if clone.AIGCWatermark != nil {
+		payload["aigc_watermark"] = *clone.AIGCWatermark
+	}
+
+	return payload
 }
 
 // miniMaxVideoErrorHandle 解析视频接口错误
@@ -488,16 +550,25 @@ func miniMaxVideoErrorHandle(resp *http.Response) *types.OpenAIError {
 
 // MiniMaxVideoCreateRequest 统一描述提交任务所需参数
 type MiniMaxVideoCreateRequest struct {
-	Model                 string `json:"model,omitempty"`
-	Prompt                string `json:"prompt,omitempty"`
-	FirstFrameImage       string `json:"first_frame_image,omitempty"`
-	LastFrameImage        string `json:"last_frame_image,omitempty"`
-	ReferenceImage        string `json:"reference_image,omitempty"`
-	Duration              int    `json:"duration,omitempty"`
-	Resolution            string `json:"resolution,omitempty"`
-	CallbackURL           string `json:"callback_url,omitempty"`
-	EnablePromptExpansion *bool  `json:"enable_prompt_expansion,omitempty"`
-	ExternalTaskID        string `json:"external_task_id,omitempty"`
+	Model            string                    `json:"model,omitempty"`
+	Prompt           string                    `json:"prompt,omitempty"`
+	FirstFrameImage  string                    `json:"first_frame_image,omitempty"`
+	LastFrameImage   string                    `json:"last_frame_image,omitempty"`
+	ReferenceImage   string                    `json:"reference_image,omitempty"`
+	SubjectReference []MiniMaxSubjectReference `json:"subject_reference,omitempty"`
+	Duration         int                       `json:"duration,omitempty"`
+	Resolution       string                    `json:"resolution,omitempty"`
+	CallbackURL      string                    `json:"callback_url,omitempty"`
+	// 兼容历史/上游差异：
+	// - 官方文档字段：prompt_optimizer（是否自动优化提示词）
+	// - 历史/PPInfra：enable_prompt_expansion（提示词扩写开关）
+	EnablePromptExpansion *bool `json:"enable_prompt_expansion,omitempty"`
+	PromptOptimizer       *bool `json:"prompt_optimizer,omitempty"`
+	// 仅 MiniMax-Hailuo-02 生效：缩短 prompt_optimizer 优化耗时
+	FastPretreatment *bool `json:"fast_pretreatment,omitempty"`
+	// 是否在生成视频中添加 AIGC 水印
+	AIGCWatermark  *bool  `json:"aigc_watermark,omitempty"`
+	ExternalTaskID string `json:"external_task_id,omitempty"`
 }
 
 // MiniMaxVideoCreateResponse 表示创建任务返回的数据
@@ -514,6 +585,8 @@ type MiniMaxVideoQueryResponse struct {
 	VideoURL        string   `json:"video_url,omitempty"`
 	CoverImage      string   `json:"cover_image,omitempty"`
 	WatermarkedURL  string   `json:"watermarked_url,omitempty"`
+	VideoWidth      int      `json:"video_width,omitempty"`
+	VideoHeight     int      `json:"video_height,omitempty"`
 	ErrorCode       string   `json:"error_code,omitempty"`
 	ErrorMessage    string   `json:"error_message,omitempty"`
 	ProgressPercent float64  `json:"progress_percent,omitempty"`
@@ -588,9 +661,9 @@ type MiniMaxPPInfraAudioMeta struct {
 }
 
 func (r *MiniMaxVideoQueryResponse) Normalize() {
-    if r == nil {
-        return
-    }
+	if r == nil {
+		return
+	}
 	if r.TaskDetail != nil {
 		if r.TaskID == "" {
 			r.TaskID = r.TaskDetail.TaskID
@@ -618,37 +691,39 @@ func (r *MiniMaxVideoQueryResponse) Normalize() {
 		}
 	}
 
-    if len(r.Videos) > 0 {
-        for _, video := range r.Videos {
-            typeLower := strings.ToLower(video.VideoType)
-            if r.VideoURL == "" && (typeLower == "" || strings.Contains(typeLower, "origin") || strings.Contains(typeLower, "mp4")) {
-                r.VideoURL = video.VideoURL
-            }
-            if r.WatermarkedURL == "" && (strings.Contains(typeLower, "watermark") || strings.Contains(typeLower, "wm")) {
-                r.WatermarkedURL = video.VideoURL
-            }
-        }
-        if r.VideoURL == "" {
-            r.VideoURL = r.Videos[0].VideoURL
-        }
-    }
+	if len(r.Videos) > 0 {
+		for _, video := range r.Videos {
+			typeLower := strings.ToLower(video.VideoType)
+			if r.VideoURL == "" && (typeLower == "" || strings.Contains(typeLower, "origin") || strings.Contains(typeLower, "mp4")) {
+				r.VideoURL = video.VideoURL
+			}
+			if r.WatermarkedURL == "" && (strings.Contains(typeLower, "watermark") || strings.Contains(typeLower, "wm")) {
+				r.WatermarkedURL = video.VideoURL
+			}
+		}
+		if r.VideoURL == "" {
+			r.VideoURL = r.Videos[0].VideoURL
+		}
+	}
 
-    // 统一状态字段至 MiniMax 品牌枚举
-    switch strings.ToUpper(strings.TrimSpace(r.Status)) {
-    case "TASK_STATUS_SUCCEED":
-        r.Status = "Success"
-    case "TASK_STATUS_FAILED":
-        r.Status = "Fail"
-    case "TASK_STATUS_PROCESSING":
-        r.Status = "Processing"
-    case "TASK_STATUS_QUEUED":
-        r.Status = "Queueing"
-    }
+	// 统一状态字段：全部转为小写，并合并同义词
+	statusLower := strings.ToLower(strings.TrimSpace(r.Status))
+	switch statusLower {
+	case "task_status_succeed", "success", "succeeded", "completed", "finish", "finished", "done":
+		statusLower = "success"
+	case "task_status_failed", "fail", "failed", "error", "exception":
+		statusLower = "failed"
+	case "task_status_processing", "processing", "pending", "waiting", "running", "in_progress":
+		statusLower = "processing"
+	case "task_status_queued", "queueing", "queued":
+		statusLower = "queueing"
+	}
+	r.Status = statusLower
 
-    // 对齐官方响应体：移除上游（PPInfra）特有的字段，避免干扰调用方
-    r.Extra = nil
-    r.TaskDetail = nil
-    r.Videos = nil
-    r.Images = nil
-    r.Audios = nil
+	// 对齐官方响应体：移除上游（PPInfra）特有的字段，避免干扰调用方
+	r.Extra = nil
+	r.TaskDetail = nil
+	r.Videos = nil
+	r.Images = nil
+	r.Audios = nil
 }

@@ -153,32 +153,3 @@ func isMiniMaxOfficialChannel(ch *model.Channel) bool {
 	}
 	return true
 }
-
-func RelayTaskList(c *gin.Context) {
-	userID := c.GetInt("id")
-
-	var params model.TaskQueryParams
-	if err := c.ShouldBindQuery(&params); err != nil {
-		StringError(c, http.StatusBadRequest, "invalid_request", err.Error())
-		return
-	}
-	params.Platform = model.TaskPlatformMiniMax
-
-	result, err := model.GetAllUserTasks(userID, &params)
-	if err != nil {
-		StringError(c, http.StatusInternalServerError, "query_failed", err.Error())
-		return
-	}
-
-	var items []*miniProvider.MiniMaxVideoQueryResponse
-	for _, task := range *result.Data {
-		items = append(items, taskModelToDto(task))
-	}
-
-	writeJSONNoEscape(c, http.StatusOK, gin.H{
-		"data":  items,
-		"total": result.Size,
-		"page":  result.Page,
-		"size":  result.Size,
-	})
-}

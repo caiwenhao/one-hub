@@ -476,23 +476,23 @@ func GetDefaultPrice() []*Price {
 		"Baichuan2-53B":           {[]float64{1.4286, 1.4286}, config.ChannelTypeBaichuan}, // ¥0.02 / 1k tokens
 		"Baichuan-Text-Embedding": {[]float64{0.0357, 0.0357}, config.ChannelTypeBaichuan}, // ¥0.0005 / 1k tokens
 
-        // minimaxi 文本（按官方定价，单位：人民币/1k tokens；计价基准存储为 /RMBRate）
-        // MiniMax-M1（默认采用 0-32k 档：输入 0.8 元 / 百万，输出 8 元 / 百万）
-        // 0.8/1M → 0.0008/1k；8/1M → 0.008/1k
-        "MiniMax-M1":      {[]float64{0.057142857, 0.571428571}, config.ChannelTypeMiniMax},
-        // MiniMax-Text-01（输入 1 元 / 百万，输出 8 元 / 百万）
-        // 1/1M → 0.001/1k；8/1M → 0.008/1k
-        "MiniMax-Text-01": {[]float64{0.071428571, 0.571428571}, config.ChannelTypeMiniMax},
+		// minimaxi 文本（按官方定价，单位：人民币/1k tokens；计价基准存储为 /RMBRate）
+		// MiniMax-M1（默认采用 0-32k 档：输入 0.8 元 / 百万，输出 8 元 / 百万）
+		// 0.8/1M → 0.0008/1k；8/1M → 0.008/1k
+		"MiniMax-M1": {[]float64{0.057142857, 0.571428571}, config.ChannelTypeMiniMax},
+		// MiniMax-Text-01（输入 1 元 / 百万，输出 8 元 / 百万）
+		// 1/1M → 0.001/1k；8/1M → 0.008/1k
+		"MiniMax-Text-01": {[]float64{0.071428571, 0.571428571}, config.ChannelTypeMiniMax},
 
-        // minimaxi 语音（按字符计费；此处沿用 tokens 计量，等价视 1 字符 = 1 token）
-        // 同步 T2A（HD 档：3.5 元 / 万字符 → 0.35 / 1k；Turbo 档：2 元 / 万字符 → 0.2 / 1k）
-        // base = 人民币单价(每1k) / RMBRate
-        "speech-2.5-hd-preview": {[]float64{25, 25}, config.ChannelTypeMiniMax},      // 0.35 / 1k chars
-        "speech-02-hd":          {[]float64{25, 25}, config.ChannelTypeMiniMax},      // 0.35 / 1k chars
-        "speech-01-hd":          {[]float64{25, 25}, config.ChannelTypeMiniMax},      // 0.35 / 1k chars
-        "speech-2.5-turbo-preview": {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
-        "speech-02-turbo":          {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
-        "speech-01-turbo":          {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
+		// minimaxi 语音（按字符计费；此处沿用 tokens 计量，等价视 1 字符 = 1 token）
+		// 同步 T2A（HD 档：3.5 元 / 万字符 → 0.35 / 1k；Turbo 档：2 元 / 万字符 → 0.2 / 1k）
+		// base = 人民币单价(每1k) / RMBRate
+		"speech-2.5-hd-preview":    {[]float64{25, 25}, config.ChannelTypeMiniMax},               // 0.35 / 1k chars
+		"speech-02-hd":             {[]float64{25, 25}, config.ChannelTypeMiniMax},               // 0.35 / 1k chars
+		"speech-01-hd":             {[]float64{25, 25}, config.ChannelTypeMiniMax},               // 0.35 / 1k chars
+		"speech-2.5-turbo-preview": {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
+		"speech-02-turbo":          {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
+		"speech-01-turbo":          {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
 
 		"deepseek-coder": {[]float64{0.75, 0.75}, config.ChannelTypeDeepseek}, // 暂定 $0.0015 / 1K tokens
 		"deepseek-chat":  {[]float64{0.75, 0.75}, config.ChannelTypeDeepseek}, // 暂定 $0.0015 / 1K tokens
@@ -959,38 +959,41 @@ func GetDefaultPrice() []*Price {
 		prices = append(prices, price)
 	}
 
-    // minimaxi 视频默认价格（单位：人民币/视频）对齐官方档：
-    // MiniMax-Hailuo-02：
-    //  - 512P 6s：0.6；512P 10s：1.0；768P 6s：2.0；768P 10s：4.0；1080P 10s：3.5
-    // T2V-01 / I2V-01 / S2V-01：720P 6s：T2V-01=3；I2V-01/I2V-01-live=3；S2V-01=4.5
-    var defaultMiniMaxVideoPrice = map[string]float64{
-        // MiniMax-Hailuo-02 - 文/图生视频
-        "minimax-text2video-minimax-hailuo-02-512p-6s":  0.6,
-        "minimax-text2video-minimax-hailuo-02-512p-10s": 1.0,
-        "minimax-text2video-minimax-hailuo-02-768p-6s":  2.0,
-        "minimax-text2video-minimax-hailuo-02-768p-10s": 4.0,
-        "minimax-text2video-minimax-hailuo-02-1080p-10s": 3.5,
+	// minimaxi 视频默认价格（单位：人民币/视频）对齐官方档：
+	// MiniMax-Hailuo-02：
+	//  - 512P 6s：0.6；512P 10s：1.0；768P 6s：2.0；768P 10s：4.0；1080P 6s / 10s：3.5
+	// T2V-01 / I2V-01 / S2V-01：720P 6s：T2V-01=3；I2V-01/I2V-01-live=3；S2V-01=4.5
+	var defaultMiniMaxVideoPrice = map[string]float64{
+		// MiniMax-Hailuo-02 - 文/图生视频
+		"minimax-text2video-minimax-hailuo-02-512p-6s":   0.6,
+		"minimax-text2video-minimax-hailuo-02-512p-10s":  1.0,
+		"minimax-text2video-minimax-hailuo-02-768p-6s":   2.0,
+		"minimax-text2video-minimax-hailuo-02-768p-10s":  4.0,
+		"minimax-text2video-minimax-hailuo-02-1080p-6s":  3.5,
+		"minimax-text2video-minimax-hailuo-02-1080p-10s": 3.5,
 
-        "minimax-image2video-minimax-hailuo-02-512p-6s":  0.6,
-        "minimax-image2video-minimax-hailuo-02-512p-10s": 1.0,
-        "minimax-image2video-minimax-hailuo-02-768p-6s":  2.0,
-        "minimax-image2video-minimax-hailuo-02-768p-10s": 4.0,
-        "minimax-image2video-minimax-hailuo-02-1080p-10s": 3.5,
+		"minimax-image2video-minimax-hailuo-02-512p-6s":   0.6,
+		"minimax-image2video-minimax-hailuo-02-512p-10s":  1.0,
+		"minimax-image2video-minimax-hailuo-02-768p-6s":   2.0,
+		"minimax-image2video-minimax-hailuo-02-768p-10s":  4.0,
+		"minimax-image2video-minimax-hailuo-02-1080p-6s":  3.5,
+		"minimax-image2video-minimax-hailuo-02-1080p-10s": 3.5,
 
-        // 首尾帧（按需求与 Hailuo-02 同档位；若使用 S2V-01 则见下新增）
-        "minimax-start-end2video-minimax-hailuo-02-512p-6s":  0.6,
-        "minimax-start-end2video-minimax-hailuo-02-512p-10s": 1.0,
-        "minimax-start-end2video-minimax-hailuo-02-768p-6s":  2.0,
-        "minimax-start-end2video-minimax-hailuo-02-768p-10s": 4.0,
-        "minimax-start-end2video-minimax-hailuo-02-1080p-10s": 3.5,
+		// 首尾帧（按需求与 Hailuo-02 同档位；若使用 S2V-01 则见下新增）
+		"minimax-start-end2video-minimax-hailuo-02-512p-6s":   0.6,
+		"minimax-start-end2video-minimax-hailuo-02-512p-10s":  1.0,
+		"minimax-start-end2video-minimax-hailuo-02-768p-6s":   2.0,
+		"minimax-start-end2video-minimax-hailuo-02-768p-10s":  4.0,
+		"minimax-start-end2video-minimax-hailuo-02-1080p-6s":  3.5,
+		"minimax-start-end2video-minimax-hailuo-02-1080p-10s": 3.5,
 
-        // 新模型：T2V-01 / I2V-01 / I2V-01-live / S2V-01（720P 6s）
-        "minimax-text2video-t2v-01-720p-6s":      3.0,
-        "minimax-text2video-t2v-01-director-720p-6s": 3.0,
-        "minimax-image2video-i2v-01-720p-6s":     3.0,
-        "minimax-image2video-i2v-01-live-720p-6s":3.0,
-        "minimax-start-end2video-s2v-01-720p-6s": 4.5,
-    }
+		// 新模型：T2V-01 / I2V-01 / I2V-01-live / S2V-01（720P 6s）
+		"minimax-text2video-t2v-01-720p-6s":          3.0,
+		"minimax-text2video-t2v-01-director-720p-6s": 3.0,
+		"minimax-image2video-i2v-01-720p-6s":         3.0,
+		"minimax-image2video-i2v-01-live-720p-6s":    3.0,
+		"minimax-subject2video-s2v-01-720p-6s":       4.5,
+	}
 
 	for model, miniMaxPrice := range defaultMiniMaxVideoPrice {
 		base := miniMaxPrice / RMBRate

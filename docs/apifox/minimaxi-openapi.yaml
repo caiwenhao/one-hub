@@ -15,22 +15,15 @@ security:
   - bearerAuth: []
 
 paths:
-  /minimaxi/v1/videos/{action}:
+  /minimaxi/v1/video_generation:
     post:
-      summary: minimaxi 文/图/首尾帧生视频
+      summary: minimaxi 文/图/主体/首尾帧视频生成
       description: |
-        - action=text2video：文生视频，需传 prompt
-        - action=image2video：图生视频，需传 first_frame_image（可选 prompt）
-        - action=start-end2video：首尾帧视频，需传 first_frame_image + last_frame_image
-        - 默认模型：MiniMax-Hailuo-02
-      parameters:
-        - in: path
-          name: action
-          required: true
-          schema:
-            type: string
-            enum: [text2video, image2video, start-end2video]
-          description: 动作类型
+        与官方 `POST /v1/video_generation` 一致，动作将根据请求体自动识别：
+        - 文生视频：提供 `prompt`
+        - 图生视频：提供 `first_frame_image`（可选 `prompt`）
+        - 首尾帧视频：同时提供 `first_frame_image` 与 `last_frame_image`
+        - 主体参考视频：提供 `subject_reference`（当前仅支持模型 S2V-01）
       requestBody:
         required: true
         content:
@@ -61,6 +54,17 @@ paths:
                   last_frame_image: https://example.com/last.jpg
                   resolution: 768P
                   duration: 6
+              subject2video:
+                summary: 主体参考视频示例
+                value:
+                  model: S2V-01
+                  prompt: 女生跑向镜头并挥手
+                  subject_reference:
+                    - type: character
+                      image:
+                        - https://example.com/reference.jpg
+                  resolution: 720P
+                  duration: 6
       responses:
         '200':
           description: 创建成功
@@ -86,54 +90,6 @@ paths:
       responses:
         '200':
           description: 查询成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MiniMaxVideoQueryResponse'
-
-  /minimaxi/v1/tasks:
-    get:
-      summary: 查询当前用户 minimaxi 视频任务列表
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-        - in: query
-          name: size
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: 成功
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/MiniMaxVideoQueryResponse'
-                  total:
-                    type: integer
-                  page:
-                    type: integer
-                  size:
-                    type: integer
-
-  /minimaxi/v1/tasks/{task_id}:
-    get:
-      summary: 查询单个 minimaxi 视频任务详情
-      parameters:
-        - in: path
-          name: task_id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: 成功
           content:
             application/json:
               schema:
@@ -368,6 +324,11 @@ components:
         reference_image:
           type: string
           format: uri
+        subject_reference:
+          type: array
+          description: 主体参考配置，仅当模型为 S2V-01（subject2video）时可用，当前仅支持单主体
+          items:
+            $ref: '#/components/schemas/MiniMaxSubjectReference'
         duration:
           type: integer
           enum: [6, 10]
@@ -382,6 +343,16 @@ components:
           format: uri
         enable_prompt_expansion:
           type: boolean
+          description: 兼容字段，功能等价于 prompt_optimizer
+        prompt_optimizer:
+          type: boolean
+          description: 是否自动优化 prompt（官方字段，默认 true）
+        fast_pretreatment:
+          type: boolean
+          description: 是否缩短 prompt_optimizer 的优化耗时（仅 Hailuo-02 生效）
+        aigc_watermark:
+          type: boolean
+          description: 是否在生成视频中添加水印
         external_task_id:
           type: string
 
@@ -405,7 +376,7 @@ components:
           type: string
         status:
           type: string
-          description: Queueing/Processing/Success/Fail（已对齐官方枚举）
+          description: queueing/processing/success/failed（全部小写，与官方回调保持一致）
         file_id:
           type: string
         video_url:
@@ -417,6 +388,12 @@ components:
         watermarked_url:
           type: string
           format: uri
+        video_width:
+          type: integer
+          description: 生成视频宽度，单位像素
+        video_height:
+          type: integer
+          description: 生成视频高度，单位像素
         progress_percent:
           type: number
           format: float
@@ -466,6 +443,20 @@ components:
         download_url:
           type: string
           format: uri
+
+    MiniMaxSubjectReference:
+      type: object
+      properties:
+        type:
+          type: string
+          description: 主体类型，目前仅支持 character
+          example: character
+        image:
+          type: array
+          description: 主体参考图列表，目前仅支持单张图片
+          items:
+            type: string
+            format: uri
 
     ChatCompletionsRequest:
       type: object
