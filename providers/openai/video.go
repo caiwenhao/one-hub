@@ -72,18 +72,34 @@ type soraSizeInfo struct {
 }
 
 func (p *OpenAIProvider) CreateVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-	// 统一遵循 OpenAI 标准视频路由：/v1/videos
-	return p.createOfficialVideo(request)
+    // 根据渠道配置与 BaseURL 识别供应商，分别适配官方与 MountSea 聚合
+    switch p.detectSoraVendor() {
+    case soraVendorMountSea:
+        return p.createMountSeaVideo(request)
+    default:
+        // 统一遵循 OpenAI 标准视频路由：/v1/videos
+        return p.createOfficialVideo(request)
+    }
 }
 
 func (p *OpenAIProvider) RetrieveVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-	// 统一遵循 OpenAI 标准视频路由：/v1/videos
-	return p.retrieveOfficialVideo(videoID)
+    switch p.detectSoraVendor() {
+    case soraVendorMountSea:
+        return p.retrieveMountSeaVideo(videoID)
+    default:
+        // 统一遵循 OpenAI 标准视频路由：/v1/videos
+        return p.retrieveOfficialVideo(videoID)
+    }
 }
 
 func (p *OpenAIProvider) DownloadVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode) {
-	// 统一遵循 OpenAI 标准视频路由：/v1/videos
-	return p.downloadOfficialVideo(videoID, variant)
+    switch p.detectSoraVendor() {
+    case soraVendorMountSea:
+        return p.downloadMountSeaVideo(videoID, variant)
+    default:
+        // 统一遵循 OpenAI 标准视频路由：/v1/videos
+        return p.downloadOfficialVideo(videoID, variant)
+    }
 }
 
 func (p *OpenAIProvider) detectSoraVendor() string {
