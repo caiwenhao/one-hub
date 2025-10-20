@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useTheme } from '@mui/material/styles';
 import { Icon } from '@iconify/react';
-import { InputAdornment, OutlinedInput, Stack, FormControl, InputLabel } from '@mui/material';
+import { InputAdornment, OutlinedInput, Stack, FormControl, InputLabel, Grid } from '@mui/material';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
@@ -10,28 +10,22 @@ import 'dayjs/locale/zh-cn';
 
 // ----------------------------------------------------------------------
 
-export default function TableToolBar({ filterName, handleFilterName, userIsAdmin }) {
+export default function TableToolBar({ filterName, handleFilterName, userIsAdmin, actions }) {
   const { t } = useTranslation();
   const theme = useTheme();
   const grey500 = theme.palette.grey[500];
 
   return (
     <>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={{ xs: 3, sm: 2, md: 2 }}
-        padding={'24px'}
-        paddingBottom={'0px'}
-        sx={{ width: '100%', '& > *': { flex: 1 } }}
-      >
-        <FormControl>
+      {/* 第一行：令牌、模型、来源IP、起始时间、结束时间 */}
+      <Grid container spacing={2} padding={'24px'} paddingBottom={'0px'}>
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl fullWidth>
           <InputLabel htmlFor="channel-token_name-label">{t('tableToolBar.tokenName')}</InputLabel>
           <OutlinedInput
             id="token_name"
             name="token_name"
-            sx={{
-              minWidth: '100%'
-            }}
+            size="small"
             label={t('tableToolBar.tokenName')}
             value={filterName.token_name}
             onChange={handleFilterName}
@@ -42,15 +36,15 @@ export default function TableToolBar({ filterName, handleFilterName, userIsAdmin
               </InputAdornment>
             }
           />
-        </FormControl>
-        <FormControl>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl fullWidth>
           <InputLabel htmlFor="channel-model_name-label">{t('tableToolBar.modelName')}</InputLabel>
           <OutlinedInput
             id="model_name"
             name="model_name"
-            sx={{
-              minWidth: '100%'
-            }}
+            size="small"
             label={t('tableToolBar.modelName')}
             value={filterName.model_name}
             onChange={handleFilterName}
@@ -61,15 +55,15 @@ export default function TableToolBar({ filterName, handleFilterName, userIsAdmin
               </InputAdornment>
             }
           />
-        </FormControl>
-        <FormControl>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl fullWidth>
           <InputLabel htmlFor="channel-source_ip-label">{t('tableToolBar.sourceIp')}</InputLabel>
           <OutlinedInput
             id="source_ip"
             name="source_ip"
-            sx={{
-              minWidth: '100%'
-            }}
+            size="small"
             label={t('tableToolBar.sourceIp')}
             value={filterName.source_ip}
             onChange={handleFilterName}
@@ -80,8 +74,10 @@ export default function TableToolBar({ filterName, handleFilterName, userIsAdmin
               </InputAdornment>
             }
           />
-        </FormControl>
-        <FormControl>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl fullWidth>
           <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={'zh-cn'}>
             <DateTimePicker
               label={t('tableToolBar.startTime')}
@@ -98,12 +94,16 @@ export default function TableToolBar({ filterName, handleFilterName, userIsAdmin
               slotProps={{
                 actionBar: {
                   actions: ['clear', 'today', 'accept']
-                }
+                },
+                textField: { size: 'small', fullWidth: true }
               }}
+              sx={{ width: '100%' }}
             />
           </LocalizationProvider>
-        </FormControl>
-        <FormControl>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl fullWidth>
           <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={'zh-cn'}>
             <DateTimePicker
               label={t('tableToolBar.endTime')}
@@ -120,61 +120,75 @@ export default function TableToolBar({ filterName, handleFilterName, userIsAdmin
               slotProps={{
                 actionBar: {
                   actions: ['clear', 'today', 'accept']
-                }
+                },
+                textField: { size: 'small', fullWidth: true }
               }}
+              sx={{ width: '100%' }}
             />
           </LocalizationProvider>
-        </FormControl>
-      </Stack>
-
-      {userIsAdmin && (
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={{ xs: 3, sm: 2, md: 4 }}
-          padding={'24px'}
-          sx={{ width: '100%', '& > *': { flex: 1 } }}
-        >
-          <FormControl>
-            <InputLabel htmlFor="channel-channel_id-label">{t('tableToolBar.channelId')}</InputLabel>
-            <OutlinedInput
-              id="channel_id"
-              name="channel_id"
-              sx={{
-                minWidth: '100%'
-              }}
-              label={t('tableToolBar.channelId')}
-              value={filterName.channel_id}
-              onChange={handleFilterName}
-              placeholder={t('tableToolBar.channelId')}
-              startAdornment={
-                <InputAdornment position="start">
-                  <Icon icon="ph:open-ai-logo-duotone" width="20" color={grey500} />
-                </InputAdornment>
-              }
-            />
           </FormControl>
+        </Grid>
+      </Grid>
 
-          <FormControl>
-            <InputLabel htmlFor="channel-username-label">{t('tableToolBar.username')}</InputLabel>
-            <OutlinedInput
-              id="username"
-              name="username"
-              sx={{
-                minWidth: '100%'
-              }}
-              label={t('tableToolBar.username')}
-              value={filterName.username}
-              onChange={handleFilterName}
-              placeholder={t('tableToolBar.username')}
-              startAdornment={
-                <InputAdornment position="start">
-                  <Icon icon="solar:user-bold-duotone" width="20" color={grey500} />
-                </InputAdornment>
-              }
-            />
-          </FormControl>
-        </Stack>
-      )}
+      {/* 第二行：管理员可见的 渠道ID / 用户名 + 右侧操作区（刷新/搜索/列设置） */}
+      <Grid container spacing={2} padding={'24px'}>
+        {/* 左侧输入区 */}
+        {userIsAdmin && (
+          <>
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth>
+              <InputLabel htmlFor="channel-channel_id-label">{t('tableToolBar.channelId')}</InputLabel>
+              <OutlinedInput
+                id="channel_id"
+                name="channel_id"
+                size="small"
+                label={t('tableToolBar.channelId')}
+                value={filterName.channel_id}
+                onChange={handleFilterName}
+                placeholder={t('tableToolBar.channelId')}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <Icon icon="ph:open-ai-logo-duotone" width="20" color={grey500} />
+                  </InputAdornment>
+                }
+              />
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth>
+              <InputLabel htmlFor="channel-username-label">{t('tableToolBar.username')}</InputLabel>
+              <OutlinedInput
+                id="username"
+                name="username"
+                size="small"
+                label={t('tableToolBar.username')}
+                value={filterName.username}
+                onChange={handleFilterName}
+                placeholder={t('tableToolBar.username')}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <Icon icon="solar:user-bold-duotone" width="20" color={grey500} />
+                  </InputAdornment>
+                }
+              />
+              </FormControl>
+            </Grid>
+          </>
+        )}
+
+        {/* 右侧操作区 */}
+        {actions && (
+          <Grid item xs={12} md={userIsAdmin ? 4 : 12} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, alignItems: 'center' }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ width: '100%', justifyContent: { xs: 'space-between', md: 'flex-end' } }}>
+              {actions}
+            </Stack>
+          </Grid>
+        )}
+      </Grid>
+
+      {/* 非管理员：若未渲染第二行输入，也需要把 actions 放到一行（靠右） */}
+      {!userIsAdmin && actions && null}
     </>
   );
 }
@@ -182,5 +196,6 @@ export default function TableToolBar({ filterName, handleFilterName, userIsAdmin
 TableToolBar.propTypes = {
   filterName: PropTypes.object,
   handleFilterName: PropTypes.func,
-  userIsAdmin: PropTypes.bool
+  userIsAdmin: PropTypes.bool,
+  actions: PropTypes.oneOfType([PropTypes.node, PropTypes.arrayOf(PropTypes.node)])
 };
