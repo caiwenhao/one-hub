@@ -235,7 +235,7 @@ var ownedByKeywordRules = []struct {
 }{
 	{config.ChannelTypeDeepseek, []string{"deepseek"}},
 	{config.ChannelTypeAnthropic, []string{"claude", "anthropic/"}},
-	{config.ChannelTypeOpenAI, []string{"gpt-", "gpt", "davinci", "curie", "babbage", "ada", "whisper", "dall-e", "text-embedding", "o1-", "o3-"}},
+	{config.ChannelTypeOpenAI, []string{"gpt-", "gpt", "davinci", "curie", "babbage", "ada", "whisper", "dall-e", "text-embedding", "o1-", "o3-", "sora-"}},
 	{config.ChannelTypeGemini, []string{"gemini", "palm-"}},
 	{config.ChannelTypeAli, []string{"qwen", "tongyi"}},
 	{config.ChannelTypeLLAMA, []string{"llama", "meta-llama"}},
@@ -322,6 +322,22 @@ func GetDefaultPrice() []*Price {
 		"gpt-4-vision-preview":   {[]float64{5, 15}, config.ChannelTypeOpenAI},
 		// $0.005 / 1K tokens	$0.015 / 1K tokens
 		"gpt-4o": {[]float64{2.5, 7.5}, config.ChannelTypeOpenAI},
+
+		// GPT-5 系列（按 1M tokens 定价，换算至 1K tokens 并折算为系统基准 1 = $0.002/1k tokens）
+		// GPT-5:    input $1.25/M → 0.00125/1k → 0.625；output $10.00/M → 0.01/1k → 5
+		"gpt-5": {[]float64{0.625, 5}, config.ChannelTypeOpenAI},
+		// GPT-5 mini: input $0.25/M → 0.00025/1k → 0.125；output $2.00/M → 0.002/1k → 1
+		"gpt-5-mini": {[]float64{0.125, 1}, config.ChannelTypeOpenAI},
+		// GPT-5 nano: input $0.05/M → 0.00005/1k → 0.025；output $0.40/M → 0.0004/1k → 0.2
+		"gpt-5-nano": {[]float64{0.025, 0.2}, config.ChannelTypeOpenAI},
+		// GPT-5 pro:  input $15.00/M → 0.015/1k → 7.5；output $120.00/M → 0.12/1k → 60
+		"gpt-5-pro": {[]float64{7.5, 60}, config.ChannelTypeOpenAI},
+
+		// Realtime API（Text 基准价；音频与图像通过 extra_ratios 单独配置）
+		// gpt-realtime: input $4.00/M → 0.004/1k → 2；output $16.00/M → 0.016/1k → 8
+		"gpt-realtime": {[]float64{2, 8}, config.ChannelTypeOpenAI},
+		// gpt-realtime-mini: input $0.60/M → 0.0006/1k → 0.3；output $2.40/M → 0.0024/1k → 1.2
+		"gpt-realtime-mini": {[]float64{0.3, 1.2}, config.ChannelTypeOpenAI},
 		// 	$0.0005 / 1K tokens	$0.0015 / 1K tokens
 		"gpt-3.5-turbo":      {[]float64{0.25, 0.75}, config.ChannelTypeOpenAI},
 		"gpt-3.5-turbo-0125": {[]float64{0.25, 0.75}, config.ChannelTypeOpenAI},
@@ -360,6 +376,12 @@ func GetDefaultPrice() []*Price {
 		"dall-e-2": {[]float64{8, 8}, config.ChannelTypeOpenAI},
 		// $0.040 - $0.120 / image
 		"dall-e-3": {[]float64{20, 20}, config.ChannelTypeOpenAI},
+
+		// GPT-Image 系列（基准价以“图片 tokens”计，文本输入通过 extra_ratios.input_text_tokens 下调）
+		// gpt-image-1: image input $10/M → 0.01/1k → 5；image output $40/M → 0.04/1k → 20
+		"gpt-image-1": {[]float64{5, 20}, config.ChannelTypeOpenAI},
+		// gpt-image-1-mini: image input $2.5/M → 0.0025/1k → 1.25；image output $8/M → 0.008/1k → 4
+		"gpt-image-1-mini": {[]float64{1.25, 4}, config.ChannelTypeOpenAI},
 
 		// $0.80/million tokens $2.40/million tokens
 		"claude-instant-1.2": {[]float64{0.4, 1.2}, config.ChannelTypeAnthropic},
@@ -1144,6 +1166,30 @@ func GetDefaultPrice() []*Price {
 }
 
 func GetDefaultExtraRatio() string {
-	return `{"gpt-4o-audio-preview":{"input_audio_tokens":40,"output_audio_tokens":20},"gpt-4o-audio-preview-2024-10-01":{"input_audio_tokens":40,"output_audio_tokens":20},"gpt-4o-audio-preview-2024-12-17":{"input_audio_tokens":16,"output_audio_tokens":8},"gpt-4o-mini-audio-preview":{"input_audio_tokens":67,"output_audio_tokens":34},"gpt-4o-mini-audio-preview-2024-12-17":{"input_audio_tokens":67,"output_audio_tokens":34},"gpt-4o-realtime-preview":{"input_audio_tokens":20,"output_audio_tokens":10},"gpt-4o-realtime-preview-2024-10-01":{"input_audio_tokens":20,"output_audio_tokens":10},"gpt-4o-realtime-preview-2024-12-17":{"input_audio_tokens":8,"output_audio_tokens":4},"gpt-4o-mini-realtime-preview":{"input_audio_tokens":17,"output_audio_tokens":8.4},"gpt-4o-mini-realtime-preview-2024-12-17":{"input_audio_tokens":17,"output_audio_tokens":8.4},"gemini-2.5-flash-preview-04-17":{"reasoning_tokens":5.833},"gpt-image-1":{"input_text_tokens": 0.5}}`
+	return `{
+  "gpt-4o-audio-preview": {"input_audio_tokens": 40, "output_audio_tokens": 20},
+  "gpt-4o-audio-preview-2024-10-01": {"input_audio_tokens": 40, "output_audio_tokens": 20},
+  "gpt-4o-audio-preview-2024-12-17": {"input_audio_tokens": 16, "output_audio_tokens": 8},
+  "gpt-4o-mini-audio-preview": {"input_audio_tokens": 67, "output_audio_tokens": 34},
+  "gpt-4o-mini-audio-preview-2024-12-17": {"input_audio_tokens": 67, "output_audio_tokens": 34},
+
+  "gpt-4o-realtime-preview": {"input_audio_tokens": 20, "output_audio_tokens": 10},
+  "gpt-4o-realtime-preview-2024-10-01": {"input_audio_tokens": 20, "output_audio_tokens": 10},
+  "gpt-4o-realtime-preview-2024-12-17": {"input_audio_tokens": 8, "output_audio_tokens": 4},
+  "gpt-4o-mini-realtime-preview": {"input_audio_tokens": 17, "output_audio_tokens": 8.4},
+  "gpt-4o-mini-realtime-preview-2024-12-17": {"input_audio_tokens": 17, "output_audio_tokens": 8.4},
+
+  "gpt-realtime": {"input_audio_tokens": 8, "output_audio_tokens": 4, "input_image_tokens": 1.25, "cached_tokens": 0.1},
+  "gpt-realtime-mini": {"input_audio_tokens": 16.6666667, "output_audio_tokens": 8.3333333, "input_image_tokens": 1.3333333, "cached_tokens": 0.1},
+
+  "gemini-2.5-flash-preview-04-17": {"reasoning_tokens": 5.833},
+
+  "gpt-image-1": {"input_text_tokens": 0.5, "cached_tokens": 0.25},
+  "gpt-image-1-mini": {"input_text_tokens": 0.8, "cached_tokens": 0.1},
+
+  "gpt-5": {"cached_tokens": 0.1},
+  "gpt-5-mini": {"cached_tokens": 0.1},
+  "gpt-5-nano": {"cached_tokens": 0.1}
+}`
 
 }

@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { API } from 'utils/api';
 import { showError, showSuccess } from 'utils/common';
 import {
@@ -63,6 +63,28 @@ const ModelSelectorModal = ({ open, onClose, onConfirm, channelValues, prices })
   const [mappingPreview, setMappingPreview] = useState({});
   const [modelsListCollapsed, setModelsListCollapsed] = useState(false);
 
+  // 精确计费模型（组合计费）变体映射：baseModel -> [{ model, price_display }]
+  const [variantMap, setVariantMap] = useState({});
+  const [variantExpanded, setVariantExpanded] = useState({});
+
+  const fetchAvailableVariants = useCallback(async () => {
+    try {
+      const res = await API.get('/api/available_model');
+      const { success, data } = res.data;
+      if (!success || !data) return;
+      const map = {};
+      Object.entries(data || {}).forEach(([base, item]) => {
+        const variants = Array.isArray(item.variants) ? item.variants : [];
+        if (variants.length > 0) {
+          map[base] = variants;
+        }
+      });
+      setVariantMap(map);
+    } catch (e) {
+      // 静默失败：不影响主流程
+    }
+  }, []);
+
   const getOwnedbyName = (id) => {
     const owner = ownedby.find((item) => item.id === id);
     return owner?.name;
@@ -103,8 +125,12 @@ const ModelSelectorModal = ({ open, onClose, onConfirm, channelValues, prices })
       setOverwriteMappings(false);
       setOverwriteModels(false);
       setMappingPreview({});
+
+      // 预取可用模型变体（用于“按组合计费”展示）
+      fetchAvailableVariants();
+      setVariantExpanded({});
     }
-  }, [open, channelValues, t]);
+  }, [open, channelValues, t, fetchAvailableVariants]);
 
   useEffect(() => {
     if (!addToMapping || selectedModels.length === 0) {
@@ -712,43 +738,102 @@ const ModelSelectorModal = ({ open, onClose, onConfirm, channelValues, prices })
                           <List dense disablePadding sx={{ pl: { xs: 1, sm: 2 } }}>
                             {groupModels.map((model) => {
                               const isSelected = selectedModels.some((m) => m.id === model.id);
+                              const hasVariants = Array.isArray(variantMap[model.id]) && variantMap[model.id].length > 0;
+                              const expanded = !!variantExpanded[model.id];
                               return (
-                                <ListItem
-                                  key={model.id}
-                                  dense
-                                  button
-                                  onClick={() => handleModelToggle(model)}
-                                  sx={{
-                                    borderRadius: 1,
-                                    mb: 0.5,
-                                    transition: 'all 0.2s',
-                                    py: { xs: 0.75, sm: 0.5 },
-                                    '&:hover': {
-                                      bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)')
-                                    },
-                                    ...(isSelected && {
-                                      bgcolor: (theme) =>
-                                        theme.palette.mode === 'dark' ? 'rgba(144,202,249,0.15)' : 'rgba(33,150,243,0.08)'
-                                    })
-                                  }}
-                                >
-                                  <ListItemIcon sx={{ minWidth: { xs: 36, sm: 42 } }}>
-                                    <Checkbox edge="start" checked={isSelected} tabIndex={-1} disableRipple color="primary" size="small" />
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primary={model.id}
-                                    primaryTypographyProps={{
-                                      sx: {
-                                        fontFamily: 'monospace',
-                                        fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        ...(isSelected && { fontWeight: 600 })
-                                      }
+                                <Box key={model.id}>
+                                  <ListItem
+                                    dense
+                                    button
+                                    onClick={() => handleModelToggle(model)}
+                                    sx={{
+                                      borderRadius: 1,
+                                      mb: 0.5,
+                                      transition: 'all 0.2s',
+                                      py: { xs: 0.75, sm: 0.5 },
+                                      '&:hover': {
+                                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)')
+                                      },
+                                      ...(isSelected && {
+                                        bgcolor: (theme) =>
+                                          theme.palette.mode === 'dark' ? 'rgba(144,202,249,0.15)' : 'rgba(33,150,243,0.08)'
+                                      })
                                     }}
-                                  />
-                                </ListItem>
+                                  >
+                                    <ListItemIcon sx={{ minWidth: { xs: 36, sm: 42 } }}>
+                                      <Checkbox edge="start" checked={isSelected} tabIndex={-1} disableRipple color="primary" size="small" />
+                                    </ListItemIcon>
+                                    <ListItemText
+                                      primary={model.id}
+                                      primaryTypographyProps={{
+                                        sx: {
+                                          fontFamily: 'monospace',
+                                          fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                                          whiteSpace: 'nowrap',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          ...(isSelected && { fontWeight: 600 })
+                                        }
+                                      }}
+                                    />
+                                    {hasVariants && (
+                                      <IconButton
+                                        edge="end"
+                                        size="small"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setVariantExpanded((prev) => ({ ...prev, [model.id]: !expanded }));
+                                        }}
+                                        sx={{ ml: 0.5 }}
+                                        title={expanded ? t('channel_edit.collapse') : t('channel_edit.expand')}
+                                      >
+                                        <Icon icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'} />
+                                      </IconButton>
+                                    )}
+                                  </ListItem>
+                                  {hasVariants && (
+                                    <Collapse in={expanded} timeout="auto">
+                                      <List dense disablePadding sx={{ pl: { xs: 5, sm: 6 } }}>
+                                        {variantMap[model.id].map((v) => {
+                                          const vModel = { id: v.model, group: model.group };
+                                          const vSelected = selectedModels.some((m) => m.id === vModel.id);
+                                          return (
+                                            <ListItem
+                                              key={vModel.id}
+                                              dense
+                                              button
+                                              onClick={() => handleModelToggle(vModel)}
+                                              sx={{
+                                                borderRadius: 1,
+                                                mb: 0.25,
+                                                py: { xs: 0.5, sm: 0.25 },
+                                                '&:hover': {
+                                                  bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)')
+                                                },
+                                                ...(vSelected && {
+                                                  bgcolor: (theme) =>
+                                                    theme.palette.mode === 'dark' ? 'rgba(144,202,249,0.12)' : 'rgba(33,150,243,0.06)'
+                                                })
+                                              }}
+                                            >
+                                              <ListItemIcon sx={{ minWidth: { xs: 36, sm: 42 } }}>
+                                                <Checkbox edge="start" checked={vSelected} tabIndex={-1} disableRipple color="primary" size="small" />
+                                              </ListItemIcon>
+                                              <ListItemText
+                                                primary={vModel.id}
+                                                secondary={v.price_display ? `${v.price_display.type === 'times' ? 'USD/each' : 'USD/1k tokens'}: ${v.price_display.input_usd || ''}${v.price_display.output_usd ? ' / ' + v.price_display.output_usd : ''}` : ''}
+                                                primaryTypographyProps={{
+                                                  sx: { fontFamily: 'monospace', fontSize: { xs: '0.78rem', sm: '0.85rem' } }
+                                                }}
+                                                secondaryTypographyProps={{ sx: { fontSize: '0.72rem', opacity: 0.8 } }}
+                                              />
+                                            </ListItem>
+                                          );
+                                        })}
+                                      </List>
+                                    </Collapse>
+                                  )}
+                                </Box>
                               );
                             })}
                           </List>

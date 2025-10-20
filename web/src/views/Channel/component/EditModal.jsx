@@ -62,14 +62,15 @@ const getValidationSchema = (t) =>
     test_model: Yup.string(),
     models: Yup.array().min(1, t('channel_edit.requiredModels')),
     groups: Yup.array().min(1, t('channel_edit.requiredGroup')),
-    base_url: Yup.string().when('type', {
-      is: (value) => [3, 8].includes(value),
-      then: Yup.string().required(t('channel_edit.requiredBaseUrl')), // base_url 是必需的
-      otherwise: Yup.string() // 在其他情况下，base_url 可以是任意字符串
+    base_url: Yup.string().when(['type', 'openai_upstream'], {
+      is: (type, upstream) => [3, 8].includes(type) || (type === 1 && upstream === 'mountsea'),
+      then: Yup.string().required(t('channel_edit.requiredBaseUrl')), // base_url 必填：Azure/自定义/或 OpenAI+MountSea 上游
+      otherwise: Yup.string()
     }),
     model_mapping: Yup.array(),
     model_headers: Yup.array(),
-    custom_parameter: Yup.string().nullable()
+    custom_parameter: Yup.string().nullable(),
+    openai_upstream: Yup.string()
   });
 
 // MiniMax 上游供应商选项（后续可按渠道类型扩展）
@@ -77,6 +78,14 @@ const MINIMAX_UPSTREAM_OPTIONS = [
   { value: '', label: '默认（官方）' },
   { value: 'official', label: '官方（直连）' },
   { value: 'ppinfra', label: 'PPInfra（聚合）' }
+];
+
+// OpenAI 上游供应商选项
+const OPENAI_UPSTREAM_OPTIONS = [
+  { value: '', label: '默认（官方）' },
+  { value: 'official', label: '官方（OpenAI）' },
+  { value: 'openrouter', label: 'OpenRouter（聚合）' },
+  { value: 'mountsea', label: 'MountSea' }
 ];
 
 const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, modelOptions, prices }) => {
@@ -444,24 +453,29 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
         if (data.plugin === null) {
           data.plugin = {};
         }
-        // 解析 custom_parameter 顶层 upstream 作为 UI 展示的上游选项
-        if (!data.minimax_upstream && data.custom_parameter) {
+        // 解析 custom_parameter 顶层 upstream 作为 UI 展示的上游选项（minimax/openai）
+        if ((data.type === 27 || data.type === 1) && data.custom_parameter) {
           try {
             const obj = JSON.parse(data.custom_parameter);
             if (obj && typeof obj === 'object') {
-              if (obj.video && typeof obj.video === 'object' && obj.video.upstream) {
-                data.minimax_upstream = obj.video.upstream;
-              } else if (obj.upstream) {
-                data.minimax_upstream = obj.upstream;
+              if (data.type === 27) {
+                if (obj.video && typeof obj.video === 'object' && obj.video.upstream) {
+                  data.minimax_upstream = obj.video.upstream;
+                } else if (obj.upstream) {
+                  data.minimax_upstream = obj.upstream;
+                }
+              } else if (data.type === 1) {
+                if (obj.upstream) {
+                  data.openai_upstream = obj.upstream;
+                }
               }
             }
           } catch (e) {
             // ignore parse error, 交给原有校验
           }
         }
-        if (!data.minimax_upstream) {
-          data.minimax_upstream = 'official';
-        }
+        if (data.type === 27 && !data.minimax_upstream) data.minimax_upstream = 'official';
+        if (data.type === 1 && !data.openai_upstream) data.openai_upstream = 'official';
 
         initChannel(data.type);
         setInitialInput(data);
@@ -566,6 +580,18 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                         } else if (next === 'official' || next === '') {
                           setFieldValue('base_url', 'https://api.minimaxi.com');
                         }
+                        // 同步 custom_parameter 顶层 upstream，方便后端/视频客户端解析
+                        try {
+                          const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};
+                          if (next && next !== 'official') {
+                            obj.upstream = next;
+                          } else {
+                            if (obj && typeof obj === 'object' && 'upstream' in obj) delete obj.upstream;
+                          }
+                          setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
+                        } catch (_) {
+                          // 保守处理：不破坏用户自定义 JSON
+                        }
                       }}
                     >
                       {MINIMAX_UPSTREAM_OPTIONS.map((opt) => (
@@ -576,6 +602,53 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                     </Select>
                     <FormHelperText id="helper-tex-minimax-upstream-label">
                       仅影响 MiniMax 视频/文本/语音的上游请求入口，默认官方直连；高级按能力覆盖可在下方“额外参数”JSON中配置。
+                    </FormHelperText>
+                  </FormControl>
+                )}
+
+                {/* OpenAI 专用：上游供应商选择（顶层 upstream） */}
+                {!isTag && values.type === 1 && (
+                  <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
+                    <InputLabel id="openai-upstream-label">上游供应商</InputLabel>
+                    <Select
+                      labelId="openai-upstream-label"
+                      id="openai-upstream"
+                      name="openai_upstream"
+                      value={values.openai_upstream || ''}
+                      label="上游供应商"
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setFieldValue('openai_upstream', next);
+                        if (next === 'openrouter') {
+                          setFieldValue('base_url', 'https://openrouter.ai/api');
+                        } else if (next === 'mountsea') {
+                          // MountSea 需使用其 API 域名，默认给出可识别占位，建议按实际端点覆盖
+                          setFieldValue('base_url', 'https://api.mountsea.ai');
+                        } else if (next === 'official' || next === '') {
+                          setFieldValue('base_url', 'https://api.openai.com');
+                        }
+                        // 将选择同步到 custom_parameter 顶层 upstream（OpenAIProvider 将按此切换基础域名/视频上游识别）
+                        try {
+                          const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};
+                          if (next && next !== 'official') {
+                            obj.upstream = next;
+                          } else {
+                            if (obj && typeof obj === 'object' && 'upstream' in obj) delete obj.upstream;
+                          }
+                          setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
+                        } catch (_) {
+                          // 不打断提交流程，交由用户自行修正 JSON
+                        }
+                      }}
+                    >
+                      {OPENAI_UPSTREAM_OPTIONS.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText id="helper-tex-openai-upstream-label">
+                      可选官方 / OpenRouter / MountSea。选择 OpenRouter/MountSea 将自动切换基础地址与 custom_parameter.upstream；如使用 MountSea，请确认 API 基础地址为你的 MountSea 端点。
                     </FormHelperText>
                   </FormControl>
                 )}

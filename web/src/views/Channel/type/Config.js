@@ -18,7 +18,8 @@ const defaultConfig = {
     pre_cost: 1,
     disabled_stream: [],
     compatible_response: false,
-    minimax_upstream: 'official'
+    minimax_upstream: 'official',
+    openai_upstream: 'official'
   },
   inputLabel: {
     name: '渠道名称',

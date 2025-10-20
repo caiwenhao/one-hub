@@ -1,0 +1,424 @@
+openapi: 3.0.3
+info:
+  title: One Hub - OpenAI 渠道 API
+  version: 1.0.0
+  description: |
+    One Hub 提供的 OpenAI 渠道代理接口（完全兼容 OpenAI 路由）。
+    - 认证：使用 One Hub 的用户 Token（非 OpenAI 平台 Key）
+    - 域名：导入后可在 Apifox 环境中替换为你的 One Hub 地址
+    - 兼容性：除标准文本/多模态接口外，包含 Sora 视频 API（/v1/videos）
+servers:
+  - url: https://onehub.example.com
+    description: 你的 One Hub 服务地址（导入后可在 Apifox 环境改成实际值）
+security:
+  - bearerAuth: []
+paths:
+  /v1/chat/completions:
+    post:
+      summary: Chat Completions（聊天补全）
+      description: 兼容 OpenAI 官方 /v1/chat/completions。支持流式（stream=true）与工具调用。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+            examples:
+              basic:
+                summary: 基础对话
+                value:
+                  model: gpt-4o-mini
+                  messages:
+                    - role: user
+                      content: 写一首七言绝句，主题是春雨
+                  temperature: 0.7
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+  /v1/responses:
+    post:
+      summary: Responses（统一多模态）
+      description: 兼容 OpenAI 官方 /v1/responses，适合多模态、工具调用、JSON 结果等复杂工作流。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model: { type: string }
+                input:
+                  oneOf:
+                    - type: string
+                    - type: array
+                tools:
+                  type: array
+                  items: { type: object }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1/embeddings:
+    post:
+      summary: Embeddings（文本向量）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbeddingsRequest'
+            examples:
+              basic:
+                value:
+                  model: text-embedding-3-small
+                  input: 吾尝终日而思矣，不如须臾之所学也
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddingsResponse'
+  /v1/moderations:
+    post:
+      summary: Moderations（内容安全）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationResponse'
+  /v1/models:
+    get:
+      summary: 列出可用模型
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object: { type: string, example: list }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        object: { type: string, example: model }
+  /v1/audio/speech:
+    post:
+      summary: 文本转语音（TTS）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model: { type: string, example: gpt-4o-mini-tts }
+                voice: { type: string, example: alloy }
+                input: { type: string, example: 你好，欢迎使用 One Hub！ }
+      responses:
+        '200':
+          description: 返回音频流
+          content:
+            audio/mpeg:
+              schema: { type: string, format: binary }
+            application/octet-stream:
+              schema: { type: string, format: binary }
+  /v1/audio/transcriptions:
+    post:
+      summary: 语音转文字（ASR）
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                model: { type: string, example: whisper-1 }
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text: { type: string }
+  /v1/images/generations:
+    post:
+      summary: 文生图
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model: { type: string, example: gpt-image-1 }
+                prompt: { type: string }
+                size: { type: string, example: 1024x1024 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        url: { type: string }
+                        b64_json: { type: string }
+  /v1/images/edits:
+    post:
+      summary: 图像编辑
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                model: { type: string, example: gpt-image-1 }
+                image: { type: string, format: binary }
+                prompt: { type: string }
+                mask: { type: string, format: binary }
+      responses:
+        '200':
+          description: 成功
+  /v1/images/variations:
+    post:
+      summary: 图像变体
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                model: { type: string, example: gpt-image-1 }
+                image: { type: string, format: binary }
+      responses:
+        '200': { description: 成功 }
+  /v1/videos:
+    post:
+      summary: 创建视频任务（Sora Video API）
+      description: 兼容 OpenAI /v1/videos。支持 prompt 文生视频、input_image(s) 图生视频、remix 复刻等。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VideoCreateRequest'
+            examples:
+              text2video:
+                value:
+                  model: sora-2
+                  prompt: a calico cat playing a piano on stage
+                  seconds: 10
+                  size: 1280x720
+              image2video:
+                value:
+                  model: sora-2-pro
+                  input_image: https://example.com/cat.jpg
+                  seconds: 10
+                  size: 1792x1024
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoJob'
+  /v1/videos/{id}:
+    get:
+      summary: 查询视频任务
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoJob'
+  /v1/videos/{id}/content:
+    get:
+      summary: 下载视频内容
+      description: 可选 query 参数 `variant` 指定变体（缺省返回主视频）。
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: variant
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: 返回视频二进制流
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant, tool]
+        content:
+          oneOf:
+            - type: string
+            - type: array
+        name: { type: string }
+    ChatCompletionRequest:
+      type: object
+      required: [model, messages]
+      properties:
+        model: { type: string }
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        temperature: { type: number, format: float, minimum: 0, maximum: 2 }
+        max_tokens: { type: integer, minimum: 1 }
+        stream: { type: boolean }
+        stream_options:
+          type: object
+          properties:
+            include_usage: { type: boolean }
+        tools:
+          type: array
+          items: { type: object }
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id: { type: string }
+        object: { type: string, example: chat.completion }
+        created: { type: integer }
+        model: { type: string }
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index: { type: integer }
+              message:
+                $ref: '#/components/schemas/ChatMessage'
+              finish_reason: { type: string }
+        usage:
+          type: object
+          properties:
+            prompt_tokens: { type: integer }
+            completion_tokens: { type: integer }
+            total_tokens: { type: integer }
+    EmbeddingsRequest:
+      type: object
+      required: [model, input]
+      properties:
+        model: { type: string }
+        input:
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+    EmbeddingsResponse:
+      type: object
+      properties:
+        object: { type: string, example: list }
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              object: { type: string, example: embedding }
+              embedding:
+                type: array
+                items: { type: number }
+              index: { type: integer }
+        model: { type: string }
+    ModerationRequest:
+      type: object
+      required: [model, input]
+      properties:
+        model: { type: string, example: omni-moderation-latest }
+        input: { type: string }
+    ModerationResponse:
+      type: object
+      properties:
+        id: { type: string }
+        model: { type: string }
+        results:
+          type: array
+          items: { type: object }
+    VideoCreateRequest:
+      type: object
+      required: [model]
+      properties:
+        model: { type: string, example: sora-2 }
+        prompt: { type: string }
+        seconds: { type: integer, example: 10 }
+        size: { type: string, example: 1280x720 }
+        remove_watermark: { type: boolean }
+        input_image: { type: string, description: URL 或 data URI }
+        input_images:
+          type: array
+          items: { type: string }
+        input_reference: { type: string }
+        remix_video_id: { type: string }
+        seed: { type: string }
+    VideoJob:
+      type: object
+      properties:
+        id: { type: string }
+        object: { type: string, example: video }
+        created_at: { type: integer }
+        status: { type: string, enum: [queued, in_progress, completed, failed] }
+        model: { type: string }
+        progress: { type: number }
+        seconds: { type: integer }
+        size: { type: string }
+        error:
+          type: object
+          properties:
+            code: {}
+            message: { type: string }
+        result:
+          type: object
+          properties:
+            video_url: { type: string }
+            thumbnail_url: { type: string }
+            spritesheet_url: { type: string }

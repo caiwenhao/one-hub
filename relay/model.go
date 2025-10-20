@@ -194,6 +194,15 @@ func inferOwnedBy(modelName string, price *model.Price) *string {
 		}
 		return &name
 	}
+    // OpenAI Sora 基础模型归属推断（sora-* 显示为 OpenAI）
+    if strings.HasPrefix(lower, "sora-") {
+        name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeOpenAI)
+        if name == model.UnknownOwnedBy || name == "" {
+            fallback := "OpenAI"
+            return &fallback
+        }
+        return &name
+    }
 	// minimaxi 视频基础模型归属推断
 	if strings.Contains(lower, "minimax-hailuo-02") ||
 		lower == "t2v-01" || lower == "t2v-01-director" ||
@@ -340,19 +349,38 @@ func buildPriceDisplay(p *model.Price) *PriceDisplay {
     return d
 }
 
+// 针对特定模型（如 Sora）调整单位展示
+func buildPriceDisplayForModel(modelName string, p *model.Price) *PriceDisplay {
+    d := buildPriceDisplay(p)
+    if d == nil {
+        return d
+    }
+    lower := strings.ToLower(strings.TrimSpace(modelName))
+    if strings.HasPrefix(lower, "sora-2") { // 包含 sora-2 与 sora-2-pro
+        // Sora 采用“按秒=按 token”结算，为避免误解，单位改为 USD/sec
+        d.Unit = "USD/sec"
+    }
+    return d
+}
+
 func shouldAttachVariants(base string) (bool, string) {
     lower := strings.ToLower(strings.TrimSpace(base))
-    m := map[string]string{
-        "minimax-hailuo-02": "minimax-hailuo-02",
-        "t2v-01":             "t2v-01",
-        "t2v-01-director":    "t2v-01-director",
-        "i2v-01":             "i2v-01",
-        "i2v-01-live":        "i2v-01-live",
-        "s2v-01":             "s2v-01",
+    // 有序匹配，避免 sora-2 覆盖 sora-2-pro
+    ordered := []string{
+        // Sora 放前，且 pro 在 base 之前
+        "sora-2-pro",
+        "sora-2",
+        // minimaxi 基础视频模型
+        "minimax-hailuo-02",
+        "t2v-01-director",
+        "t2v-01",
+        "i2v-01-live",
+        "i2v-01",
+        "s2v-01",
     }
-    for k, seg := range m {
-        if strings.Contains(lower, k) || lower == k {
-            return true, seg
+    for _, k := range ordered {
+        if lower == k || strings.Contains(lower, k) {
+            return true, k
         }
     }
     return false, ""
@@ -374,7 +402,49 @@ func collectMiniMaxVariants(baseSegment string, allPrices map[string]*model.Pric
         }
         variants = append(variants, VariantDisplay{
             Model:        name,
-            PriceDisplay: buildPriceDisplay(pr),
+            PriceDisplay: buildPriceDisplayForModel(name, pr),
+        })
+    }
+    sort.Slice(variants, func(i, j int) bool { return variants[i].Model < variants[j].Model })
+    return variants
+}
+
+func collectSoraVariants(baseSegment string, allPrices map[string]*model.Price) []VariantDisplay {
+    var variants []VariantDisplay
+    prefix := strings.ToLower(baseSegment) + "-"
+
+    // 针对 sora-2/sora-2-pro 精确控制可用分辨率
+    allow := map[string]bool{}
+    switch strings.ToLower(baseSegment) {
+    case "sora-2":
+        allow["1280x720"] = true
+        allow["720x1280"] = true
+    case "sora-2-pro":
+        allow["1280x720"] = true
+        allow["720x1280"] = true
+        allow["1792x1024"] = true
+        allow["1024x1792"] = true
+    }
+
+    for name, pr := range allPrices {
+        lower := strings.ToLower(name)
+        if pr == nil || pr.ChannelType != config.ChannelTypeOpenAI {
+            continue
+        }
+        if !strings.HasPrefix(lower, prefix) {
+            continue
+        }
+        if len(allow) > 0 {
+            // 仅保留允许的分辨率后缀
+            // 期望格式：sora-2-<resolution>
+            seg := strings.TrimPrefix(lower, prefix)
+            if !allow[seg] {
+                continue
+            }
+        }
+        variants = append(variants, VariantDisplay{
+            Model:        name,
+            PriceDisplay: buildPriceDisplayForModel(name, pr),
         })
     }
     sort.Slice(variants, func(i, j int) bool { return variants[i].Model < variants[j].Model })
@@ -429,10 +499,14 @@ func getAvailableModels(groupName string) map[string]*AvailableModelResponse {
                 disp = buildPriceDisplay(price)
             }
 
-            // 精确计费组合（仅对 minimaxi 视频基础模型等进行展开）
+            // 精确计费组合（对 minimaxi 与 sora 视频基础模型展开）
             var variants []VariantDisplay
             if ok, seg := shouldAttachVariants(modelName); ok {
-                variants = collectMiniMaxVariants(seg, model.PricingInstance.GetAllPrices())
+                if strings.HasPrefix(seg, "sora-2") {
+                    variants = collectSoraVariants(seg, model.PricingInstance.GetAllPrices())
+                } else {
+                    variants = collectMiniMaxVariants(seg, model.PricingInstance.GetAllPrices())
+                }
             }
 
             availableModels[modelName] = &AvailableModelResponse{

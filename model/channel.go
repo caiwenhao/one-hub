@@ -43,9 +43,11 @@ type Channel struct {
 
 	DisabledStream *datatypes.JSONSlice[string] `json:"disabled_stream,omitempty" gorm:"type:json"`
 
-	Plugin          *datatypes.JSONType[PluginType] `json:"plugin" form:"plugin" gorm:"type:json"`
-	MiniMaxUpstream string                          `json:"minimax_upstream,omitempty" form:"minimax_upstream" gorm:"-"`
-	DeletedAt       gorm.DeletedAt                  `json:"-" gorm:"index"`
+    Plugin          *datatypes.JSONType[PluginType] `json:"plugin" form:"plugin" gorm:"type:json"`
+    MiniMaxUpstream string                          `json:"minimax_upstream,omitempty" form:"minimax_upstream" gorm:"-"`
+    // OpenAIUpstream 仅用于前端表单传参展示，不入库
+    OpenAIUpstream  string                          `json:"openai_upstream,omitempty" form:"openai_upstream" gorm:"-"`
+    DeletedAt       gorm.DeletedAt                  `json:"-" gorm:"index"`
 }
 
 func (c *Channel) AllowStream(modelName string) bool {

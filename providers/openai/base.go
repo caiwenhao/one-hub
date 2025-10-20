@@ -89,6 +89,9 @@ func getOpenAIConfig(baseURL string, channel *model.Channel) base.ProviderConfig
                     switch strings.ToLower(strings.TrimSpace(up)) {
                     case "openrouter":
                         providerConfig.BaseURL = "https://openrouter.ai/api"
+                    case "mountsea":
+                        // MountSea 聚合：遵循 OpenAI 标准路由，默认基础域名，可由渠道 base_url 覆盖
+                        providerConfig.BaseURL = "https://api.mountsea.ai"
                     }
                 }
             }
