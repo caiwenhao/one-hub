@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Grid, Box, Stack, Typography, Button } from '@mui/material';
+import { Grid, Box, Button } from '@mui/material';
 import { gridSpacing } from 'store/constant';
 import StatisticalLineChartCard from './component/StatisticalLineChartCard';
 import ApexCharts from 'ui-component/chart/ApexCharts';
@@ -15,6 +15,7 @@ import QuickStartCard from './component/QuickStartCard';
 import RPM from './component/RPM';
 import StatusPanel from './component/StatusPanel';
 import { useSelector } from 'react-redux';
+import PageHeader from 'ui-component/PageHeader';
 
 // TabPanel component for tab content
 function TabPanel(props) {
@@ -154,57 +155,54 @@ const Dashboard = () => {
     </Grid>
   );
 
+  const headerActions = siteInfo.UptimeEnabled
+    ? [
+        (
+          <Button
+            key="dashboard"
+            onClick={() => handleTabChange(0)}
+            variant={currentTab === 0 ? 'contained' : 'text'}
+            size="small"
+            disableElevation
+            sx={{
+              padding: '6px 16px',
+              borderRadius: '4px',
+              backgroundColor: currentTab === 0 ? 'primary.main' : 'transparent',
+              color: currentTab === 0 ? 'white' : 'text.primary',
+              '&:hover': {
+                backgroundColor: currentTab === 0 ? 'primary.dark' : 'action.hover'
+              }
+            }}
+          >
+            {t('dashboard_index.tab_dashboard')}
+          </Button>
+        ),
+        (
+          <Button
+            key="status"
+            onClick={() => handleTabChange(1)}
+            variant={currentTab === 1 ? 'contained' : 'text'}
+            size="small"
+            disableElevation
+            sx={{
+              padding: '6px 16px',
+              borderRadius: '4px',
+              backgroundColor: currentTab === 1 ? 'primary.main' : 'transparent',
+              color: currentTab === 1 ? 'white' : 'text.primary',
+              '&:hover': {
+                backgroundColor: currentTab === 1 ? 'primary.dark' : 'action.hover'
+              }
+            }}
+          >
+            {t('dashboard_index.tab_status')}
+          </Button>
+        )
+      ]
+    : [];
+
   return (
     <>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
-        <Stack direction="row" alignItems="center" spacing={3}>
-          <Stack direction="column" spacing={1}>
-            <Typography variant="h2">{t('dashboard_index.title')}</Typography>
-            <Typography variant="subtitle1" color="text.secondary">
-              Dashboard
-            </Typography>
-          </Stack>
-
-          {siteInfo.UptimeEnabled && (
-            <Stack direction="row" spacing={1}>
-              <Button 
-                onClick={() => handleTabChange(0)}
-                variant={currentTab === 0 ? "contained" : "text"}
-                size="small"
-                disableElevation
-                sx={{
-                  padding: '6px 16px',
-                  borderRadius: '4px',
-                  backgroundColor: currentTab === 0 ? 'primary.main' : 'transparent',
-                  color: currentTab === 0 ? 'white' : 'text.primary',
-                  '&:hover': {
-                    backgroundColor: currentTab === 0 ? 'primary.dark' : 'action.hover'
-                  }
-                }}
-              >
-                {t('dashboard_index.tab_dashboard')}
-              </Button>
-              <Button 
-                onClick={() => handleTabChange(1)}
-                variant={currentTab === 1 ? "contained" : "text"}
-                size="small"
-                disableElevation
-                sx={{
-                  padding: '6px 16px',
-                  borderRadius: '4px',
-                  backgroundColor: currentTab === 1 ? 'primary.main' : 'transparent',
-                  color: currentTab === 1 ? 'white' : 'text.primary',
-                  '&:hover': {
-                    backgroundColor: currentTab === 1 ? 'primary.dark' : 'action.hover'
-                  }
-                }}
-              >
-                {t('dashboard_index.tab_status')}
-              </Button>
-            </Stack>
-          )}
-        </Stack>
-      </Stack>
+      <PageHeader title={t('dashboard_index.title')} subtitle="Dashboard" actions={headerActions} />
 
       {siteInfo.UptimeEnabled ? (
         <>

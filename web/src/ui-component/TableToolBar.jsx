@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { Icon } from '@iconify/react';
 
-import Toolbar from '@mui/material/Toolbar';
+import Stack from '@mui/material/Stack';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import InputAdornment from '@mui/material/InputAdornment';
 
@@ -14,19 +14,15 @@ export default function TableToolBar({ placeholder }) {
   const grey500 = theme.palette.grey[500];
 
   return (
-    <Toolbar
-      sx={{
-        height: 80,
-        display: 'flex',
-        justifyContent: 'space-between',
-        p: (theme) => theme.spacing(0, 1, 0, 3)
-      }}
-    >
+    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ width: '100%' }}>
       <OutlinedInput
         id="keyword"
         name="keyword"
         sx={{
-          minWidth: '100%',
+          flex: 1,
+          minWidth: 0,
+          backgroundColor: theme.palette.background.paper,
+          borderRadius: `${theme.shape.borderRadius}px`,
           '& .MuiInputAdornment-root:hover': {
             '& .search-icon': {
               borderRadius: '50%',
@@ -36,13 +32,14 @@ export default function TableToolBar({ placeholder }) {
           }
         }}
         placeholder={placeholder}
+        size="small"
         startAdornment={
           <InputAdornment position="start">
             <Icon icon="solar:minimalistic-magnifer-line-duotone" className="search-icon" width="20" height="20" color={grey500} />
           </InputAdornment>
         }
       />
-    </Toolbar>
+    </Stack>
   );
 }
 

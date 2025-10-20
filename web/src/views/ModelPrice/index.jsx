@@ -1,30 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
-import {
-  Card,
-  Stack,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Box,
-  InputBase,
-  Paper,
-  IconButton,
-  Fade,
-  useMediaQuery,
-  Avatar,
-  ButtonBase,
-  Tooltip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
-} from '@mui/material';
+import { Card, Stack, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box, InputBase, Paper, IconButton, Fade, useMediaQuery, Avatar, ButtonBase, Tooltip, FormControl, InputLabel, Select, MenuItem, Button, ButtonGroup } from '@mui/material';
+import FilterBar from 'ui-component/FilterBar';
+import ActionBar from 'ui-component/ActionBar';
 import { Icon } from '@iconify/react';
 import { API } from 'utils/api';
 import { showError, ValueFormatter, copy, useIsAdmin } from 'utils/common';
@@ -261,15 +240,7 @@ export default function ModelPrice() {
         </Typography>
       </Box>
 
-      <Card
-        elevation={0}
-        sx={{
-          p: 3,
-          overflow: 'visible',
-          backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.6) : theme.palette.background.paper,
-          borderRadius: 2
-        }}
-      >
+      <FilterBar sx={{ p: 0 }}>
         {/* 搜索和单位选择 */}
         <Box
           sx={{
@@ -691,7 +662,14 @@ export default function ModelPrice() {
             })}
           </Box>
         </Box>
-      </Card>
+      </FilterBar>
+
+      <ActionBar>
+        <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
+          <Button onClick={clearSearch}>{t('common.reset')}</Button>
+          <Button onClick={() => setExpanded({})}>{t('common.collapseAll')}</Button>
+        </ButtonGroup>
+      </ActionBar>
 
       <Card
         sx={{

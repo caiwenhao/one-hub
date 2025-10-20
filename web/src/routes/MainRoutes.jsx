@@ -29,6 +29,7 @@ const InvoiceDetail = Loadable(lazy(() => import('views/Invoice/detail')));
 const Dashboard = Loadable(lazy(() => import('views/Dashboard')));
 
 const SystemInfo = Loadable(lazy(() => import('views/SystemInfo')));
+const Styleguide = Loadable(lazy(() => import('views/Styleguide')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -127,6 +128,10 @@ const MainRoutes = {
     {
       path: 'model_ownedby',
       element: <ModelOwnedby />
+    },
+    {
+      path: 'styleguide',
+      element: <Styleguide />
     },
     {
       path: 'system_info',

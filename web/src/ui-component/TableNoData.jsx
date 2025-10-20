@@ -1,22 +1,12 @@
 import PropTypes from 'prop-types';
-import { Box, Typography, TableRow, TableCell } from '@mui/material';
+import { TableRow, TableCell } from '@mui/material';
+import EmptyState from './EmptyState';
 
 const TableNoData = ({ message = '暂无数据' }) => {
   return (
     <TableRow>
       <TableCell colSpan={1000}>
-        <Box
-          sx={{
-            minHeight: '490px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <Typography variant="h3" color={'#697586'}>
-            {message}
-          </Typography>
-        </Box>
+        <EmptyState title={message} description={null} sx={{ minHeight: 240 }} />
       </TableCell>
     </TableRow>
   );

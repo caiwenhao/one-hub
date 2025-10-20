@@ -4,7 +4,10 @@ import { showError, trims } from 'utils/common';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import FilterBar from 'ui-component/FilterBar';
+import ActionBar from 'ui-component/ActionBar';
+import ScrollArea from 'ui-component/ScrollArea';
 import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -220,19 +223,13 @@ export default function Log() {
             })}
           </Tabs>
         </Box>
-        <Box component="form" noValidate>
-          <TableToolBar filterName={toolBarValue} handleFilterName={handleToolBarValue} userIsAdmin={userIsAdmin} />
-        </Box>
-        <Toolbar
-          sx={{
-            textAlign: 'right',
-            height: 50,
-            display: 'flex',
-            justifyContent: 'space-between',
-            p: (theme) => theme.spacing(0, 1, 0, 3)
-          }}
-        >
-          <Container maxWidth="xl">
+        <FilterBar>
+          <Box component="form" noValidate>
+            <TableToolBar filterName={toolBarValue} handleFilterName={handleToolBarValue} userIsAdmin={userIsAdmin} />
+          </Box>
+        </FilterBar>
+        <ActionBar>
+          <Container maxWidth="xl" disableGutters>
             {matchUpMd ? (
               <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
                 <Button onClick={handleRefresh} size="small" startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
@@ -317,10 +314,10 @@ export default function Log() {
               )}
             </Menu>
           </Container>
-        </Toolbar>
+        </ActionBar>
         {searching && <LinearProgress />}
-        <PerfectScrollbar component="div">
-          <TableContainer sx={{ overflow: 'unset' }}>
+        <ScrollArea>
+          <TableContainer sx={{ overflow: 'auto' }}>
             <Table sx={{ minWidth: 800 }}>
               <KeywordTableHead
                 order={order}
@@ -421,7 +418,7 @@ export default function Log() {
               </TableBody>
             </Table>
           </TableContainer>
-        </PerfectScrollbar>
+        </ScrollArea>
         <TablePagination
           page={page}
           component="div"

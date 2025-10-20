@@ -10,11 +10,14 @@ import { store } from 'store';
 
 // style + assets
 import 'assets/scss/style.scss';
+import { applyTokens } from 'design/applyTokens';
 import config from './config';
 import reportWebVitals from 'reportWebVitals';
 // ==============================|| REACT DOM RENDER  ||============================== //
 
 const container = document.getElementById('root');
+// 注入设计令牌 CSS 变量（企业稳重风格）
+applyTokens();
 const root = createRoot(container); // createRoot(container!) if you use TypeScript
 root.render(
   <Provider store={store}>

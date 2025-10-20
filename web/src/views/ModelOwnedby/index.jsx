@@ -4,7 +4,8 @@ import { showError, showSuccess } from 'utils/common';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import ScrollArea from 'ui-component/ScrollArea';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Toolbar from '@mui/material/Toolbar';
 
@@ -341,7 +342,7 @@ export default function ModelOwnedby() {
               </ButtonGroup>
             </Container>
           </Toolbar>
-          <PerfectScrollbar component="div">
+          <ScrollArea>
             <TableContainer sx={{ overflow: 'unset' }}>
               <Table sx={{ minWidth: 800 }}>
                 <KeywordTableHead
@@ -365,7 +366,7 @@ export default function ModelOwnedby() {
                 </TableBody>
               </Table>
             </TableContainer>
-          </PerfectScrollbar>
+          </ScrollArea>
         </Card>
       </TabPanel>
 

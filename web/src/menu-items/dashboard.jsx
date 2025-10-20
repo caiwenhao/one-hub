@@ -4,7 +4,8 @@ const icons = {
   IconDashboard: () => <Icon width={20} icon="solar:widget-2-bold-duotone" />,
   IconChartHistogram: () => <Icon width={20} icon="solar:chart-2-bold-duotone" />,
   IconBallFootball: () => <Icon width={20} icon="solar:chat-round-line-bold-duotone" />,
-  IconSystemInfo: () => <Icon width={20} icon="solar:code-scan-bold" />
+  IconSystemInfo: () => <Icon width={20} icon="solar:code-scan-bold" />,
+  IconStyle: () => <Icon width={20} icon="solar:palette-2-bold-duotone" />
 };
 
 const dashboard = {
@@ -37,6 +38,15 @@ const dashboard = {
       url: '/panel/playground',
       icon: icons.IconBallFootball,
       breadcrumbs: false
+    },
+    {
+      id: 'styleguide',
+      title: 'UI规范',
+      type: 'item',
+      url: '/panel/styleguide',
+      icon: icons.IconStyle,
+      breadcrumbs: false,
+      isAdmin: true
     },
     {
       id: 'systemInfo',

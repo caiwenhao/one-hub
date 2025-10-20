@@ -4,7 +4,8 @@ import { showError, showSuccess, trims } from 'utils/common';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import ScrollArea from 'ui-component/ScrollArea';
 import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -192,7 +193,7 @@ export default function Redemption() {
           </Container>
         </Toolbar>
         {searching && <LinearProgress />}
-        <PerfectScrollbar component="div">
+        <ScrollArea>
           <TableContainer sx={{ overflow: 'unset' }}>
             <Table sx={{ minWidth: 800 }}>
               <KeywordTableHead
@@ -222,7 +223,7 @@ export default function Redemption() {
               </TableBody>
             </Table>
           </TableContainer>
-        </PerfectScrollbar>
+        </ScrollArea>
         <TablePagination
           page={page}
           component="div"

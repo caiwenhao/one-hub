@@ -7,7 +7,7 @@ import { Box, Chip, Drawer, Stack, useMediaQuery } from '@mui/material';
 import { useSelector } from 'react-redux';
 
 // third-party
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
 import { BrowserView, MobileView } from 'react-device-detect';
 
 // project imports
@@ -52,33 +52,23 @@ const Sidebar = ({ drawerOpen, drawerToggle, window: windowProp }) => {
             position: 'relative'
           }}
         >
-          <PerfectScrollbar
+          <Box
             component="div"
-            key={`perfect-scrollbar-${customization.isOpen.length}`}
-            options={{
-              wheelPropagation: false,
-              suppressScrollX: true,
-              minScrollbarLength: 40,
-              maxScrollbarLength: 100,
-              updateOnWindowResize: true
-            }}
-            style={{
+            key={`native-scroll-${customization.isOpen.length}`}
+            sx={{
               height: '100%',
-              paddingLeft: '16px',
-              paddingRight: '16px',
-              paddingTop: '8px',
-              paddingBottom: '16px'
-            }}
-            containerRef={(ref) => {
-              if (ref) {
-                // 在组件挂载和更新时添加resize监听
-                const resizeObserver = new ResizeObserver(() => {
-                  // 当内容大小变化时，通知PerfectScrollbar更新
-                  if (ref.ps) ref.ps.update();
-                });
-                resizeObserver.observe(ref);
-                // 保存引用以便在组件卸载时清理
-                ref._resizeObserver = resizeObserver;
+              px: 2,
+              pt: 1,
+              pb: 2,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'thin',
+              '&::-webkit-scrollbar': {
+                width: '6px'
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
+                borderRadius: '4px'
               }
             }}
           >
@@ -112,7 +102,7 @@ const Sidebar = ({ drawerOpen, drawerToggle, window: windowProp }) => {
                 />
               </Stack>
             </Box>
-          </PerfectScrollbar>
+          </Box>
         </Box>
       </BrowserView>
       <MobileView>
@@ -228,6 +218,7 @@ const Sidebar = ({ drawerOpen, drawerToggle, window: windowProp }) => {
             }),
             boxSizing: 'border-box',
             borderRadius: 0,
+            overflowY: 'hidden',
             [theme.breakpoints.up('md')]: {
               top: '64px',
               height: 'calc(100% - 64px)',

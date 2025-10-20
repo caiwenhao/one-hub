@@ -4,12 +4,11 @@ import { Link } from 'react-router-dom';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
-import { Box, Card, Divider, Grid, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import MuiBreadcrumbs from '@mui/material/Breadcrumbs';
 
 // project imports
 import config from 'config';
-import { gridSpacing } from 'store/constant';
 
 // assets
 import { IconTallymark1 } from '@tabler/icons-react';
@@ -27,7 +26,19 @@ const linkSX = {
 
 // ==============================|| BREADCRUMBS ||============================== //
 
-const Breadcrumbs = ({ card, divider, icon, icons, maxItems, navigation, rightAlign, separator, title, titleBottom, ...others }) => {
+const Breadcrumbs = ({
+  card = true,
+  divider = true,
+  icon,
+  icons,
+  maxItems,
+  navigation,
+  rightAlign,
+  separator,
+  title,
+  titleBottom,
+  ...others
+}) => {
   const theme = useTheme();
 
   const iconStyle = {
@@ -117,60 +128,79 @@ const Breadcrumbs = ({ card, divider, icon, icons, maxItems, navigation, rightAl
       </Typography>
     );
 
-    // main
     if (item.breadcrumbs !== false) {
+      const useRowLayout = rightAlign && !titleBottom;
+      const renderRightBreadcrumb = useRowLayout && title;
+
+      const titleNode = (
+        <Typography variant="h3" sx={{ fontWeight: 500 }}>
+          {item.title}
+        </Typography>
+      );
+
+      const breadcrumbsNode = (
+        <MuiBreadcrumbs
+          sx={{ '& .MuiBreadcrumbs-separator': { width: 16, ml: 1.25, mr: 1.25 } }}
+          aria-label="breadcrumb"
+          maxItems={maxItems || 8}
+          separator={separatorIcon}
+        >
+          <Typography component={Link} to="/" color="inherit" variant="subtitle1" sx={linkSX}>
+            {icons && <HomeTwoToneIcon sx={iconStyle} />}
+            {icon && <HomeIcon sx={{ ...iconStyle, mr: 0 }} />}
+            {!icon && 'Dashboard'}
+          </Typography>
+          {mainContent}
+          {itemContent}
+        </MuiBreadcrumbs>
+      );
+
+      const leftSection = [];
+      if (title && !titleBottom) {
+        leftSection.push(titleNode);
+      }
+      if (!renderRightBreadcrumb) {
+        leftSection.push(breadcrumbsNode);
+      }
+      if (title && titleBottom) {
+        leftSection.push(titleNode);
+      }
+
       breadcrumbContent = (
-        <Card
+        <Box
           sx={{
-            marginBottom: card === false ? 0 : theme.spacing(gridSpacing),
-            border: card === false ? 'none' : '1px solid',
-            borderColor: theme.palette.primary[200] + 75,
-            background: card === false ? 'transparent' : theme.palette.background.default
+            mb: theme.spacing(card ? 3 : 2.5),
+            ...(card
+              ? {
+                  px: { xs: 1.5, md: 2 },
+                  py: { xs: 1.25, md: 1.5 },
+                  borderRadius: `${theme.shape.borderRadius}px`,
+                  border: `1px solid ${theme.palette.divider}`,
+                  backgroundColor: theme.palette.background.paper
+                }
+              : {
+                  pb: divider !== false ? theme.spacing(1.5) : 0,
+                  borderBottom: divider !== false ? `1px solid ${theme.palette.divider}` : 'none'
+                })
           }}
           {...others}
         >
-          <Box sx={{ p: 2, pl: card === false ? 0 : 2 }}>
-            <Grid
-              container
-              direction={rightAlign ? 'row' : 'column'}
-              justifyContent={rightAlign ? 'space-between' : 'flex-start'}
-              alignItems={rightAlign ? 'center' : 'flex-start'}
-              spacing={1}
-            >
-              {title && !titleBottom && (
-                <Grid item>
-                  <Typography variant="h3" sx={{ fontWeight: 500 }}>
-                    {item.title}
-                  </Typography>
-                </Grid>
-              )}
-              <Grid item>
-                <MuiBreadcrumbs
-                  sx={{ '& .MuiBreadcrumbs-separator': { width: 16, ml: 1.25, mr: 1.25 } }}
-                  aria-label="breadcrumb"
-                  maxItems={maxItems || 8}
-                  separator={separatorIcon}
-                >
-                  <Typography component={Link} to="/" color="inherit" variant="subtitle1" sx={linkSX}>
-                    {icons && <HomeTwoToneIcon sx={iconStyle} />}
-                    {icon && <HomeIcon sx={{ ...iconStyle, mr: 0 }} />}
-                    {!icon && 'Dashboard'}
-                  </Typography>
-                  {mainContent}
-                  {itemContent}
-                </MuiBreadcrumbs>
-              </Grid>
-              {title && titleBottom && (
-                <Grid item>
-                  <Typography variant="h3" sx={{ fontWeight: 500 }}>
-                    {item.title}
-                  </Typography>
-                </Grid>
-              )}
-            </Grid>
-          </Box>
-          {card === false && divider !== false && <Divider sx={{ borderColor: theme.palette.primary.main, mb: gridSpacing }} />}
-        </Card>
+          <Stack
+            direction={useRowLayout ? { xs: 'column', md: 'row' } : 'column'}
+            alignItems={useRowLayout ? { xs: 'flex-start', md: 'center' } : 'flex-start'}
+            justifyContent={useRowLayout ? { xs: 'flex-start', md: 'space-between' } : 'flex-start'}
+            spacing={useRowLayout ? { xs: 1, md: 1.5 } : 0.75}
+          >
+            <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+              {leftSection.map((node, index) => (
+                <Box key={index} sx={{ minWidth: 0 }}>
+                  {node}
+                </Box>
+              ))}
+            </Stack>
+            {renderRightBreadcrumb && <Box sx={{ minWidth: 0 }}>{breadcrumbsNode}</Box>}
+          </Stack>
+        </Box>
       );
     }
   }

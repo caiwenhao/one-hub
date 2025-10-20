@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Outlet } from 'react-router-dom';
 import AuthGuard from 'utils/route-guard/AuthGuard';
@@ -37,10 +37,10 @@ export const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open
           duration: theme.transitions.duration.leavingScreen
         }
   ),
-  overflowY: 'auto',
-  overflowX: 'hidden',
-  height: 'calc(100vh - 64px)',
-  paddingBottom: '30px',
+  flexGrow: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  paddingBottom: theme.spacing(4),
   marginTop: '64px',
   position: 'relative',
   scrollbarWidth: 'thin',
@@ -56,7 +56,7 @@ export const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open
     background: 'transparent'
   },
   [theme.breakpoints.up('md')]: {
-    marginLeft: open ? 0 : -(drawerWidth - 20),
+    marginLeft: 0,
     width: open ? `calc(100% - ${drawerWidth}px)` : '100%',
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3)
@@ -65,16 +65,14 @@ export const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open
     marginLeft: '0',
     width: '100%',
     padding: '16px',
-    marginTop: '64px',
-    height: 'calc(100vh - 64px)'
+    marginTop: '64px'
   },
   [theme.breakpoints.down('sm')]: {
     marginLeft: '0',
     width: '100%',
     padding: '16px',
     marginRight: '0',
-    marginTop: '56px',
-    height: 'calc(100vh - 56px)'
+    marginTop: '56px'
   }
 }));
 
@@ -101,13 +99,17 @@ const MainLayout = () => {
     setProfileDrawerOpen(false);
   };
 
+  useEffect(() => {
+    // 断点切换时自动收起移动端侧边栏，桌面端恢复常驻
+    dispatch({ type: SET_MENU, opened: !matchDownMd });
+  }, [dispatch, matchDownMd]);
+
   return (
     <Box
       sx={{
         display: 'flex',
-        overflow: 'hidden',
         width: '100%',
-        height: '100vh',
+        minHeight: '100vh',
         position: 'relative',
         backgroundColor: theme.palette.background.default
       }}
@@ -122,28 +124,25 @@ const MainLayout = () => {
         sx={{
           bgcolor: theme.palette.background.default,
           boxShadow: 'none',
-          borderBottom: 'none',
+          borderBottom: `1px solid ${theme.palette.divider}`,
           transition: leftDrawerOpened ? theme.transitions.create('width') : 'none',
-          zIndex: {
-            xs: matchDownMd && leftDrawerOpened ? 0 : theme.zIndex.drawer - 1,
-            md: theme.zIndex.drawer + 1
-          },
+          zIndex: theme.zIndex.drawer + 1,
           width: '100%',
           borderRadius: 0
         }}
       >
-        <Toolbar sx={{ px: { xs: 1.5, sm: 2, md: 3 }, minHeight: '64px', height: '64px' }}>
+        <Toolbar sx={{ px: { xs: 1.5, sm: 2, md: 3 }, minHeight: { xs: 56, sm: 64 }, height: { xs: 56, sm: 64 } }}>
           <Header handleLeftDrawerToggle={handleLeftDrawerToggle} toggleProfileDrawer={openProfileDrawer} />
         </Toolbar>
       </AppBar>
 
       {/* drawer */}
-      <Sidebar drawerOpen={!matchDownMd ? leftDrawerOpened : !leftDrawerOpened} drawerToggle={handleLeftDrawerToggle} />
+      <Sidebar drawerOpen={leftDrawerOpened} drawerToggle={handleLeftDrawerToggle} />
 
       {/* main content */}
       <Main theme={theme} open={leftDrawerOpened}>
         {/* breadcrumb */}
-        <Breadcrumbs separator={<Icon icon="solar:arrow-right-linear" width="16" />} navigation={navigation} icon title rightAlign />
+        <Breadcrumbs separator={<Icon icon="solar:arrow-right-linear" width="16" />} navigation={navigation} icon card={false} />
         <AuthGuard>
           <AdminContainer>
             <Outlet />

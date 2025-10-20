@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { useTheme } from '@mui/material/styles';
-import { Avatar, Box, ButtonBase, Hidden, Menu, MenuItem, Typography } from '@mui/material';
+import PropTypes from 'prop-types';
+import { alpha, useTheme } from '@mui/material/styles';
+import { Box, ButtonBase, Menu, MenuItem, Typography } from '@mui/material';
 import i18nList from 'i18n/i18nList';
 import useI18n from 'hooks/useI18n';
 import Flags from 'country-flag-icons/react/3x2';
-import { height } from '@mui/system';
 
-export default function I18nButton() {
+export default function I18nButton({ sx }) {
   const theme = useTheme();
   const i18n = useI18n();
 
@@ -36,50 +36,44 @@ export default function I18nButton() {
   const CurrentFlag = Flags[getCurrentCountryCode()];
 
   return (
-    <Box
-      sx={{
-        ml: 2,
-        mr: 3,
-        [theme.breakpoints.down('md')]: {
-          mr: 2
-        }
-      }}
-    >
-      <ButtonBase sx={{ borderRadius: '12px' }} onClick={handleMenuOpen}>
-        <Avatar
-          variant="rounded"
-          sx={{
-            ...theme.typography.commonAvatar,
-            ...theme.typography.mediumAvatar,
-            ...theme.typography.menuButton,
-            transition: 'all .2s ease-in-out',
-            borderColor: theme.typography.menuChip.background,
-            borderRadius: '50%',
-            background: 'transparent',
-            overflow: 'hidden',
-            '&[aria-controls="menu-list-grow"],&:hover': {
-              boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
-              background: 'transparent !important'
-            }
-          }}
-          color="inherit"
-        >
-          {CurrentFlag && (
-            <Box
-              sx={{
-                width: '1.8rem',
-                height: '1.4rem',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative'
-              }}
-            >
-              <CurrentFlag style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            </Box>
-          )}
-        </Avatar>
+    <>
+      <ButtonBase
+        aria-label="切换语言"
+        onClick={handleMenuOpen}
+        sx={{
+          width: 40,
+          height: 40,
+          borderRadius: '12px',
+          border: `1px solid ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.24 : 0.14)}`,
+          backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.7) : theme.palette.background.paper,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          transition: 'all .2s ease',
+          '&:hover': {
+            boxShadow: theme.shadows[4],
+            transform: 'translateY(-1px)'
+          },
+          ...sx
+        }}
+      >
+        {CurrentFlag && (
+          <Box
+            sx={{
+              width: '20px',
+              height: '14px',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '6px',
+              boxShadow: `0 0 0 1px ${alpha(theme.palette.common.black, 0.08)}`
+            }}
+          >
+            <CurrentFlag style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </Box>
+        )}
       </ButtonBase>
       <Menu
         anchorEl={anchorEl}
@@ -126,6 +120,10 @@ export default function I18nButton() {
           );
         })}
       </Menu>
-    </Box>
+    </>
   );
 }
+
+I18nButton.propTypes = {
+  sx: PropTypes.object
+};

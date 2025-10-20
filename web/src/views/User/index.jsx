@@ -4,14 +4,16 @@ import { showError, showSuccess, trims } from 'utils/common';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import ScrollArea from 'ui-component/ScrollArea';
 import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import ButtonGroup from '@mui/material/ButtonGroup';
-import Toolbar from '@mui/material/Toolbar';
+import FilterBar from 'ui-component/FilterBar';
+import ActionBar from 'ui-component/ActionBar';
 import { Icon } from '@iconify/react';
 
-import { Button, Card, Box, Stack, Container, Typography } from '@mui/material';
+import { Button, Card, Box } from '@mui/material';
 import UsersTableRow from './component/TableRow';
 import KeywordTableHead from 'ui-component/TableHead';
 import TableToolBar from 'ui-component/TableToolBar';
@@ -20,6 +22,7 @@ import { PAGE_SIZE_OPTIONS, getPageSize, savePageSize } from 'constants';
 import EditeModal from './component/EditModal';
 
 import { useTranslation } from 'react-i18next';
+import PageHeader from 'ui-component/PageHeader';
 // ----------------------------------------------------------------------
 export default function Users() {
   const { t } = useTranslation();
@@ -155,49 +158,37 @@ export default function Users() {
     }
   };
 
+  const headerActions = [
+    <Button
+      key="create"
+      variant="contained"
+      color="primary"
+      startIcon={<Icon icon="solar:add-circle-line-duotone" />}
+      onClick={() => handleOpenModal(0)}
+    >
+      {t('userPage.createUser')}
+    </Button>
+  ];
+
   return (
     <>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-        <Stack direction="column" spacing={1}>
-          <Typography variant="h2">{t('userPage.users')}</Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            User
-          </Typography>
-        </Stack>
-
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Icon icon="solar:add-circle-line-duotone" />}
-          onClick={() => handleOpenModal(0)}
-        >
-          {t('userPage.createUser')}
-        </Button>
-      </Stack>
+      <PageHeader title={t('userPage.users')} subtitle="User" actions={headerActions} />
       <Card>
-        <Box component="form" onSubmit={searchUsers} noValidate>
-          <TableToolBar placeholder={t('userPage.searchPlaceholder')} />
-        </Box>
-        <Toolbar
-          sx={{
-            textAlign: 'right',
-            height: 50,
-            display: 'flex',
-            justifyContent: 'space-between',
-            p: (theme) => theme.spacing(0, 1, 0, 3)
-          }}
-        >
-          <Container maxWidth="xl">
-            <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
-              <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
-                {t('userPage.refresh')}
-              </Button>
-            </ButtonGroup>
-          </Container>
-        </Toolbar>
+        <FilterBar>
+          <Box component="form" onSubmit={searchUsers} noValidate>
+            <TableToolBar placeholder={t('userPage.searchPlaceholder')} />
+          </Box>
+        </FilterBar>
+        <ActionBar>
+          <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
+            <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
+              {t('userPage.refresh')}
+            </Button>
+          </ButtonGroup>
+        </ActionBar>
         {searching && <LinearProgress />}
-        <PerfectScrollbar component="div">
-          <TableContainer sx={{ overflow: 'unset' }}>
+        <ScrollArea>
+          <TableContainer sx={{ overflow: 'auto' }}>
             <Table sx={{ minWidth: 800 }}>
               <KeywordTableHead
                 order={order}
@@ -228,7 +219,7 @@ export default function Users() {
               </TableBody>
             </Table>
           </TableContainer>
-        </PerfectScrollbar>
+        </ScrollArea>
         <TablePagination
           page={page}
           component="div"

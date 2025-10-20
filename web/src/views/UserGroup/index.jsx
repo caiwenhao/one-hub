@@ -4,11 +4,13 @@ import { showError, showSuccess } from 'utils/common';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import ScrollArea from 'ui-component/ScrollArea';
 import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Toolbar from '@mui/material/Toolbar';
+import ActionBar from 'ui-component/ActionBar';
 
 import { Button, Card, Stack, Container, Typography } from '@mui/material';
 import UserGroupTableRow from './component/TableRow';
@@ -156,25 +158,15 @@ export default function UserGroup() {
         </Button>
       </Stack>
       <Card>
-        <Toolbar
-          sx={{
-            textAlign: 'right',
-            height: 50,
-            display: 'flex',
-            justifyContent: 'space-between',
-            p: (theme) => theme.spacing(0, 1, 0, 3)
-          }}
-        >
-          <Container maxWidth="xl">
-            <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
-              <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
-                {t('userPage.refresh')}
-              </Button>
-            </ButtonGroup>
-          </Container>
-        </Toolbar>
+        <ActionBar>
+          <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
+            <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
+              {t('userPage.refresh')}
+            </Button>
+          </ButtonGroup>
+        </ActionBar>
         {searching && <LinearProgress />}
-        <PerfectScrollbar component="div">
+        <ScrollArea>
           <TableContainer sx={{ overflow: 'unset' }}>
             <Table sx={{ minWidth: 800 }}>
               <KeywordTableHead
@@ -209,7 +201,7 @@ export default function UserGroup() {
               </TableBody>
             </Table>
           </TableContainer>
-        </PerfectScrollbar>
+        </ScrollArea>
         <TablePagination
           page={page}
           component="div"

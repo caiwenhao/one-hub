@@ -61,38 +61,36 @@ export default function componentStyleOverrides(theme) {
       styleOverrides: {
         root: {
           fontWeight: 600,
-          borderRadius: '14px',
+          borderRadius: '10px',
           textTransform: 'none',
           boxShadow: 'none',
           minHeight: '36px',
           padding: '6px 16px',
           letterSpacing: '0.01em',
-          transition: 'all 0.25s ease',
+          transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
           '&.Mui-disabled': {
             color: theme.colors?.grey600
           },
-          '&:hover': {
-            boxShadow: '0 8px 24px rgba(14, 165, 255, 0.25)'
+          '&.Mui-focusVisible': {
+            outline: `2px solid ${theme.colors?.primaryMain}`,
+            outlineOffset: '2px'
           },
-          '&:active': {
-            transform: 'translateY(0)'
+          '&:hover': {
+            boxShadow: 'none'
           }
         },
         containedPrimary: {
-          background: `linear-gradient(135deg, ${theme.colors?.primaryMain}, ${theme.colors?.secondaryMain})`,
+          background: theme.colors?.primaryMain,
           color: '#fff',
-          boxShadow: '0 6px 16px rgba(14,165,255,0.24)',
           '&:hover': {
-            background: `linear-gradient(135deg, ${theme.colors?.primaryMain}, ${theme.colors?.primaryDark})`,
-            boxShadow: '0 10px 28px rgba(14,165,255,0.35)'
+            background: theme.colors?.primaryDark
           }
         },
         outlinedPrimary: {
           borderColor: theme.colors?.primaryMain,
           color: theme.colors?.primaryMain,
           '&:hover': {
-            backgroundColor: 'rgba(14, 165, 255, 0.06)',
-            boxShadow: '0 6px 16px rgba(14,165,255,0.15)'
+            backgroundColor: 'rgba(14, 165, 255, 0.06)'
           }
         },
         text: {
@@ -119,6 +117,10 @@ export default function componentStyleOverrides(theme) {
           borderRadius: '8px',
           padding: '8px',
           color: theme.darkTextPrimary,
+          '&.Mui-focusVisible': {
+            outline: `2px solid ${theme.colors?.primaryMain}`,
+            outlineOffset: '2px'
+          },
           '&:hover': {
             backgroundColor: 'rgba(0, 0, 0, 0.04)'
           }
@@ -135,38 +137,33 @@ export default function componentStyleOverrides(theme) {
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          borderRadius: '16px',
-          background: theme.mode === 'dark'
-            ? 'linear-gradient(180deg, rgba(19,21,26,0.75), rgba(26,29,35,0.65))'
-            : 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,250,252,0.8))',
-          backdropFilter: 'blur(8px)',
-          border: theme.mode === 'dark'
-            ? '1px solid rgba(139, 92, 246, 0.12)'
-            : '1px solid rgba(14, 165, 255, 0.10)',
-          boxShadow: theme.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.35)' : '0 10px 28px rgba(14,165,255,0.10)'
+          borderRadius: '12px',
+          // 注意：此处接收的是 themeOption，而非 MUI theme 对象
+          background: theme.paper,
+          border: `1px solid ${theme.divider}`,
+          boxShadow: theme.mode === 'dark' ? 'none' : '0 2px 8px rgba(0,0,0,0.06)'
         },
         rounded: {
-          borderRadius: `${theme?.customization?.borderRadius || 14}px`
+          borderRadius: `${theme?.customization?.borderRadius || 12}px`
         },
         elevation1: {
-          boxShadow: theme.mode === 'dark' ? '0 2px 8px 0 rgba(0,0,0,0.2)' : '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)'
+          boxShadow: theme.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.08)'
         },
         elevation2: {
-          boxShadow:
-            theme.mode === 'dark' ? '0 3px 12px 0 rgba(0,0,0,0.22)' : '0 3px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)'
+          boxShadow: theme.mode === 'dark' ? 'none' : '0 3px 12px rgba(0,0,0,0.10)'
         }
       }
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: '20px',
+          borderRadius: '12px',
           padding: 0,
-          boxShadow: theme.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.35)' : '0 10px 28px rgba(14,165,255,0.10)',
-          transition: 'all 0.3s ease',
+          boxShadow: theme.mode === 'dark' ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
+          transition: 'box-shadow 0.2s ease',
           overflow: 'hidden',
           '&:hover': {
-            boxShadow: theme.mode === 'dark' ? '0 12px 32px rgba(0,0,0,0.45)' : '0 16px 40px rgba(14,165,255,0.18)'
+            boxShadow: theme.mode === 'dark' ? 'none' : '0 6px 16px rgba(0,0,0,0.10)'
           },
           '& .MuiTableContainer-root': {
             borderRadius: 0
@@ -527,7 +524,7 @@ export default function componentStyleOverrides(theme) {
       styleOverrides: {
         root: {
           backgroundColor: theme.headBackgroundColor,
-          borderBottom: `1px dashed ${theme.tableBorderBottom}`,
+          borderBottom: `1px solid ${theme.tableBorderBottom}`,
           width: '100%',
           margin: 0,
           '& tr': {
@@ -545,7 +542,7 @@ export default function componentStyleOverrides(theme) {
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderBottom: `1px dashed ${theme.tableBorderBottom}`,
+          borderBottom: `1px solid ${theme.tableBorderBottom}`,
           fontSize: '0.875rem',
           padding: '16px 12px',
           textAlign: 'center',
@@ -575,13 +572,13 @@ export default function componentStyleOverrides(theme) {
         root: {
           transition: 'background-color 0.2s ease',
           '&:hover': {
-            backgroundColor: theme.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.04)'
+            backgroundColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)'
           },
           '&:last-child td': {
             borderBottom: 0
           },
           '&.MuiTableRow-root.MuiTableRow-hover:hover': {
-            backgroundColor: theme.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.04)'
+            backgroundColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)'
           },
           '& .MuiCollapse-root': {
             '&:hover': {
@@ -600,7 +597,7 @@ export default function componentStyleOverrides(theme) {
       styleOverrides: {
         root: {
           color: theme.textDark,
-          borderTop: `1px dashed ${theme.tableBorderBottom}`,
+          borderTop: `1px solid ${theme.tableBorderBottom}`,
           overflow: 'auto',
           backgroundColor: theme.headBackgroundColor,
           minHeight: '56px',
@@ -764,11 +761,11 @@ export default function componentStyleOverrides(theme) {
     MuiDialog: {
       styleOverrides: {
         paper: {
-          borderRadius: '16px',
-          boxShadow: theme.mode === 'dark' ? '0 12px 40px 0 rgba(0,0,0,0.5)' : '0 25px 50px -12px rgba(0,0,0,0.25)',
+          borderRadius: '12px',
+          boxShadow: theme.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.5)' : '0 8px 24px rgba(0,0,0,0.12)',
           overflow: 'visible',
           '&.MuiPaper-rounded': {
-            borderRadius: '16px'
+            borderRadius: '12px'
           }
         },
         paperWidthXs: {
@@ -816,6 +813,12 @@ export default function componentStyleOverrides(theme) {
         root: {
           color: theme.colors?.primaryMain,
           textDecoration: 'none',
+          // 可访问性：焦点样式可见
+          '&:focus-visible': {
+            outline: `2px solid ${theme.colors?.primaryMain}`,
+            outlineOffset: '2px',
+            borderRadius: '4px'
+          },
           '&:hover': {
             textDecoration: 'underline'
           }
@@ -892,7 +895,7 @@ export default function componentStyleOverrides(theme) {
             margin: 0,
             padding: 0,
             '& .MuiDataGrid-columnHeaders': {
-              borderBottom: `1px dashed ${theme.tableBorderBottom}`,
+              borderBottom: `1px solid ${theme.tableBorderBottom}`,
               borderRadius: 0,
               backgroundColor: theme.headBackgroundColor,
               minHeight: '48px',
@@ -983,7 +986,7 @@ export default function componentStyleOverrides(theme) {
         cell: {
           fontSize: '0.875rem',
           padding: '12px 16px',
-          borderBottom: `1px dashed ${theme.tableBorderBottom}`,
+          borderBottom: `1px solid ${theme.tableBorderBottom}`,
           textAlign: 'center',
           '&:focus': {
             outline: 'none'
@@ -995,12 +998,12 @@ export default function componentStyleOverrides(theme) {
         row: {
           transition: 'background-color 0.2s ease',
           '&:hover': {
-            backgroundColor: theme.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.04)'
+            backgroundColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)'
           },
           '&.Mui-selected': {
-            backgroundColor: theme.mode === 'dark' ? 'rgba(8, 132, 221, 0.15)' : 'rgba(8, 132, 221, 0.08)',
+            backgroundColor: theme.mode === 'dark' ? 'rgba(22, 119, 255, 0.18)' : 'rgba(22, 119, 255, 0.08)',
             '&:hover': {
-              backgroundColor: theme.mode === 'dark' ? 'rgba(8, 132, 221, 0.25)' : 'rgba(8, 132, 221, 0.12)'
+              backgroundColor: theme.mode === 'dark' ? 'rgba(22, 119, 255, 0.24)' : 'rgba(22, 119, 255, 0.12)'
             }
           }
         },

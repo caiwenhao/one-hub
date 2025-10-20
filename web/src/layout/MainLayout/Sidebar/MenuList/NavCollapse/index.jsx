@@ -1,10 +1,10 @@
 import PropTypes from 'prop-types';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { Collapse, List, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
 
 // project imports
@@ -19,55 +19,65 @@ import { IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 const NavCollapse = ({ menu, level }) => {
   const theme = useTheme();
   const customization = useSelector((state) => state.customization);
-
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
-  const handleClick = () => {
-    setOpen(!open);
-    setSelected(!selected ? menu.id : null);
-    // 触发一个小延迟后的滚动容器重新计算
-    setTimeout(() => {
-      // 触发窗口的resize事件，让PerfectScrollbar重新计算
-      window.dispatchEvent(new Event('resize'));
-      // 找到当前滚动容器并进行滚动更新
-      const scrollContainer = document.querySelector('.ps--active-y');
-      if (scrollContainer?.ps) {
-        scrollContainer.ps.update();
-      }
-    }, 300); // 等待折叠动画完成
-  };
+  const leftPaddingUnit = level === 1 ? 2 : 2 + (level - 1) * 1.5;
+  const leftPadding = theme.spacing(leftPaddingUnit);
+  const childListMargin = theme.spacing(Math.max(1.5, leftPaddingUnit - 0.5));
+  const activeBg = alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.28 : 0.12);
+  const hoverBg = alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.08);
+  const connectorColor = alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.25 : 0.16);
 
-  const { pathname } = useLocation();
-  const checkOpenForParent = (child, id) => {
-    child.forEach((item) => {
-      if (item.url === pathname) {
-        setOpen(true);
-        setSelected(id);
-      }
-    });
-  };
-
-  // menu collapse for sub-levels
-  useEffect(() => {
-    setOpen(false);
-    setSelected(null);
-    if (menu.children) {
-      menu.children.forEach((item) => {
-        if (item.children?.length) {
-          checkOpenForParent(item.children, menu.id);
+  const hasActiveChild = useMemo(() => {
+    const loop = (nodes = []) =>
+      nodes.some((child) => {
+        if (child.children?.length) {
+          return loop(child.children);
         }
-        if (item.url === pathname) {
-          setSelected(menu.id);
-          setOpen(true);
-        }
+        return child.url === pathname;
       });
+    return loop(menu.children);
+  }, [menu.children, pathname]);
+
+  useEffect(() => {
+    if (hasActiveChild) {
+      setOpen(true);
+      setSelected(menu.id);
+    } else {
+      setSelected(null);
     }
+  }, [hasActiveChild, menu.id]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, menu.children]);
+  const triggerResize = () => window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
 
-  // menu collapse & item
+  const handleClick = () => {
+    setOpen((prev) => !prev);
+    setSelected((prev) => (prev ? null : menu.id));
+    triggerResize();
+  };
+
+  const iconSize = 20;
+  const iconWrapperSize = 36;
+  const IconComponent = menu.icon;
+  const isSelected = selected === menu.id;
+
+  const menuIcon = IconComponent ? (
+    <IconComponent strokeWidth={1.5} size={iconSize} />
+  ) : (
+    <FiberManualRecordIcon
+      sx={{
+        width: isSelected ? 10 : 8,
+        height: isSelected ? 10 : 8,
+        transition: theme.transitions.create(['transform', 'color'], {
+          duration: theme.transitions.duration.shorter
+        })
+      }}
+      fontSize={level > 0 ? 'inherit' : 'medium'}
+    />
+  );
+
   const menus = menu.children?.map((item) => {
     switch (item.type) {
       case 'collapse':
@@ -83,40 +93,87 @@ const NavCollapse = ({ menu, level }) => {
     }
   });
 
-  const IconComponent = menu.icon;
-  const menuIcon = menu.icon ? (
-    <IconComponent strokeWidth={1.5} size="1.3rem" style={{ marginTop: 'auto', marginBottom: 'auto' }} />
-  ) : (
-    <FiberManualRecordIcon
-      sx={{
-        width: selected === menu.id ? 8 : 6,
-        height: selected === menu.id ? 8 : 6
-      }}
-      fontSize={level > 0 ? 'inherit' : 'medium'}
-    />
-  );
-
   return (
     <>
       <ListItemButton
         sx={{
-          borderRadius: `${customization.borderRadius}px`,
+          position: 'relative',
+          borderRadius: `${Math.max(customization.borderRadius, 10)}px`,
           mb: 0.5,
-          alignItems: 'flex-start',
-          backgroundColor: level > 1 ? 'transparent !important' : 'inherit',
-          py: level > 1 ? 0.6 : 0.75,
-          pl: `${level * 24}px`
+          alignItems: 'center',
+          minHeight: level > 1 ? 40 : 44,
+          px: 1.5,
+          py: 0.75,
+          pl: leftPadding,
+          color: isSelected ? theme.palette.primary.main : theme.palette.text.secondary,
+          backgroundColor: isSelected ? activeBg : 'transparent',
+          transition: theme.transitions.create(['background-color', 'color'], {
+            duration: theme.transitions.duration.shorter
+          }),
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            left: theme.spacing(1),
+            top: theme.spacing(0.75),
+            bottom: theme.spacing(0.75),
+            width: '3px',
+            borderRadius: '8px',
+            backgroundColor: isSelected ? theme.palette.primary.main : 'transparent',
+            transform: isSelected ? 'scaleY(1)' : 'scaleY(0.2)',
+            opacity: isSelected ? 1 : 0,
+            transition: theme.transitions.create(['transform', 'opacity', 'background-color'], {
+              duration: theme.transitions.duration.shorter
+            })
+          },
+          '&:hover': {
+            backgroundColor: hoverBg,
+            color: theme.palette.primary.main,
+            '& .MuiListItemIcon-root': {
+              color: theme.palette.primary.main
+            },
+            '&::before': {
+              transform: 'scaleY(1)',
+              opacity: 1,
+              backgroundColor: theme.palette.primary.main
+            }
+          },
+          '&.Mui-selected': {
+            backgroundColor: activeBg,
+            color: theme.palette.primary.main,
+            '& .MuiListItemIcon-root': {
+              color: theme.palette.primary.main
+            },
+            '&:hover': {
+              backgroundColor: activeBg
+            }
+          }
         }}
-        selected={selected === menu.id}
+        selected={isSelected}
         onClick={handleClick}
       >
-        <ListItemIcon sx={{ my: 'auto', minWidth: !menu.icon ? 18 : 36 }}>{menuIcon}</ListItemIcon>
+        <ListItemIcon
+          sx={{
+            my: 'auto',
+            minWidth: iconWrapperSize,
+            color: isSelected ? theme.palette.primary.main : theme.palette.text.secondary,
+            transition: theme.transitions.create(['color'], {
+              duration: theme.transitions.duration.shorter
+            }),
+            '& svg': {
+              width: iconSize,
+              height: iconSize
+            }
+          }}
+        >
+          {menuIcon}
+        </ListItemIcon>
         <ListItemText
-          primary={
-            <Typography variant={selected === menu.id ? 'h5' : 'body1'} color="inherit" sx={{ my: 'auto' }}>
-              {menu.title}
-            </Typography>
-          }
+          primary={menu.title}
+          primaryTypographyProps={{
+            variant: isSelected ? 'subtitle1' : 'body2',
+            fontWeight: isSelected ? 600 : 500,
+            noWrap: true
+          }}
           secondary={
             menu.caption && (
               <Typography variant="caption" sx={{ ...theme.typography.subMenuCaption }} display="block" gutterBottom>
@@ -126,69 +183,21 @@ const NavCollapse = ({ menu, level }) => {
           }
         />
         {open ? (
-          <IconChevronUp
-            stroke={1.5}
-            size="1rem"
-            style={{
-              marginTop: 'auto',
-              marginBottom: 'auto',
-              color: theme.palette.primary.main
-            }}
-          />
+          <IconChevronUp stroke={1.5} size="1rem" style={{ marginTop: 'auto', marginBottom: 'auto' }} />
         ) : (
-          <IconChevronDown
-            stroke={1.5}
-            size="1rem"
-            style={{
-              marginTop: 'auto',
-              marginBottom: 'auto',
-              color: theme.palette.primary.main
-            }}
-          />
+          <IconChevronDown stroke={1.5} size="1rem" style={{ marginTop: 'auto', marginBottom: 'auto' }} />
         )}
       </ListItemButton>
-      <Collapse
-        in={open}
-        timeout="auto"
-        unmountOnExit
-        onEntered={() => {
-          window.dispatchEvent(new Event('resize'));
-          // 找到当前滚动容器并立即更新
-          const scrollContainer = document.querySelector('.ps--active-y');
-          if (scrollContainer?.ps) {
-            scrollContainer.ps.update();
-          }
-        }}
-        onExited={() => {
-          window.dispatchEvent(new Event('resize'));
-          // 找到当前滚动容器并立即更新
-          const scrollContainer = document.querySelector('.ps--active-y');
-          if (scrollContainer?.ps) {
-            scrollContainer.ps.update();
-          }
-          // 触发第二次更新以确保所有变化都被捕获
-          setTimeout(() => {
-            if (scrollContainer?.ps) {
-              scrollContainer.ps.update();
-            }
-          }, 100);
-        }}
-      >
+      <Collapse in={open} timeout="auto" unmountOnExit onEntered={triggerResize} onExited={triggerResize}>
         <List
           component="div"
           disablePadding
           sx={{
             position: 'relative',
-            '&:after': {
-              content: "''",
-              position: 'absolute',
-              left: '32px',
-              top: 0,
-              height: '100%',
-              width: '1px',
-              opacity: 1,
-              background: theme.palette.primary.light
-            }
+            ml: childListMargin,
+            pl: theme.spacing(1.5),
+            borderLeft: `1px solid ${connectorColor}`,
+            mt: 0.5
           }}
         >
           {menus}

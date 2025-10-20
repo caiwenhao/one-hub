@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 // material-ui
 import { Typography } from '@mui/material';
 
@@ -13,34 +14,54 @@ const MenuList = () => {
   const userIsAdmin = useIsAdmin();
   const { t } = useTranslation();
   const siteInfo = useSelector((state) => state.siteInfo);
-  // 遍历并修改 children 的 title 字段
-  menuItem.items.forEach((group) => {
-    group.children.forEach((item) => {
-      item.title = t(item.id);
-    });
-  });
+
+  const groups = useMemo(() => {
+    // 递归转换：本地化标题 + 权限过滤
+    const formatNodes = (nodes = []) =>
+      nodes.reduce((acc, node) => {
+        // 非管理员隐藏管理员菜单；缺少发票权限时隐藏发票
+        if ((node.isAdmin && !userIsAdmin) || (siteInfo?.UserInvoiceMonth === false && node.id === 'invoice')) {
+          return acc;
+        }
+
+        const localizedNode = {
+          ...node,
+          title: t(node.id, { defaultValue: node.title })
+        };
+
+        if (node.children?.length) {
+          const nextChildren = formatNodes(node.children);
+          if (!nextChildren.length) {
+            // 折叠菜单在子项被过滤完时直接剔除
+            if (node.type === 'collapse') {
+              return acc;
+            }
+            localizedNode.children = [];
+          } else {
+            localizedNode.children = nextChildren;
+          }
+        }
+
+        acc.push(localizedNode);
+        return acc;
+      }, []);
+
+    return formatNodes(menuItem.items).filter((group) => group.type === 'group' && group.children?.length);
+  }, [siteInfo?.UserInvoiceMonth, t, userIsAdmin]);
+
+  if (!groups.length) {
+    return (
+      <Typography variant="h6" color="error" align="center">
+        {t('menu.error')}
+      </Typography>
+    );
+  }
 
   return (
     <>
-      {menuItem.items.map((item) => {
-        if (item.type !== 'group') {
-          return (
-            <Typography key={item.id} variant="h6" color="error" align="center">
-              {t('menu.error')}
-            </Typography>
-          );
-        }
-
-        const filteredChildren = item.children.filter(
-          (child) => (!child.isAdmin || userIsAdmin) && !(siteInfo.UserInvoiceMonth === false && child.id === 'invoice')
-        );
-
-        if (filteredChildren.length === 0) {
-          return null;
-        }
-
-        return <NavGroup key={item.id} item={{ ...item, children: filteredChildren }} />;
-      })}
+      {groups.map((group, index) => (
+        <NavGroup key={group.id} item={group} isLast={index === groups.length - 1} />
+      ))}
     </>
   );
 };

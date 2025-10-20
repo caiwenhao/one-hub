@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { Tabs, Tab, Box, Card, Alert, Stack, Button, Typography, ButtonGroup } from '@mui/material';
+import ActionBar from 'ui-component/ActionBar';
 import { Icon } from '@iconify/react';
 import Single from './single';
 import Multiple from './multiple';
@@ -192,22 +193,17 @@ const Pricing = () => {
             Price
           </Typography>
         </Stack>
-
-        <ButtonGroup variant="contained" aria-label="outlined small primary button group">
-          <Button color="primary" onClick={() => handleOpenaddModal(null)} startIcon={<Icon icon="solar:add-circle-line-duotone" />}>
-            {t('pricingPage.newButton')}
-          </Button>
-          <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" />}>
-            {t('pricingPage.refreshButton')}
-          </Button>
-          <Button
-            onClick={() => {
-              setOpenModal(true);
-            }}
-          >
-            {t('pricingPage.updatePricesButton')}
-          </Button>
-        </ButtonGroup>
+        <ActionBar sx={{ py: 0 }}>
+          <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
+            <Button color="primary" onClick={() => handleOpenaddModal(null)} startIcon={<Icon icon="solar:add-circle-line-duotone" />}>
+              {t('pricingPage.newButton')}
+            </Button>
+            <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" />}>
+              {t('pricingPage.refreshButton')}
+            </Button>
+            <Button onClick={() => setOpenModal(true)}>{t('pricingPage.updatePricesButton')}</Button>
+          </ButtonGroup>
+        </ActionBar>
       </Stack>
 
       <Alert severity="info">

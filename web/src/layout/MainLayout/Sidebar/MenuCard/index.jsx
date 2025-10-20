@@ -1,35 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 
 // material-ui
 import { styled, useTheme, alpha } from '@mui/material/styles';
-import { Avatar, Card, CardContent, Box, Typography, Chip, LinearProgress, Stack, Tooltip } from '@mui/material';
-import { keyframes } from '@emotion/react';
+import { Avatar, Card, CardContent, Box, Typography, Chip, LinearProgress, Stack, Tooltip, Divider } from '@mui/material';
 import User1 from 'assets/images/users/user-round.svg';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '@iconify/react';
 
 const CardStyle = styled(Card)(({ theme }) => ({
-  background: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.8) : alpha(theme.palette.background.paper, 0.9),
-  backdropFilter: 'blur(8px)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  marginBottom: '22px',
-  overflow: 'hidden',
-  position: 'relative',
+  backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.85) : theme.palette.background.paper,
+  border: `1px solid ${alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.2 : 0.12)}`,
   borderRadius: 12,
-  boxShadow: theme.palette.mode === 'dark' ? '0 4px 16px rgba(0,0,0,0.2)' : '0 4px 16px rgba(149, 157, 165, 0.1)',
-  '&:after': {
-    content: '""',
-    position: 'absolute',
-    width: '120px',
-    height: '120px',
-    background: alpha(theme.palette.primary.main, 0.08),
-    borderRadius: '50%',
-    top: '-60px',
-    right: '-30px',
-    zIndex: 0
-  }
+  boxShadow: 'none',
+  marginBottom: theme.spacing(3),
+  overflow: 'hidden'
 }));
 
 const ProgressBarWrapper = styled(Box)(({ theme }) => ({
@@ -38,7 +24,7 @@ const ProgressBarWrapper = styled(Box)(({ theme }) => ({
   height: 6,
   borderRadius: 6,
   overflow: 'hidden',
-  backgroundColor: alpha(theme.palette.divider, 0.1),
+  backgroundColor: alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.06),
   '& .MuiLinearProgress-root': {
     height: '100%',
     borderRadius: 6,
@@ -66,168 +52,125 @@ const MenuCard = () => {
   const { user, userGroup } = useSelector((state) => state.account);
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [balance, setBalance] = useState(0);
-  const [usedQuota, setUsedQuota] = useState(0);
-  const [requestCount, setRequestCount] = useState(0);
 
-  // Define the gradient animation
-  const gradientAnimation = keyframes`
-    0% {
-      background-position: 0 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0 50%;
-    }
-  `;
+  const quotaStats = useMemo(() => {
+    const quotaPerUnit = Number(localStorage.getItem('quota_per_unit')) || 500000;
+    const balanceValue = user?.quota ? Number(((user.quota || 0) / quotaPerUnit).toFixed(2)) : 0;
+    const usedValue = user?.used_quota ? Number(((user.used_quota || 0) / quotaPerUnit).toFixed(2)) : 0;
+    const total = balanceValue + usedValue;
+    const percent = total > 0 ? Math.min(100, Math.round((usedValue / total) * 100)) : 0;
 
-  const quotaPerUnit = localStorage.getItem('quota_per_unit') || 500000;
+    return {
+      balanceValue,
+      usedValue,
+      total,
+      percent,
+      requestCount: user?.request_count || 0
+    };
+  }, [user]);
 
-  const totalQuota = parseFloat(balance) + parseFloat(usedQuota);
-  const progressValue = (parseFloat(usedQuota) / totalQuota) * 100;
-
-  useEffect(() => {
-    if (user) {
-      setBalance(((user.quota || 0) / quotaPerUnit).toFixed(2));
-      setUsedQuota(((user.used_quota || 0) / quotaPerUnit).toFixed(2));
-      setRequestCount(user.request_count || 0);
-    }
-  }, [user, quotaPerUnit]);
-
-  const getProgressColor = () => {
-    if (progressValue < 60) return theme.palette.success.main;
-    if (progressValue < 85) return theme.palette.warning.main;
-    return theme.palette.error.main;
-  };
+  const usageColor = theme.palette.primary.main;
+  const usageBg = alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.3 : 0.15);
 
   return (
     <CardStyle>
-      <CardContent sx={{ p: 1.5, pb: '8px !important' }}>
-        <Stack direction="row" spacing={1} alignItems="center" mb={1}>
-          <Box 
-            component="div"
-            sx={{ 
-              cursor: 'pointer',
-              position: 'relative',
-              width: '38px',
-              height: '38px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '50%',
-              background: `linear-gradient(90deg, 
-                ${theme.palette.primary.main}, 
-                ${theme.palette.secondary.main}, 
-                ${theme.palette.primary.light}, 
-                ${theme.palette.primary.main})`,
-              backgroundSize: '300% 300%',
-              animation: `${gradientAnimation} 3s ease infinite`,
-              '&:hover': {
-                animation: `${gradientAnimation} 1.5s ease infinite`,
-              }
-            }}
-            onClick={() => navigate('/panel/profile')}
-          >
+      <CardContent sx={{ p: 2 }}>
+        <Stack spacing={2}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
             <Avatar
               src={user?.avatar_url || User1}
+              alt={user?.display_name || 'User Avatar'}
               sx={{
-                width: '36px',
-                height: '36px',
-                cursor: 'pointer',
-                border: '1px solid',
-                borderColor: (theme) => (theme.palette.mode === 'dark' ? theme.palette.background.paper : '#ffffff'),
-                bgcolor: '#FFFFFF',
-                variant: 'rounded',
-                transition: 'transform 0.2s ease-in-out, background-color 0.2s ease-in-out',
-                '&:hover': {
-                  transform: 'scale(1.03)'
-                }
+                width: 40,
+                height: 40,
+                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fff',
+                border: `1px solid ${alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.3 : 0.12)}`,
+                cursor: 'pointer'
               }}
+              onClick={() => navigate('/panel/profile')}
             />
-          </Box>
-
-          <Box sx={{ flex: 1 }}>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                lineHeight: 1.2,
-                mb: 0.3
-              }}
-            >
-              {user ? user.display_name || 'Loading...' : 'Loading...'}
-            </Typography>
-
-            {user && userGroup && userGroup[user.group] && (
-              <InfoChip
-                label={
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    {/*<Icon icon="solar:heart-bold" color={theme.palette.error.main} width={12} />*/}
-                    <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 500 }}>
-                      {userGroup[user.group].name} | RPM:{userGroup[user.group].api_rate}
-                    </Typography>
-                  </Stack>
-                }
-                size="small"
-                variant="outlined"
-                color="primary"
-              />
-            )}
-          </Box>
-        </Stack>
-
-        <Box sx={{ mt: 1 }}>
-          <Stack direction="row" alignItems="center" mb={0.5}>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 0.5, mr: 'auto' }}
-            >
-              <Icon icon="solar:wallet-money-linear" width={12} />
-              {t('sidebar.remainingBalance')}: ${balance}
-            </Typography>
-            <Tooltip title={t('dashboard_index.calls')}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 0.5 }}
-              >
-                <Icon icon="solar:call-linear" width={12} />
-                {new Intl.NumberFormat().format(requestCount)}
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.2, mb: 0.25 }}>
+                {user ? user.display_name || 'Loading…' : 'Loading…'}
               </Typography>
-            </Tooltip>
+              {user && userGroup && userGroup[user.group] && (
+                <InfoChip
+                  label={
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 500 }}>
+                        {userGroup[user.group].name} · RPM {userGroup[user.group].api_rate}
+                      </Typography>
+                    </Stack>
+                  }
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                />
+              )}
+            </Box>
           </Stack>
 
-          <Box sx={{ position: 'relative' }}>
+          <Box>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.75 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Icon icon="solar:wallet-money-linear" width={14} />
+                {t('sidebar.remainingBalance')}:
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                ${quotaStats.balanceValue.toFixed(2)}
+              </Typography>
+            </Stack>
             <ProgressBarWrapper>
               <LinearProgress
                 variant="determinate"
-                value={progressValue}
+                value={quotaStats.percent}
                 sx={{
                   '& .MuiLinearProgress-bar': {
-                    backgroundColor: getProgressColor()
+                    backgroundColor: usageColor
                   }
                 }}
               />
             </ProgressBarWrapper>
-            <Typography
-              variant="caption"
-              component="div"
-              sx={{
-                fontSize: '0.7rem',
-                color: 'text.secondary',
-                position: 'relative',
-                textAlign: 'right',
-                mt: 0.5
-              }}
-            >
-              {`$${usedQuota} (${Math.round(progressValue)}%)`}
-            </Typography>
+            <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.75 }}>
+              <Typography variant="caption" color="text.secondary">
+                {t('dashboard_index.used')}: ${quotaStats.usedValue.toFixed(2)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: usageColor, fontWeight: 600 }}>
+                {quotaStats.percent}%
+              </Typography>
+            </Stack>
           </Box>
-        </Box>
+
+          <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.4) }} />
+
+          <Stack spacing={1}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Box
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 8,
+                    bgcolor: usageBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Icon icon="solar:call-linear" width={14} color={usageColor} />
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {t('dashboard_index.calls')}
+                </Typography>
+              </Stack>
+              <Tooltip title={t('dashboard_index.calls')}>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {new Intl.NumberFormat().format(quotaStats.requestCount)}
+                </Typography>
+              </Tooltip>
+            </Stack>
+          </Stack>
+        </Stack>
       </CardContent>
     </CardStyle>
   );

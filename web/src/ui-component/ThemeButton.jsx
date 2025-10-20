@@ -1,59 +1,49 @@
+import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { SET_THEME } from 'store/actions';
-import { useTheme } from '@mui/material/styles';
-import { Avatar, Box, ButtonBase } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
+import { ButtonBase } from '@mui/material';
 import { Icon } from '@iconify/react';
 
-export default function ThemeButton() {
+export default function ThemeButton({ sx }) {
   const dispatch = useDispatch();
-
   const defaultTheme = useSelector((state) => state.customization.theme);
-
   const theme = useTheme();
 
+  const isLight = defaultTheme === 'light';
+  const handler = () => {
+    const nextTheme = isLight ? 'dark' : 'light';
+    dispatch({ type: SET_THEME, theme: nextTheme });
+    localStorage.setItem('theme', nextTheme);
+  };
+
   return (
-    <Box
+    <ButtonBase
+      aria-label={isLight ? '切换至深色主题' : '切换至浅色主题'}
+      onClick={handler}
       sx={{
-        ml: 2,
-        mr: 3,
-        [theme.breakpoints.down('md')]: {
-          mr: 2
-        }
+        width: 40,
+        height: 40,
+        borderRadius: '12px',
+        border: `1px solid ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.32 : 0.18)}`,
+        backgroundColor: isLight ? alpha(theme.palette.primary.main, 0.08) : alpha(theme.palette.primary.main, 0.16),
+        color: isLight ? theme.palette.primary.main : theme.palette.primary.light,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all .2s ease',
+        '&:hover': {
+          boxShadow: theme.shadows[4],
+          transform: 'translateY(-1px)'
+        },
+        ...sx
       }}
     >
-      <ButtonBase sx={{ borderRadius: '12px' }}>
-        <Avatar
-          variant="rounded"
-          sx={{
-            ...theme.typography.commonAvatar,
-            ...theme.typography.mediumAvatar,
-            ...theme.typography.menuButton,
-            transition: 'all .2s ease-in-out',
-            borderColor: 'transparent',
-            backgroundColor: 'transparent',
-            boxShadow: 'none',
-            // color: 'inherit',
-            borderRadius: '50%',
-            '&[aria-controls="menu-list-grow"],&:hover': {
-              boxShadow: '0 0 10px rgba(0,0,0,0.2)',
-              backgroundColor: 'transparent',
-              borderRadius: '50%'
-            }
-          }}
-          onClick={() => {
-            let theme = defaultTheme === 'light' ? 'dark' : 'light';
-            dispatch({ type: SET_THEME, theme: theme });
-            localStorage.setItem('theme', theme);
-          }}
-          color="inherit"
-        >
-          {defaultTheme === 'light' ? (
-            <Icon icon="solar:sun-2-bold-duotone" width="1.5rem" />
-          ) : (
-            <Icon icon="solar:moon-bold-duotone" width="1.5rem" />
-          )}
-        </Avatar>
-      </ButtonBase>
-    </Box>
+      <Icon icon={isLight ? 'solar:sun-2-bold-duotone' : 'solar:moon-bold-duotone'} width="20" />
+    </ButtonBase>
   );
 }
+
+ThemeButton.propTypes = {
+  sx: PropTypes.object
+};

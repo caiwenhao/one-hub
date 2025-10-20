@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import ScrollArea from 'ui-component/ScrollArea';
 import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import ChannelTableRow from './TableRow';
@@ -139,7 +140,7 @@ export default function ChannelTable({ tag }) {
   return (
     <>
       {searching && <LinearProgress />}
-      <PerfectScrollbar component="div">
+      <ScrollArea>
         <TableContainer>
           <Table sx={{ minWidth: 800 }}>
             <KeywordTableHead
@@ -179,7 +180,7 @@ export default function ChannelTable({ tag }) {
             showLastButton
           />
         </TableContainer>
-      </PerfectScrollbar>
+      </ScrollArea>
     </>
   );
 }

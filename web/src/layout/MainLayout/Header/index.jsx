@@ -1,18 +1,15 @@
 import PropTypes from 'prop-types';
-import { useState } from 'react';
 import { Icon } from '@iconify/react';
-import { useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
-import { Box, IconButton, Stack } from '@mui/material';
+import { Box, IconButton, useMediaQuery } from '@mui/material';
 
 // project imports
 import LogoSection from '../LogoSection';
-import Profile from './Profile';
-import ThemeButton from 'ui-component/ThemeButton';
-import I18nButton from 'ui-component/i18nButton';
-import { NoticeButton } from 'ui-component/notice';
+import HeaderActions from 'layout/common/HeaderActions';
+import { drawerWidth } from 'store/constant';
 
 // assets
 // import { Icon } from '@iconify/react';
@@ -21,18 +18,18 @@ import { NoticeButton } from 'ui-component/notice';
 
 const Header = ({ handleLeftDrawerToggle, toggleProfileDrawer }) => {
   const theme = useTheme();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
-  const location = useLocation();
-  
-  // 检查当前路径是否为面板/控制台页面
-  const isConsoleRoute = location.pathname.startsWith('/panel');
+  const leftDrawerOpened = useSelector((state) => state.customization.opened);
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const collapsedWidth = 72;
+  const currentWidth = isDesktop ? (leftDrawerOpened ? drawerWidth : collapsedWidth) : 'auto';
+  const iconColor = theme.palette.mode === 'dark' ? theme.palette.text.secondary : theme.palette.text.primary;
 
   return (
     <>
       {/* logo & toggler button */}
       <Box
         sx={{
-          width: isDrawerOpen ? 255 : 150,
+          width: currentWidth,
           display: 'flex',
           alignItems: 'center',
           [theme.breakpoints.down('md')]: {
@@ -49,8 +46,8 @@ const Header = ({ handleLeftDrawerToggle, toggleProfileDrawer }) => {
           color="inherit"
           aria-label="menu"
           sx={{
-            width: '38',
-            height: '38px',
+            width: 38,
+            height: 38,
             borderRadius: '8px',
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
             '&:hover': {
@@ -58,29 +55,21 @@ const Header = ({ handleLeftDrawerToggle, toggleProfileDrawer }) => {
             },
             transition: 'background-color 0.2s ease-in-out'
           }}
-          onClick={() => {
-            setIsDrawerOpen(!isDrawerOpen);
-            handleLeftDrawerToggle();
-          }}
+          onClick={handleLeftDrawerToggle}
         >
           <Icon
-            icon={isDrawerOpen ? 'tabler:layout-sidebar-right-collapse' : 'tabler:layout-sidebar-left-expand'}
+            icon={leftDrawerOpened ? 'tabler:layout-sidebar-right-collapse' : 'tabler:layout-sidebar-left-expand'}
             width="22px"
             height="22px"
-            color={theme.palette.mode === 'dark' ? theme.palette.text.secondary : theme.palette.text.primary}
+            color={iconColor}
           />
         </IconButton>
       </Box>
 
       <Box sx={{ flexGrow: 1 }} />
 
-      {/* 右侧功能按钮区 */}
-      <Stack direction="row" spacing={1} alignItems="center">
-        <NoticeButton />
-        <ThemeButton />
-        <I18nButton />
-        {isConsoleRoute && <Profile toggleProfileDrawer={toggleProfileDrawer} />}
-      </Stack>
+      {/* 右侧功能按钮区（统一） */}
+      <HeaderActions showProfileWhenPanel toggleProfileDrawer={toggleProfileDrawer} />
     </>
   );
 };

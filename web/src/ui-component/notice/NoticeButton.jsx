@@ -1,49 +1,45 @@
-import { Avatar, Box, ButtonBase } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import PropTypes from 'prop-types';
+import { ButtonBase } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 
 import { Icon } from '@iconify/react';
 
 import { useNotice } from './NoticeContext';
 
-export function NoticeButton() {
+export function NoticeButton({ sx }) {
   const theme = useTheme();
   const { openNotice } = useNotice();
 
+  const surfaceColor = theme.palette.mode === 'dark' ? alpha(theme.palette.background.paper, 0.7) : theme.palette.background.paper;
+  const borderColor = alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.24 : 0.14);
+
   return (
-    <Box
+    <ButtonBase
+      aria-label="打开通知"
+      onClick={openNotice}
       sx={{
-        ml: 2,
-        mr: 3,
-        [theme.breakpoints.down('md')]: {
-          mr: 2
-        }
+        width: 40,
+        height: 40,
+        borderRadius: '12px',
+        border: `1px solid ${borderColor}`,
+        backgroundColor: surfaceColor,
+        color: theme.palette.mode === 'dark' ? theme.palette.primary.light : theme.palette.primary.main,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all .2s ease',
+        '&:hover': {
+          boxShadow: theme.shadows[4],
+          transform: 'translateY(-1px)'
+        },
+        ...sx
       }}
     >
-      <ButtonBase sx={{ borderRadius: '12px'}}>
-        <Avatar
-          variant="rounded"
-          sx={{
-            ...theme.typography.commonAvatar,
-            ...theme.typography.mediumAvatar,
-            ...theme.typography.menuButton,
-            transition: 'all .2s ease-in-out',
-            borderColor: 'transparent',
-            backgroundColor: 'transparent',
-            boxShadow: 'none',
-            // color: 'inherit',
-            borderRadius: '50%',
-            '&[aria-controls="menu-list-grow"],&:hover': {
-              boxShadow: '0 0 10px rgba(0,0,0,0.2)',
-              backgroundColor: 'transparent',
-              borderRadius: '50%'
-            }
-          }}
-          onClick={openNotice}
-          color="inherit"
-        >
-          <Icon icon="lets-icons:message-duotone" width="1.6rem" />
-        </Avatar>
-      </ButtonBase>
-    </Box>
+      <Icon icon="lets-icons:message-duotone" width="20" />
+    </ButtonBase>
   );
 }
+
+NoticeButton.propTypes = {
+  sx: PropTypes.object
+};

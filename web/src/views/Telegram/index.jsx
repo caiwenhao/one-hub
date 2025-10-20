@@ -5,7 +5,10 @@ import { useTranslation } from 'react-i18next'; // 引入 i18n
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import FilterBar from 'ui-component/FilterBar';
+import ActionBar from 'ui-component/ActionBar';
+import ScrollArea from 'ui-component/ScrollArea';
 import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -212,29 +215,21 @@ export default function Telegram() {
         </Button>
       </Stack>
       <Card>
-        <Box component="form" onSubmit={searchMenus} noValidate>
-          <TableToolBar placeholder={t('telegramPage.searchPlaceholder')} />
-        </Box>
-        <Toolbar
-          sx={{
-            textAlign: 'right',
-            height: 50,
-            display: 'flex',
-            justifyContent: 'space-between',
-            p: (theme) => theme.spacing(0, 1, 0, 3)
-          }}
-        >
-          <Container maxWidth="xl">
-            <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
-              <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
-                {t('telegramPage.refresh')}
-              </Button>
-            </ButtonGroup>
-          </Container>
-        </Toolbar>
+        <FilterBar>
+          <Box component="form" onSubmit={searchMenus} noValidate>
+            <TableToolBar placeholder={t('telegramPage.searchPlaceholder')} />
+          </Box>
+        </FilterBar>
+        <ActionBar>
+          <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
+            <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
+              {t('telegramPage.refresh')}
+            </Button>
+          </ButtonGroup>
+        </ActionBar>
         {searching && <LinearProgress />}
-        <PerfectScrollbar component="div">
-          <TableContainer sx={{ overflow: 'unset' }}>
+        <ScrollArea>
+          <TableContainer sx={{ overflow: 'auto' }}>
             <Table sx={{ minWidth: 800 }}>
               <KeywordTableHead
                 order={order}
@@ -262,7 +257,7 @@ export default function Telegram() {
               </TableBody>
             </Table>
           </TableContainer>
-        </PerfectScrollbar>
+        </ScrollArea>
         <TablePagination
           page={page}
           component="div"

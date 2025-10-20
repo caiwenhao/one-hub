@@ -5,7 +5,8 @@ import { showError, showSuccess } from 'utils/common';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import ScrollArea from 'ui-component/ScrollArea';
 import {
   Box,
   Typography,
@@ -301,7 +302,7 @@ export default function Multiple({ prices, reloadData, ownedby, noPriceModels })
 
       {/* 数据表格 */}
       <Card>
-        <PerfectScrollbar component="div">
+        <ScrollArea>
           <TableContainer sx={{ overflow: 'unset' }}>
             <Table
               sx={{
@@ -342,7 +343,7 @@ export default function Multiple({ prices, reloadData, ownedby, noPriceModels })
               </TableBody>
             </Table>
           </TableContainer>
-        </PerfectScrollbar>
+        </ScrollArea>
 
         {/* 分页 */}
         {filteredRows.length > rowsPerPage && (

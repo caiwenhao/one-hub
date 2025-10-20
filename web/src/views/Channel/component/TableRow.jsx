@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { useBoolean } from 'src/hooks/use-boolean';
 import ConfirmDialog from 'ui-component/confirm-dialog';
 import EditeModal from './EditModal';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import ScrollArea from 'ui-component/ScrollArea';
 import { usePopover } from 'hooks/use-popover';
 
 import {
@@ -920,7 +921,7 @@ export default function ChannelTableRow({ item, manageChannel, onRefresh, groupO
                             boxShadow: '0 0 8px rgba(0,0,0,0.05)'
                           }}
                         >
-                          <PerfectScrollbar sx={{ maxHeight: 400 }}>
+                          <ScrollArea sx={{ maxHeight: 400 }}>
                             <Table size="small" sx={{ '& .MuiTableCell-root': { py: 1, px: 1.5 } }}>
                               <TableHead sx={{ bgcolor: 'background.neutral' }}>
                                 <TableRow>
@@ -1130,7 +1131,7 @@ export default function ChannelTableRow({ item, manageChannel, onRefresh, groupO
                                 ))}
                               </TableBody>
                             </Table>
-                          </PerfectScrollbar>
+                          </ScrollArea>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1 }}>
                           <TablePagination

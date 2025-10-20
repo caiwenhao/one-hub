@@ -4,12 +4,15 @@ import { showError, showSuccess, trims, copy } from 'utils/common';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import ScrollArea from 'ui-component/ScrollArea';
 import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Toolbar from '@mui/material/Toolbar';
+import FilterBar from 'ui-component/FilterBar';
+import ActionBar from 'ui-component/ActionBar';
 
 import { Button, Card, Box, Stack, Container, Typography } from '@mui/material';
 import TokensTableRow from './component/TableRow';
@@ -215,29 +218,21 @@ export default function Token() {
         </Alert>
       </Stack>
       <Card>
-        <Box component="form" onSubmit={searchTokens} noValidate>
-          <TableToolBar placeholder={t('token_index.searchTokenName')} />
-        </Box>
-        <Toolbar
-          sx={{
-            textAlign: 'right',
-            height: 50,
-            display: 'flex',
-            justifyContent: 'space-between',
-            p: (theme) => theme.spacing(0, 1, 0, 3)
-          }}
-        >
-          <Container maxWidth="xl">
-            <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
-              <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
-                {t('token_index.refresh')}
-              </Button>
-            </ButtonGroup>
-          </Container>
-        </Toolbar>
+        <FilterBar>
+          <Box component="form" onSubmit={searchTokens} noValidate>
+            <TableToolBar placeholder={t('token_index.searchTokenName')} />
+          </Box>
+        </FilterBar>
+        <ActionBar>
+          <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
+            <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
+              {t('token_index.refresh')}
+            </Button>
+          </ButtonGroup>
+        </ActionBar>
         {searching && <LinearProgress />}
-        <PerfectScrollbar component="div">
-          <TableContainer sx={{ overflow: 'unset' }}>
+        <ScrollArea>
+          <TableContainer sx={{ overflow: 'auto' }}>
             <Table sx={{ minWidth: 800 }}>
               <KeywordTableHead
                 order={order}
@@ -268,7 +263,7 @@ export default function Token() {
               </TableBody>
             </Table>
           </TableContainer>
-        </PerfectScrollbar>
+        </ScrollArea>
         <TablePagination
           page={page}
           component="div"

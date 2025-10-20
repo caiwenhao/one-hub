@@ -107,7 +107,7 @@ LogTableRow.propTypes = {
 
 function renderDialog(item) {
   if (!item.data) {
-    return <p>无数据</p>;
+    return <span style={{ color: 'var(--mui-palette-text-secondary, rgba(0,0,0,0.6))' }}>无数据</span>;
   }
 
   if (item.platform == 'suno' && item.action == 'MUSIC') {

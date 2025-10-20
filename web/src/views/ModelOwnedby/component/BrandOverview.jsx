@@ -31,7 +31,8 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import PerfectScrollbar from 'react-perfect-scrollbar';
+// import PerfectScrollbar from 'react-perfect-scrollbar';
+import ScrollArea from 'ui-component/ScrollArea';
 import { Icon } from '@iconify/react';
 import { useTranslation } from 'react-i18next';
 import { ValueFormatter } from 'utils/common';
@@ -428,7 +429,7 @@ const BrandOverview = ({
         </Box>
       </Box>
 
-      <PerfectScrollbar component="div">
+      <ScrollArea>
         <TableContainer sx={{ overflow: 'unset' }}>
           <Table sx={{ minWidth: 1024 }}>
             <TableHead>
@@ -508,7 +509,7 @@ const BrandOverview = ({
             </TableBody>
           </Table>
         </TableContainer>
-      </PerfectScrollbar>
+      </ScrollArea>
       <TablePagination
         component="div"
         count={total}

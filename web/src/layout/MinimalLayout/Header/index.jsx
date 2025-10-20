@@ -10,6 +10,9 @@ import {
 } from '@mui/material';
 import LogoSection from 'layout/MainLayout/LogoSection';
 import { Link } from 'react-router-dom';
+import HeaderActions from 'layout/common/HeaderActions';
+import NavLinkItem from './NavLinkItem.jsx';
+import navConfig from './navConfig';
 import { useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { IconMenu2 } from '@tabler/icons-react';
@@ -49,19 +52,23 @@ const Header = () => {
           gap: 5 // space-x-10 = 40px
         }}
       >
+        {navConfig.map((it) => (
+          <NavLinkItem key={it.to} to={it.to} label={it.label} matchStart={it.matchStart} />
+        ))}
         <Typography
           component={Link}
           to="/"
           sx={{
-            color: pathname === '/' ? '#0EA5FF' : '#718096', // text-gray-700
+            color: pathname === '/' ? '#1677ff' : '#718096', // text-gray-700
             fontWeight: pathname === '/' ? 600 : 500, // font-medium
+            display: 'none',
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
             position: 'relative',
             transition: 'all 0.3s ease', // transition-all duration-300
             '&:hover': {
-              color: '#0EA5FF' // hover:text-accent
+              color: '#1677ff' // hover:text-accent
             },
             '&::after': {
               content: '""',
@@ -70,7 +77,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px', // h-0.5
-              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)', // from-accent to-electronic-purple
+              background: '#1677ff', // 简化为纯色下划线
               transform: pathname === '/' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
@@ -87,15 +94,16 @@ const Header = () => {
           component={Link}
           to="/models"
           sx={{
-            color: pathname === '/models' ? '#0EA5FF' : '#718096', // text-gray-700
+            color: pathname === '/models' ? '#1677ff' : '#718096', // text-gray-700
             fontWeight: pathname === '/models' ? 600 : 500, // font-medium
+            display: 'none',
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
             position: 'relative',
             transition: 'all 0.3s ease', // transition-all duration-300
             '&:hover': {
-              color: '#0EA5FF' // hover:text-accent
+              color: '#1677ff' // hover:text-accent
             },
             '&::after': {
               content: '""',
@@ -104,7 +112,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px', // h-0.5
-              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)', // tech gradient
+              background: '#1677ff',
               transform: pathname === '/models' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
@@ -121,15 +129,16 @@ const Header = () => {
           component={Link}
           to="/price"
           sx={{
-            color: pathname === '/price' ? '#0EA5FF' : '#718096', // text-gray-700
+            color: pathname === '/price' ? '#1677ff' : '#718096', // text-gray-700
             fontWeight: pathname === '/price' ? 600 : 500, // font-medium
+            display: 'none',
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
             position: 'relative',
             transition: 'all 0.3s ease', // transition-all duration-300
             '&:hover': {
-              color: '#0EA5FF' // hover:text-accent
+              color: '#1677ff' // hover:text-accent
             },
             '&::after': {
               content: '""',
@@ -138,7 +147,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px', // h-0.5
-              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)', // tech gradient
+              background: '#1677ff',
               transform: pathname === '/price' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
@@ -155,15 +164,16 @@ const Header = () => {
           component={Link}
           to="/developer"
           sx={{
-            color: pathname.startsWith('/developer') ? '#0EA5FF' : '#718096',
+            color: pathname.startsWith('/developer') ? '#1677ff' : '#718096',
             fontWeight: pathname.startsWith('/developer') ? 600 : 500,
+            display: 'none',
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
             position: 'relative',
             transition: 'all 0.3s ease',
             '&:hover': {
-              color: '#0EA5FF'
+              color: '#1677ff'
             },
             '&::after': {
               content: '""',
@@ -172,7 +182,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px',
-              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)',
+              background: '#1677ff',
               transform: pathname.startsWith('/developer') ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease'
@@ -189,15 +199,16 @@ const Header = () => {
           component={Link}
           to="/playground"
           sx={{
-            color: pathname === '/playground' ? '#0EA5FF' : '#718096',
+            color: pathname === '/playground' ? '#1677ff' : '#718096',
             fontWeight: pathname === '/playground' ? 600 : 500,
+            display: 'none',
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
             position: 'relative',
             transition: 'all 0.3s ease',
             '&:hover': {
-              color: '#0EA5FF'
+              color: '#1677ff'
             },
             '&::after': {
               content: '""',
@@ -206,7 +217,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px',
-              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)',
+              background: '#1677ff',
               transform: pathname === '/playground' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease'
@@ -223,15 +234,16 @@ const Header = () => {
           component={Link}
           to="/contact"
           sx={{
-            color: pathname === '/contact' ? '#0EA5FF' : '#718096', // text-gray-700
+            color: pathname === '/contact' ? '#1677ff' : '#718096', // text-gray-700
             fontWeight: pathname === '/contact' ? 600 : 500, // font-medium
+            display: 'none',
             textDecoration: 'none',
             fontSize: '1rem',
             cursor: 'pointer',
             position: 'relative',
             transition: 'all 0.3s ease', // transition-all duration-300
             '&:hover': {
-              color: '#0EA5FF' // hover:text-accent
+              color: '#1677ff' // hover:text-accent
             },
             '&::after': {
               content: '""',
@@ -240,7 +252,7 @@ const Header = () => {
               right: 0,
               bottom: 0,
               height: '2px', // h-0.5
-              background: 'linear-gradient(to right, #0EA5FF, #8B5CF6)', // tech gradient
+              background: '#1677ff',
               transform: pathname === '/contact' ? 'scaleX(1)' : 'scaleX(0)',
               transformOrigin: 'center',
               transition: 'transform 0.3s ease' // transition-transform duration-300
@@ -273,6 +285,8 @@ const Header = () => {
           </IconButton>
         ) : (
           <>
+            {/* 统一的右侧操作（主题/语言/通知） */}
+            <HeaderActions showProfileWhenPanel={false} />
             {account.user ? (
               <Button
                 component={Link}

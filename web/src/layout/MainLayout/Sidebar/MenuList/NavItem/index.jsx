@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 
 // material-ui
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { Avatar, Chip, ListItemButton, ListItemIcon, ListItemText, Typography, useMediaQuery } from '@mui/material';
 
 // project imports
@@ -21,15 +21,26 @@ const NavItem = ({ item, level }) => {
   const { pathname } = useLocation();
   const customization = useSelector((state) => state.customization);
   const matchesSM = useMediaQuery(theme.breakpoints.down('lg'));
+  const isSelected = customization.isOpen.includes(item.id);
 
+  const leftPaddingUnit = level === 1 ? 2 : 2 + (level - 1) * 1.5;
+  const leftPadding = theme.spacing(leftPaddingUnit);
+  const activeBg = alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.28 : 0.12);
+  const hoverBg = alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.08);
+
+  const iconSize = 20;
+  const iconWrapperSize = 36;
   const Icon = item.icon;
-  const itemIcon = item?.icon ? (
-    <Icon stroke={1.5} size="1.5rem" />
+  const itemIcon = Icon ? (
+    <Icon stroke={1.5} size={iconSize} />
   ) : (
     <FiberManualRecordIcon
       sx={{
-        width: customization.isOpen.findIndex((id) => id === item?.id) > -1 ? 10 : 8,
-        height: customization.isOpen.findIndex((id) => id === item?.id) > -1 ? 10 : 8
+        width: isSelected ? 10 : 8,
+        height: isSelected ? 10 : 8,
+        transition: theme.transitions.create(['transform', 'color'], {
+          duration: theme.transitions.duration.shorter
+        })
       }}
       fontSize={level > 0 ? 'inherit' : 'medium'}
     />
@@ -52,7 +63,7 @@ const NavItem = ({ item, level }) => {
     if (matchesSM) dispatch({ type: SET_MENU, opened: false });
   };
 
-  // active menu item on page load
+  // 页面刷新时保持选中态
   useEffect(() => {
     const currentIndex = document.location.pathname
       .toString()
@@ -69,23 +80,83 @@ const NavItem = ({ item, level }) => {
       {...listItemProps}
       disabled={item.disabled}
       sx={{
-        borderRadius: `${customization.borderRadius}px`,
+        position: 'relative',
+        borderRadius: `${Math.max(customization.borderRadius, 10)}px`,
         mb: 0.5,
-        alignItems: 'flex-start',
-        backgroundColor: level > 1 ? 'transparent !important' : 'inherit',
-        py: level > 1 ? 0.6 : 0.75,
-        pl: `${level * 24}px`
+        alignItems: 'center',
+        minHeight: level > 1 ? 40 : 44,
+        px: 1.5,
+        py: 0.75,
+        pl: leftPadding,
+        color: isSelected ? theme.palette.primary.main : theme.palette.text.secondary,
+        backgroundColor: isSelected ? activeBg : 'transparent',
+        transition: theme.transitions.create(['background-color', 'color'], {
+          duration: theme.transitions.duration.shorter
+        }),
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          left: theme.spacing(1),
+          top: theme.spacing(0.75),
+          bottom: theme.spacing(0.75),
+          width: '3px',
+          borderRadius: '8px',
+          backgroundColor: isSelected ? theme.palette.primary.main : 'transparent',
+          transform: isSelected ? 'scaleY(1)' : 'scaleY(0.2)',
+          opacity: isSelected ? 1 : 0,
+          transition: theme.transitions.create(['transform', 'opacity', 'background-color'], {
+            duration: theme.transitions.duration.shorter
+          })
+        },
+        '&:hover': {
+          backgroundColor: hoverBg,
+          color: theme.palette.primary.main,
+          '& .MuiListItemIcon-root': {
+            color: theme.palette.primary.main
+          },
+          '&::before': {
+            transform: 'scaleY(1)',
+            opacity: 1,
+            backgroundColor: theme.palette.primary.main
+          }
+        },
+        '&.Mui-selected': {
+          backgroundColor: activeBg,
+          color: theme.palette.primary.main,
+          '& .MuiListItemIcon-root': {
+            color: theme.palette.primary.main
+          },
+          '&:hover': {
+            backgroundColor: activeBg
+          }
+        }
       }}
-      selected={customization.isOpen.findIndex((id) => id === item.id) > -1}
+      selected={isSelected}
       onClick={() => itemHandler(item.id)}
     >
-      <ListItemIcon sx={{ my: 'auto', minWidth: !item?.icon ? 18 : 36 }}>{itemIcon}</ListItemIcon>
+      <ListItemIcon
+        sx={{
+          my: 'auto',
+          minWidth: iconWrapperSize,
+          color: isSelected ? theme.palette.primary.main : theme.palette.text.secondary,
+          transition: theme.transitions.create(['color'], {
+            duration: theme.transitions.duration.shorter
+          }),
+          '& svg': {
+            width: iconSize,
+            height: iconSize
+          }
+        }}
+      >
+        {itemIcon}
+      </ListItemIcon>
       <ListItemText
-        primary={
-          <Typography variant={customization.isOpen.findIndex((id) => id === item.id) > -1 ? 'h5' : 'body1'} color="inherit">
-            {item.title}
-          </Typography>
-        }
+        primary={item.title}
+        primaryTypographyProps={{
+          variant: isSelected ? 'subtitle1' : 'body2',
+          fontWeight: isSelected ? 600 : 500,
+          noWrap: true
+        }}
         secondary={
           item.caption && (
             <Typography variant="caption" sx={{ ...theme.typography.subMenuCaption }} display="block" gutterBottom>

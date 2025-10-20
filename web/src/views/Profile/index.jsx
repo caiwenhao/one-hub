@@ -1,25 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import UserCard from 'ui-component/cards/UserCard';
-import {
-  Card,
-  Button,
-  InputLabel,
-  FormControl,
-  OutlinedInput,
-  Stack,
-  Alert,
-  Divider,
-  Chip,
-  Typography,
-  SvgIcon,
-  useMediaQuery,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions
-} from '@mui/material';
+import { Card, Button, InputLabel, FormControl, OutlinedInput, Stack, Alert, Divider, Chip, Typography, SvgIcon, useMediaQuery, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import StickyActions from 'ui-component/StickyActions';
 import Grid from '@mui/material/Unstable_Grid2';
 import SubCard from 'ui-component/cards/SubCard';
 import { IconBrandWechat, IconBrandGithub, IconMail, IconBrandTelegram, IconBrandOauth } from '@tabler/icons-react';
@@ -44,6 +27,8 @@ const validationSchema = Yup.object().shape({
 
 export default function Profile() {
   const { t } = useTranslation();
+  const passwordRef = useRef(null);
+  const displayNameRef = useRef(null);
   const [inputs, setInputs] = useState([]);
   const [turnstileEnabled, setTurnstileEnabled] = useState(false);
   const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
@@ -158,7 +143,7 @@ export default function Profile() {
       let inputValue = inputs;
       // inputValue.username = trims(inputValue.username);
       inputValue.display_name = trims(inputValue.display_name);
-      await validationSchema.validate(inputValue);
+      await validationSchema.validate(inputValue, { abortEarly: false });
       const res = await API.put(`/api/user/self`, inputValue);
       const { success, message } = res.data;
       if (success) {
@@ -167,7 +152,25 @@ export default function Profile() {
         showError(message);
       }
     } catch (err) {
-      showError(err.message);
+      // 滚动并聚焦到首个错误字段
+      if (err && err.inner && err.inner.length > 0) {
+        const first = err.inner[0];
+        switch (first.path) {
+          case 'password':
+            passwordRef.current && passwordRef.current.focus();
+            passwordRef.current && passwordRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            break;
+          case 'display_name':
+            displayNameRef.current && displayNameRef.current.focus();
+            displayNameRef.current && displayNameRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            break;
+          default:
+            break;
+        }
+        showError(first.message || err.message);
+      } else {
+        showError(err?.message || t('common.unknownError'));
+      }
     }
   };
 
@@ -250,6 +253,7 @@ export default function Profile() {
                       value={inputs.password || ''}
                       onChange={handleInputChange}
                       name="password"
+                      inputRef={passwordRef}
                       placeholder={t('profilePage.inputPasswordPlaceholder')}
                     />
                   </FormControl>
@@ -264,15 +268,12 @@ export default function Profile() {
                       value={inputs.display_name || ''}
                       onChange={handleInputChange}
                       name="display_name"
+                      inputRef={displayNameRef}
                       placeholder={t('profilePage.inputDisplayNamePlaceholder')}
                     />
                   </FormControl>
                 </Grid>
-                <Grid xs={12}>
-                  <Button variant="contained" color="primary" onClick={submit}>
-                    {t('profilePage.submit')}
-                  </Button>
-                </Grid>
+                <Grid xs={12}></Grid>
               </Grid>
             </SubCard>
             <SubCard title={t('profilePage.accountBinding')}>
@@ -435,6 +436,15 @@ export default function Profile() {
           </Stack>
         </Card>
       </UserCard>
+      {/* 吸底操作区：保存始终可达 */}
+      <StickyActions>
+        <Button variant="outlined" onClick={loadUser} sx={{ mr: 1 }}>
+          {t('common.reset')}
+        </Button>
+        <Button variant="contained" color="primary" onClick={submit}>
+          {t('profilePage.submit')}
+        </Button>
+      </StickyActions>
       <WechatModal open={openWechat} handleClose={handleWechatClose} wechatLogin={bindWeChat} qrCode={status.wechat_qrcode} />
       <EmailModal
         open={openEmail}

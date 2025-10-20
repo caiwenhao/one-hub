@@ -1,18 +1,19 @@
 import { createTheme } from '@mui/material/styles';
 
 // assets
-import colors from 'assets/scss/_themes-vars.module.scss';
+import scssColors from 'assets/scss/_themes-vars.module.scss';
+import { buildColorsFromTokens } from './buildColorsFromTokens';
 
 // project imports
-import componentStyleOverrides from './compStyleOverride';
+import overrides from './overrides';
 import themePalette from './palette';
 import themeTypography from './typography';
 import { varAlpha, createGradient } from './utils';
 
 // 创建自定义渐变背景色
 const customGradients = {
-  primary: createGradient(colors.primaryMain, colors.primaryDark),
-  secondary: createGradient(colors.secondaryMain, colors.secondaryDark)
+  primary: createGradient(scssColors.primaryMain, scssColors.primaryDark),
+  secondary: createGradient(scssColors.secondaryMain, scssColors.secondaryDark)
 };
 
 /**
@@ -21,7 +22,8 @@ const customGradients = {
  */
 
 export const theme = (customization) => {
-  const color = colors;
+  // 基于 tokens 构建 colors，保留 SCSS 作为回退
+  const color = buildColorsFromTokens(customization.theme || 'light') || scssColors;
   const options = customization.theme === 'light' ? GetLightOption() : GetDarkOption();
   const themeOption = {
     colors: color,
@@ -43,16 +45,18 @@ export const theme = (customization) => {
       }
     },
     shape: {
-      borderRadius: themeOption?.customization?.borderRadius || 12
+      // 企业稳重：圆角更克制
+      borderRadius: themeOption?.customization?.borderRadius || 10
     },
     typography: themeTypography(themeOption),
     breakpoints: {
       values: {
+        // 统一回 MUI 默认断点，方便生态对齐
         xs: 0,
         sm: 600,
-        md: 768,
-        lg: 1024,
-        xl: 1200
+        md: 900,
+        lg: 1200,
+        xl: 1536
       }
     },
     zIndex: {
@@ -63,12 +67,12 @@ export const theme = (customization) => {
   };
 
   const themes = createTheme(themeOptions);
-  themes.components = componentStyleOverrides(themeOption);
+  themes.components = overrides(themeOption);
 
-  // 暴露 AI 科技风 tokens（供组件通过 useTheme 访问）
+  // 兼容：保留渐变字段但不鼓励大面积使用
   themes.aiGradients = {
-    brand: 'linear-gradient(-45deg, #0EA5FF, #22D3EE, #8B5CF6)',
-    brandLinear: 'linear-gradient(135deg, #0EA5FF, #8B5CF6)'
+    brand: 'linear-gradient(135deg, #1677ff, #1554c5)',
+    brandLinear: 'linear-gradient(135deg, #1677ff, #1554c5)'
   };
 
   return themes;
@@ -77,7 +81,7 @@ export const theme = (customization) => {
 export default theme;
 
 function GetDarkOption() {
-  const color = colors;
+  const color = scssColors;
   return {
     mode: 'dark',
     heading: color.darkTextTitle,
@@ -101,7 +105,7 @@ function GetDarkOption() {
 }
 
 function GetLightOption() {
-  const color = colors;
+  const color = scssColors;
   return {
     mode: 'light',
     heading: '#202939',

@@ -9,6 +9,8 @@ import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Toolbar from '@mui/material/Toolbar';
+import FilterBar from 'ui-component/FilterBar';
+import ActionBar from 'ui-component/ActionBar';
 
 import { Button, Card, Stack, Container, Typography, Box } from '@mui/material';
 import LogTableRow from './component/OrderTableRow';
@@ -119,29 +121,21 @@ export default function Order() {
         <Typography variant="h4">{t('orderlogPage.title')}</Typography>
       </Stack>
       <Card>
-        <Box component="form" noValidate>
-          <TableToolBar filterName={toolBarValue} handleFilterName={handleToolBarValue} />
-        </Box>
-        <Toolbar
-          sx={{
-            textAlign: 'right',
-            height: 50,
-            display: 'flex',
-            justifyContent: 'space-between',
-            p: (theme) => theme.spacing(0, 1, 0, 3)
-          }}
-        >
-          <Container>
-            <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
-              <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
-                {t('orderlogPage.refreshClear')}
-              </Button>
-              <Button onClick={searchLogs} startIcon={<Icon icon="solar:minimalistic-magnifer-line-duotone" width={18} />}>
-                {t('orderlogPage.search')}
-              </Button>
-            </ButtonGroup>
-          </Container>
-        </Toolbar>
+        <FilterBar>
+          <Box component="form" noValidate>
+            <TableToolBar filterName={toolBarValue} handleFilterName={handleToolBarValue} />
+          </Box>
+        </FilterBar>
+        <ActionBar>
+          <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
+            <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
+              {t('orderlogPage.refreshClear')}
+            </Button>
+            <Button onClick={searchLogs} startIcon={<Icon icon="solar:minimalistic-magnifer-line-duotone" width={18} />}>
+              {t('orderlogPage.search')}
+            </Button>
+          </ButtonGroup>
+        </ActionBar>
         {searching && <LinearProgress />}
         <TableContainer sx={{ overflow: 'unset' }}>
           <Table sx={{ minWidth: 800 }}>
