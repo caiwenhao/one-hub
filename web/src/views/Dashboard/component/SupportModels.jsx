@@ -117,9 +117,11 @@ const SupportModels = () => {
                       {models.map((model) => {
                         const p = priceMap[model];
                         let tip = p
-                          ? p.type === 'times'
-                            ? `单价：$${p.input_usd ?? p.input_rmb} / 次`
-                            : `输入：$${p.input_usd ?? p.input_rmb} / 1k，输出：$${p.output_usd ?? p.output_rmb} / 1k`
+                          ? p.unit === 'USD/sec'
+                            ? `单价：$${p.input_usd ?? p.input_rmb} / 秒`
+                            : p.type === 'times'
+                              ? `单价：$${p.input_usd ?? p.input_rmb} / 次`
+                              : `输入：$${p.input_usd ?? p.input_rmb} / 1k，输出：$${p.output_usd ?? p.output_rmb} / 1k`
                           : undefined;
                         // minimaxi 视频模型为“组合计费”，基础模型可能无单价，给出友好提示
                         if (!tip) {

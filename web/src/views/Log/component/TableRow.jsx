@@ -83,6 +83,7 @@ export default function LogTableRow({ item, userIsAdmin, userGroup, columnVisibi
   }
 
   const { totalInputTokens, totalOutputTokens, show, tokenDetails } = useMemo(() => calculateTokens(item), [item]);
+  const videoSeconds = item?.metadata?.video_seconds || 0;
 
   // 计算当前显示的列数
   const colCount = Object.values(columnVisibility).filter(Boolean).length;
@@ -138,7 +139,9 @@ export default function LogTableRow({ item, userIsAdmin, userGroup, columnVisibi
               <Label color={requestTimeLabelOptions(request_time)}>
                 {item.request_time === 0 ? '无' : request_time_str} {first_time_str ? ' / ' + first_time_str : ''}
               </Label>
-
+              {videoSeconds > 0 && (
+                <Label color="success">{`视频 ${videoSeconds} s`}</Label>
+              )}
               {request_ts_str && <Label color={requestTSLabelOptions(request_ts)}>{request_ts_str}</Label>}
             </Stack>
           </TableCell>

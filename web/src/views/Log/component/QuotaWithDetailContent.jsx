@@ -40,29 +40,46 @@ export default function QuotaWithDetailContent({ item, totalInputTokens, totalOu
   const quota = item.quota || 0;
 
   const priceType = item.metadata?.price_type || 'tokens';
+  const modelName = (item.model_name || '').toLowerCase();
+  const isSora = modelName.startsWith('sora-2');
   const extraBilling = item?.metadata?.extra_billing || {};
 
   // Get input/output prices from metadata with appropriate defaults
   const originalInputPrice =
     item.metadata?.input_price_origin ||
-    (item.metadata?.input_ratio ? `$${calculatePrice(item.metadata.input_ratio, 1, false)} /M` : '$0 /M');
+    (item.metadata?.input_ratio
+      ? isSora
+        ? `$${calculatePrice(item.metadata.input_ratio, 1, true)} /sec`
+        : `$${calculatePrice(item.metadata.input_ratio, 1, false)} /M`
+      : isSora
+        ? '$0 /sec'
+        : '$0 /M');
   const originalOutputPrice =
     item.metadata?.output_price_origin ||
-    (item.metadata?.output_ratio ? `$${calculatePrice(item.metadata.output_ratio, 1, false)} /M` : '$0 /M');
+    (item.metadata?.output_ratio
+      ? isSora
+        ? '$0'
+        : `$${calculatePrice(item.metadata.output_ratio, 1, false)} /M`
+      : '$0');
 
   // Calculate actual prices based on ratios and group discount
   const groupRatio = item.metadata?.group_ratio || 1;
   const inputPrice =
-    item.metadata?.input_price || (item.metadata?.input_ratio ? `$${calculatePrice(item.metadata.input_ratio, groupRatio, false)} ` : '$0');
+    item.metadata?.input_price ||
+    (item.metadata?.input_ratio ? `$${calculatePrice(item.metadata.input_ratio, groupRatio, isSora)} ` : '$0');
   const outputPrice =
     item.metadata?.output_price ||
-    (item.metadata?.output_ratio ? `$${calculatePrice(item.metadata.output_ratio, groupRatio, false)}` : '$0');
+    (item.metadata?.output_ratio
+      ? `$${calculatePrice(item.metadata.output_ratio, groupRatio, false)}`
+      : '$0');
 
-  const inputPriceUnit = inputPrice + ' /M';
-  const outputPriceUnit = outputPrice + ' /M';
+  const inputPriceUnit = inputPrice + (isSora ? ' /sec' : ' /M');
+  const outputPriceUnit = outputPrice + (isSora ? '' : ' /M');
 
   let calculateSteps = '';
-  if (priceType === 'tokens') {
+  if (isSora) {
+    calculateSteps = `(${totalInputTokens} × ${inputPrice} /sec)`;
+  } else if (priceType === 'tokens') {
     calculateSteps = `(${totalInputTokens} / 1M × ${inputPrice})`;
     if (totalOutputTokens > 0) {
       calculateSteps += ` + (${totalOutputTokens} / 1M × ${outputPrice})`;

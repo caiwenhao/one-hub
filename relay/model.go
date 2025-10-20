@@ -496,7 +496,8 @@ func getAvailableModels(groupName string) map[string]*AvailableModelResponse {
             // 计算人民币展示（不改变内部定价基准）；仅在已知渠道类型下展示，避免默认价误导
             var disp *PriceDisplay
             if price.ChannelType != config.ChannelTypeUnknown {
-                disp = buildPriceDisplay(price)
+                // 对特定模型（如 Sora）按秒展示单位
+                disp = buildPriceDisplayForModel(modelName, price)
             }
 
             // 精确计费组合（对 minimaxi 与 sora 视频基础模型展开）

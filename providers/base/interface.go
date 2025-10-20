@@ -142,8 +142,14 @@ type ResponsesInterface interface {
 }
 
 type VideoInterface interface {
-	ProviderInterface
-	CreateVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode)
-	RetrieveVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode)
-	DownloadVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode)
+    ProviderInterface
+    CreateVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode)
+    RetrieveVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode)
+    DownloadVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode)
+    // Remix 指定视频，生成新的任务
+    RemixVideo(videoID string, prompt string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode)
+    // List 列出视频任务（上游组织级别）
+    ListVideos(after string, limit int, order string) (*types.VideoList, *types.OpenAIErrorWithStatusCode)
+    // Delete 删除指定视频任务
+    DeleteVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode)
 }

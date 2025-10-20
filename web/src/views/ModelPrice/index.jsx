@@ -736,9 +736,13 @@ export default function ModelPrice() {
                         const p = row.priceDisplay;
                         let tip;
                         if (p) {
-                          tip = p.type === 'times'
-                            ? `单价：$${p.input_usd ?? p.input_rmb} / 次`
-                            : `基础单价：输入 $${p.input_usd ?? p.input_rmb} / 1k，输出 $${p.output_usd ?? p.output_rmb} / 1k`;
+                          if (p.unit === 'USD/sec') {
+                            tip = `单价：$${p.input_usd ?? p.input_rmb} / 秒`;
+                          } else {
+                            tip = p.type === 'times'
+                              ? `单价：$${p.input_usd ?? p.input_rmb} / 次`
+                              : `基础单价：输入 $${p.input_usd ?? p.input_rmb} / 1k，输出 $${p.output_usd ?? p.output_rmb} / 1k`;
+                          }
                         } else {
                           const lower = row.model.toLowerCase();
                           const isMiniMaxVideoBase =
@@ -894,7 +898,7 @@ export default function ModelPrice() {
                           <TableBody>
                             {row.variants.map((v) => {
                               const vp = v.priceDisplay || {};
-                              const typeText = vp.type === 'times' ? '按次' : '按 Tokens';
+                              const typeText = vp.unit === 'USD/sec' ? '按秒' : vp.type === 'times' ? '按次' : '按 Tokens';
                               return (
                                 <TableRow key={v.model}>
                                   <TableCell>
@@ -913,7 +917,11 @@ export default function ModelPrice() {
                                   <TableCell>
                                     {vp.input_usd || vp.input_rmb ? (
                                       <Label color="info" variant="outlined" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
-                                        {vp.type === 'times' ? `$${vp.input_usd ?? vp.input_rmb} / 次` : `$${vp.input_usd ?? vp.input_rmb} / 1k`}
+                                        {vp.unit === 'USD/sec'
+                                          ? `$${vp.input_usd ?? vp.input_rmb} / 秒`
+                                          : vp.type === 'times'
+                                            ? `$${vp.input_usd ?? vp.input_rmb} / 次`
+                                            : `$${vp.input_usd ?? vp.input_rmb} / 1k`}
                                       </Label>
                                     ) : (
                                       <Typography variant="body2" color="text.disabled">—</Typography>
@@ -922,7 +930,11 @@ export default function ModelPrice() {
                                   <TableCell>
                                     {vp.output_usd || vp.output_rmb ? (
                                       <Label color="info" variant="outlined" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
-                                        {vp.type === 'times' ? `$${vp.output_usd ?? vp.output_rmb} / 次` : `$${vp.output_usd ?? vp.output_rmb} / 1k`}
+                                        {vp.unit === 'USD/sec'
+                                          ? `$${vp.output_usd ?? vp.output_rmb} / 秒`
+                                          : vp.type === 'times'
+                                            ? `$${vp.output_usd ?? vp.output_rmb} / 次`
+                                            : `$${vp.output_usd ?? vp.output_rmb} / 1k`}
                                       </Label>
                                     ) : (
                                       <Typography variant="body2" color="text.disabled">—</Typography>

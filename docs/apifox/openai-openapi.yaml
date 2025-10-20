@@ -229,6 +229,22 @@ paths:
       requestBody:
         required: true
         content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                model: { type: string, example: sora-2 }
+                prompt: { type: string }
+                seconds: { type: integer, example: 8 }
+                size: { type: string, example: 720x1280 }
+                remove_watermark: { type: boolean }
+                input_image: { type: string, format: binary, description: 单张输入图（文件直传） }
+                input_images:
+                  type: array
+                  items: { type: string, format: binary }
+                input_reference: { type: string, format: binary, description: 引用文件直传 }
+                remix_video_id: { type: string }
+                seed: { type: string }
           application/json:
             schema:
               $ref: '#/components/schemas/VideoCreateRequest'
@@ -252,9 +268,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VideoJob'
+    get:
+      summary: 列出视频任务
+      description: 对齐 OpenAI 官方 /v1/videos，返回组织级视频任务列表（上游直透）。
+      parameters:
+        - in: query
+          name: after
+          required: false
+          schema: { type: string }
+          description: 上一页最后一个条目的标识，用于游标翻页。
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100 }
+          description: 返回数量上限。
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+          description: 时间排序（asc/desc）。
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object: { type: string, example: list }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VideoJob'
   /v1/videos/{id}:
     get:
       summary: 查询视频任务
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoJob'
+    delete:
+      summary: 删除视频任务
       parameters:
         - in: path
           name: id
@@ -286,6 +350,37 @@ paths:
           content:
             application/octet-stream:
               schema: { type: string, format: binary }
+  /v1/videos/{id}/remix:
+    post:
+      summary: 创建视频 Remix 任务
+      description: 对齐 OpenAI 官方 /v1/videos/{id}/remix；MountSea 渠道回退为 create + remix_video_id。
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt: { type: string, description: 更新后的提示词 }
+          multipart/form-data:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoJob'
 components:
   securitySchemes:
     bearerAuth:

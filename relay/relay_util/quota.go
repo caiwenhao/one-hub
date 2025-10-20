@@ -1,18 +1,19 @@
 package relay_util
 
 import (
-	"context"
-	"errors"
-	"math"
-	"net/http"
-	"one-api/common"
-	"one-api/common/config"
-	"one-api/common/logger"
-	"one-api/model"
-	"one-api/types"
-	"time"
+    "context"
+    "errors"
+    "math"
+    "net/http"
+    "one-api/common"
+    "one-api/common/config"
+    "one-api/common/logger"
+    "one-api/model"
+    "one-api/types"
+    "time"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
+    "strings"
 )
 
 type Quota struct {
@@ -55,11 +56,17 @@ func NewQuota(c *gin.Context, modelName string, promptTokens int) *Quota {
 }
 
 func (q *Quota) PreQuotaConsumption() *types.OpenAIErrorWithStatusCode {
-	if q.price.Type == model.TimesPriceType {
-		q.preConsumedQuota = int(1000 * q.inputRatio)
-	} else if q.price.Input != 0 || q.price.Output != 0 {
-		q.preConsumedQuota = int(float64(q.promptTokens)*q.inputRatio) + config.PreConsumedQuota
-	}
+    if q.price.Type == model.TimesPriceType {
+        q.preConsumedQuota = int(1000 * q.inputRatio)
+    } else if q.price.Input != 0 || q.price.Output != 0 {
+        // Sora 按秒计费：预扣时同样按 seconds×1000 计算
+        pt := q.promptTokens
+        lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
+        if strings.HasPrefix(lowerModel, "sora-2") {
+            pt = pt * 1000
+        }
+        q.preConsumedQuota = int(float64(pt)*q.inputRatio) + config.PreConsumedQuota
+    }
 
 	if q.preConsumedQuota == 0 {
 		return nil
@@ -206,13 +213,22 @@ func (q *Quota) GetGroupRatio() float64 {
 }
 
 func (q *Quota) GetLogMeta(usage *types.Usage) map[string]any {
-	meta := map[string]any{
-		"group_name":   q.groupName,
-		"price_type":   q.price.Type,
-		"group_ratio":  q.groupRatio,
-		"input_ratio":  q.price.GetInput(),
-		"output_ratio": q.price.GetOutput(),
-	}
+    meta := map[string]any{
+        "group_name":   q.groupName,
+        "price_type":   q.price.Type,
+        "group_ratio":  q.groupRatio,
+        "input_ratio":  q.price.GetInput(),
+        "output_ratio": q.price.GetOutput(),
+    }
+
+    // 对 Sora（sora-2 系列）标注秒单位，并记录视频秒数（由 usage.PromptTokens 提供）
+    lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
+    if strings.HasPrefix(lowerModel, "sora-2") {
+        meta["unit"] = "sec"
+        if usage != nil && usage.PromptTokens > 0 {
+            meta["video_seconds"] = usage.PromptTokens
+        }
+    }
 
 	firstResponseTime := q.GetFirstResponseTime()
 	if firstResponseTime > 0 {
@@ -242,11 +258,16 @@ func (q *Quota) getRequestTime() int {
 
 // 通过 token 数获取消费配额
 func (q *Quota) GetTotalQuota(promptTokens, completionTokens int, extraBilling map[string]types.ExtraBilling) (quota int) {
-	if q.price.Type == model.TimesPriceType {
-		quota = int(1000 * q.inputRatio)
-	} else {
-		quota = int(math.Ceil((float64(promptTokens) * q.inputRatio) + (float64(completionTokens) * q.outputRatio)))
-	}
+    if q.price.Type == model.TimesPriceType {
+        quota = int(1000 * q.inputRatio)
+    } else {
+        // Sora（OpenAI /v1/videos）按秒计费：内部换算为 seconds × 1000（对齐 tokens 基线 1k）
+        lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
+        if strings.HasPrefix(lowerModel, "sora-2") {
+            promptTokens = promptTokens * 1000
+        }
+        quota = int(math.Ceil((float64(promptTokens) * q.inputRatio) + (float64(completionTokens) * q.outputRatio)))
+    }
 
 	q.GetExtraBillingData(extraBilling)
 	extraBillingQuota := 0
