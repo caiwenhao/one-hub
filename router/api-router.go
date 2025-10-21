@@ -196,13 +196,21 @@ func SetApiRouter(router *gin.Engine) {
 			redemptionRoute.PUT("/", controller.UpdateRedemption)
 			redemptionRoute.DELETE("/:id", controller.DeleteRedemption)
 		}
-		logRoute := apiRouter.Group("/log")
-		logRoute.GET("/", middleware.AdminAuth(), controller.GetLogsList)
-		logRoute.DELETE("/", middleware.AdminAuth(), controller.DeleteHistoryLogs)
-		logRoute.GET("/stat", middleware.AdminAuth(), controller.GetLogsStat)
-		logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
-		// logRoute.GET("/search", middleware.AdminAuth(), controller.SearchAllLogs)
-		logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogsList)
+			logRoute := apiRouter.Group("/log")
+			logRoute.GET("/", middleware.AdminAuth(), controller.GetLogsList)
+			// 导出日志 CSV（管理员）
+			logRoute.GET("/export", middleware.AdminAuth(), controller.ExportLogsCSV)
+			// 选项（管理员）：模型名/渠道/用户名
+			logRoute.GET("/options", middleware.AdminAuth(), controller.GetLogOptions)
+			logRoute.DELETE("/", middleware.AdminAuth(), controller.DeleteHistoryLogs)
+			logRoute.GET("/stat", middleware.AdminAuth(), controller.GetLogsStat)
+			logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
+			// logRoute.GET("/search", middleware.AdminAuth(), controller.SearchAllLogs)
+			logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogsList)
+			// 导出日志 CSV（当前用户）
+			logRoute.GET("/self/export", middleware.UserAuth(), controller.ExportUserLogsCSV)
+			// 选项（用户）：模型名/渠道（仅与自身数据相关）
+			logRoute.GET("/self/options", middleware.UserAuth(), controller.GetUserLogOptions)
 		// logRoute.GET("/self/search", middleware.UserAuth(), controller.SearchUserLogs)
 		groupRoute := apiRouter.Group("/group")
 		groupRoute.Use(middleware.AdminAuth())

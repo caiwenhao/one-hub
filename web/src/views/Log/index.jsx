@@ -35,12 +35,15 @@ export default function Log() {
   const originalKeyword = {
     p: 0,
     username: '',
+    usernames: [],
     token_name: '',
     model_name: '',
+    model_names: [],
     start_timestamp: 0,
     end_timestamp: dayjs().unix() + 3600,
     log_type: '0',
     channel_id: '',
+    channel_ids: [],
     source_ip: ''
   };
 
@@ -50,8 +53,8 @@ export default function Log() {
   const [rowsPerPage, setRowsPerPage] = useState(() => getPageSize('log'));
   const [listCount, setListCount] = useState(0);
   const [searching, setSearching] = useState(false);
-  const [toolBarValue, setToolBarValue] = useState(originalKeyword);
-  const [searchKeyword, setSearchKeyword] = useState(originalKeyword);
+  const [toolBarValue, setToolBarValue] = useState({ ...originalKeyword });
+  const [searchKeyword, setSearchKeyword] = useState({ ...originalKeyword });
   const [refreshFlag, setRefreshFlag] = useState(false);
   const { userGroup } = useSelector((state) => state.account);
   const theme = useTheme();
@@ -129,11 +132,12 @@ export default function Log() {
 
   const searchLogs = async () => {
     setPage(0);
-    setSearchKeyword(toolBarValue);
+    setSearchKeyword({ ...toolBarValue });
   };
 
   const handleToolBarValue = (event) => {
-    setToolBarValue({ ...toolBarValue, [event.target.name]: event.target.value });
+    const { name, value } = event.target;
+    setToolBarValue((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleTabsChange = async (event, newValue) => {
@@ -184,9 +188,39 @@ export default function Log() {
   const handleRefresh = async () => {
     setOrderBy('created_at');
     setOrder('desc');
-    setToolBarValue(originalKeyword);
-    setSearchKeyword(originalKeyword);
+    setToolBarValue({ ...originalKeyword });
+    setSearchKeyword({ ...originalKeyword });
     setRefreshFlag(!refreshFlag);
+  };
+
+  // 导出 CSV（按当前筛选条件）
+  const handleExport = async () => {
+    try {
+      // 以当前已应用的筛选条件导出（searchKeyword）
+      let params = { ...searchKeyword };
+      let sort = orderBy;
+      if (sort) {
+        params.order = order === 'desc' ? `-${sort}` : sort;
+      }
+      const url = userIsAdmin ? '/api/log/export' : '/api/log/self/export';
+      const res = await API.get(url, {
+        params,
+        responseType: 'blob'
+      });
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
+      const link = document.createElement('a');
+      const href = URL.createObjectURL(blob);
+      link.href = href;
+      const now = dayjs().format('YYYYMMDD_HHmmss');
+      link.download = `logs_${now}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(href);
+    } catch (error) {
+      console.error(error);
+      showError('导出失败，请检查筛选条件与网络状态');
+    }
   };
 
   useEffect(() => {
@@ -202,6 +236,9 @@ export default function Log() {
       <Button onClick={searchLogs} size="small" startIcon={<Icon icon="solar:minimalistic-magnifer-line-duotone" width={18} />}>
         {t('logPage.searchButton')}
       </Button>
+      <Button onClick={handleExport} size="small" startIcon={<Icon icon="solar:download-minimalistic-bold-duotone" width={18} />}>
+        {t('logPage.exportButton', { defaultValue: '导出CSV' })}
+      </Button>
       <Button onClick={handleColumnMenuOpen} size="small" startIcon={<Icon icon="solar:settings-bold-duotone" width={18} />}>
         {t('logPage.columnSettings')}
       </Button>
@@ -213,6 +250,9 @@ export default function Log() {
       </IconButton>
       <IconButton onClick={searchLogs} size="small">
         <Icon icon="solar:minimalistic-magnifer-line-duotone" width={18} />
+      </IconButton>
+      <IconButton onClick={handleExport} size="small">
+        <Icon icon="solar:download-minimalistic-bold-duotone" width={18} />
       </IconButton>
       <IconButton onClick={handleColumnMenuOpen} size="small">
         <Icon icon="solar:settings-bold-duotone" width={18} />

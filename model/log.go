@@ -209,6 +209,53 @@ func GetUserLogsList(userId int, params *LogsListParams) (*DataResult[Log], erro
 	return PaginateAndOrder[Log](tx, &params.PaginationParams, &logs, allowedLogsOrderFields)
 }
 
+// GetLogsListWithArrays 支持多选数组过滤（管理员/用户公用）
+func GetLogsListWithArrays(params *LogsListParams, modelNames []string, channelIDs []int, usernames []string, onlyUserId *int) (*DataResult[Log], error) {
+	var logs []*Log
+
+	tx := DB.Preload("Channel", func(db *gorm.DB) *gorm.DB { return db.Select("id, name") })
+	if onlyUserId != nil {
+		tx = tx.Where("user_id = ?", *onlyUserId).Omit("id")
+	}
+
+	if params.LogType != LogTypeUnknown {
+		tx = tx.Where("type = ?", params.LogType)
+	}
+	if params.ModelName != "" {
+		tx = tx.Where("model_name = ?", params.ModelName)
+	}
+	if params.Username != "" {
+		tx = tx.Where("username = ?", params.Username)
+	}
+	if params.TokenName != "" {
+		tx = tx.Where("token_name = ?", params.TokenName)
+	}
+	if params.StartTimestamp != 0 {
+		tx = tx.Where("created_at >= ?", params.StartTimestamp)
+	}
+	if params.EndTimestamp != 0 {
+		tx = tx.Where("created_at <= ?", params.EndTimestamp)
+	}
+	if params.ChannelId != 0 {
+		tx = tx.Where("channel_id = ?", params.ChannelId)
+	}
+	if params.SourceIp != "" {
+		tx = tx.Where("source_ip = ?", params.SourceIp)
+	}
+
+	if len(modelNames) > 0 {
+		tx = tx.Where("model_name IN ?", modelNames)
+	}
+	if len(channelIDs) > 0 {
+		tx = tx.Where("channel_id IN ?", channelIDs)
+	}
+	if onlyUserId == nil && len(usernames) > 0 {
+		tx = tx.Where("username IN ?", usernames)
+	}
+
+	return PaginateAndOrder[Log](tx, &params.PaginationParams, &logs, allowedLogsOrderFields)
+}
+
 func SearchAllLogs(keyword string) (logs []*Log, err error) {
 	err = DB.Where("type = ? or content LIKE ?", keyword, keyword+"%").Order("id desc").Limit(config.MaxRecentItems).Find(&logs).Error
 	return logs, err

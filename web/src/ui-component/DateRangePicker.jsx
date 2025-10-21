@@ -15,6 +15,18 @@ export default class DateRangePicker extends React.Component {
     views: this.props?.views
   };
 
+  componentDidUpdate(prevProps) {
+    const prev = prevProps?.defaultValue || {};
+    const next = this.props?.defaultValue || {};
+    const prevStart = prev.start ? prev.start.valueOf() : null;
+    const prevEnd = prev.end ? prev.end.valueOf() : null;
+    const nextStart = next.start ? next.start.valueOf() : null;
+    const nextEnd = next.end ? next.end.valueOf() : null;
+    if (prevStart !== nextStart || prevEnd !== nextEnd) {
+      this.setState({ startDate: next.start, endDate: next.end });
+    }
+  }
+
   handleStartChange = (date) => {
     // 将 date设置当天的 00:00:00
     date = date.startOf('day');
@@ -56,7 +68,7 @@ export default class DateRangePicker extends React.Component {
           <DatePicker
             label={localeText?.start || ''}
             name="start_date"
-            defaultValue={startDate}
+            value={startDate}
             open={startOpen}
             onChange={this.handleStartChange}
             onOpen={this.handleStartOpen}
@@ -72,14 +84,14 @@ export default class DateRangePicker extends React.Component {
                 sx: { flex: 1 }
               }
             }}
-            views={this.views}
+            views={this.state.views}
             sx={{ flex: 1 }}
           />
           <Typography variant="body" sx={{ px: 1 }}> – </Typography>
           <DatePicker
             label={localeText?.end || ''}
             name="end_date"
-            defaultValue={endDate}
+            value={endDate}
             open={endOpen}
             onChange={this.handleEndChange}
             onOpen={this.handleStartOpen}
@@ -96,7 +108,7 @@ export default class DateRangePicker extends React.Component {
                 sx: { flex: 1 }
               }
             }}
-            views={this.views}
+            views={this.state.views}
             sx={{ flex: 1 }}
           />
         </LocalizationProvider>
