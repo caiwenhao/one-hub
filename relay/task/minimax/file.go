@@ -14,6 +14,7 @@ import (
 	"one-api/providers"
 	miniProvider "one-api/providers/minimaxi"
 	"one-api/relay"
+	"one-api/types"
 
 	"github.com/gin-gonic/gin"
 )
@@ -205,37 +206,37 @@ func retrieveMiniMaxFileMetadata(c *gin.Context, fileID string) (*miniProvider.M
 }
 
 func retrieveFileViaChannel(c *gin.Context, channel *model.Channel, userID int, fileID string, upsert bool) (*miniProvider.MiniMaxFileRetrieveResponse, bool) {
-    // 若为 PPInfra 上游，优先使用 artifact 中的直链构造响应，避免请求不存在的 /v1/files/retrieve
-    if !isMiniMaxOfficialChannelForFile(channel) {
-        if a, err := model.GetArtifactByFileID(userID, model.TaskPlatformMiniMax, fileID); err == nil && a != nil && strings.TrimSpace(a.DownloadURL) != "" {
-            resp := &miniProvider.MiniMaxFileRetrieveResponse{
-                File: miniProvider.MiniMaxFileObject{
-                    FileID:      miniProvider.StringOrNumber(fileID),
-                    Bytes:       0,
-                    CreatedAt:   time.Now().Unix(),
-                    Filename:    "video.mp4",
-                    Purpose:     "video",
-                    DownloadURL: a.DownloadURL,
-                },
-                BaseResp: miniProvider.BaseResp{StatusCode: 0, StatusMsg: "success"},
-            }
-            return resp, true
-        }
-    }
+	// 若为 PPInfra 上游，优先使用 artifact 中的直链构造响应，避免请求不存在的 /v1/files/retrieve
+	if !isMiniMaxOfficialChannelForFile(channel) {
+		if a, err := model.GetArtifactByFileID(userID, model.TaskPlatformMiniMax, fileID); err == nil && a != nil && strings.TrimSpace(a.DownloadURL) != "" {
+			resp := &miniProvider.MiniMaxFileRetrieveResponse{
+				File: miniProvider.MiniMaxFileObject{
+					FileID:      types.StringOrNumber(fileID),
+					Bytes:       0,
+					CreatedAt:   time.Now().Unix(),
+					Filename:    "video.mp4",
+					Purpose:     "video",
+					DownloadURL: a.DownloadURL,
+				},
+				BaseResp: miniProvider.BaseResp{StatusCode: 0, StatusMsg: "success"},
+			}
+			return resp, true
+		}
+	}
 
-    provider := providers.GetProvider(channel, c)
-    mini, ok := provider.(*miniProvider.MiniMaxProvider)
-    if !ok || mini.GetVideoClient() == nil {
-        return nil, false
-    }
-    resp, errWithCode := mini.GetVideoClient().RetrieveFile(fileID)
-    if errWithCode != nil {
-        return nil, false
-    }
-    if upsert {
-        upsertMiniMaxArtifact(userID, channel.Id, fileID, resp.File.DownloadURL)
-    }
-    return resp, true
+	provider := providers.GetProvider(channel, c)
+	mini, ok := provider.(*miniProvider.MiniMaxProvider)
+	if !ok || mini.GetVideoClient() == nil {
+		return nil, false
+	}
+	resp, errWithCode := mini.GetVideoClient().RetrieveFile(fileID)
+	if errWithCode != nil {
+		return nil, false
+	}
+	if upsert {
+		upsertMiniMaxArtifact(userID, channel.Id, fileID, resp.File.DownloadURL)
+	}
+	return resp, true
 }
 
 func upsertMiniMaxArtifact(userID, channelID int, fileID, downloadURL string) {

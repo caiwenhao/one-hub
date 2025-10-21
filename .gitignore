@@ -17,6 +17,7 @@ dist
 test.yaml
 one-api
 _output
+docs/swagger/
 
 # Go cache directories
 .gocache

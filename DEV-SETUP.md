@@ -198,6 +198,13 @@ docker exec -it redis-dev redis-cli
 ## 🧪 测试建议
 
 ### API 测试
+
+## 📘 Swagger / OpenAPI 文档
+
+- 默认仅在 `log_level=debug` 或显式设置 `swagger.enable=true`（环境变量 `SWAGGER_ENABLE=true`）时启用。
+- 启用后访问 `http://localhost:3000/swagger/index.html` 查看交互式文档，`/swagger/doc.json` 可用于 Apifox 等工具直接导入。
+- 更新接口注释后执行 `go generate ./...`（内部会运行 `swag init` 并输出到 `docs/swagger`，该目录已被 `.gitignore` 忽略）。
+- 需要本地安装 Go 1.19+ 及 `go install github.com/swaggo/swag/cmd/swag@v1.16.3` 以确保命令可用。
 ```bash
 # 健康检查
 curl http://localhost:3000/api/status

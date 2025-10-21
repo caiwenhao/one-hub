@@ -51,7 +51,6 @@ func setOpenAIRouter(router *gin.Engine) {
 		relayV1Router.POST("/audio/transcriptions", relay.Relay)
 		relayV1Router.POST("/audio/translations", relay.Relay)
 		relayV1Router.POST("/audio/speech", relay.Relay)
-		relayV1Router.POST("/t2a_async_v2", relay.MiniMaxRelay)
 		relayV1Router.POST("/moderations", relay.Relay)
 		relayV1Router.POST("/rerank", relay.RelayRerank)
 		relayV1Router.GET("/realtime", relay.ChatRealtime)
@@ -177,8 +176,8 @@ func setMiniMaxRouter(router *gin.Engine) {
 		// 其他能力：生文本/生图/生语音
 		minimaxiRouter.POST("/v1/chat/completions", relay.MiniMaxRelay)
 		minimaxiRouter.POST("/v1/images/generations", relay.MiniMaxRelay)
-		minimaxiRouter.POST("/v1/audio/speech", relay.MiniMaxRelay)
-		minimaxiRouter.POST("/v1/t2a_async_v2", relay.MiniMaxRelay)
+            minimaxiRouter.POST("/v1/t2a_v2", relay.MiniMaxRelay)
+            minimaxiRouter.POST("/v1/t2a_async_v2", relay.MiniMaxRelay)
 	}
 }
 

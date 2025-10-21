@@ -32,6 +32,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.3 init -g main.go -o docs/swagger --parseDependency --parseInternal
+
 //go:embed web/build
 var buildFS embed.FS
 

@@ -16,6 +16,7 @@ func SetRouter(router *gin.Engine, buildFS embed.FS, indexPage []byte) {
 	SetApiRouter(router)
 	SetDashboardRouter(router)
 	SetRelayRouter(router)
+	setSwaggerRouter(router)
 	// 初始化MCP服务器与Gin集成
 	if config.MCP_ENABLE {
 		logger.SysLog("Enable MCP Server")

@@ -1,7 +1,7 @@
 # MiniMax 渠道语音接口审查报告
 
 ## 范围说明
-- 本轮审查**仅聚焦 `/minimaxi` 官方兼容路由**（例如 `/minimaxi/v1/audio/speech`、`/minimaxi/v1/t2a_async_v2`），暂不处理 OpenAI 兼容入口及其降级策略。
+- 本轮审查**仅聚焦 `/minimaxi` 官方兼容路由**（例如 `/minimaxi/v1/t2a_v2`、`/minimaxi/v1/t2a_async_v2`），暂不处理 OpenAI 兼容入口及其降级策略。
 - 目标：核对路由完备性、请求/响应结构是否对齐官方 OpenAPI，并给出完善 `/minimaxi` 侧能力的实施方案。
 
 ## 项目结构与技术栈概览
@@ -10,13 +10,13 @@
 - 公用组件包括 `common/requester`（HTTP 封装）、`common/config`（路由常量与渠道信息）、`types/`（跨渠道的结构体定义）。
 
 ## 审查结论速览
-- ✅ `/minimaxi/v1/audio/speech`（同步语音）已实现，支持基本音频生成，但响应结构与官方规范存在字段缺失/命名差异，subtitle/url 等高级能力尚未覆盖。
+- ✅ `/minimaxi/v1/t2a_v2`（同步语音）已实现，支持基本音频生成，但响应结构与官方规范存在字段缺失/命名差异，subtitle/url 等高级能力尚未覆盖。
 - ✅ `/minimaxi/v1/t2a_async_v2`（创建异步任务）可用，能返回 `task_id` 等信息，但类型定义与上游返回仍存在潜在兼容性问题。
 - ❌ `/minimaxi/v1/query/t2a_async_query_v2`（异步查询）**未落地**：路由缺失、Provider 无对应方法，导致异步任务无法闭环。
 
 ## 详解
 
-### `/minimaxi/v1/audio/speech` 同步语音合成
+### `/minimaxi/v1/t2a_v2` 同步语音合成
 - 路径：`router/relay-router.go:166-181` 使用 `relay.MiniMaxRelay` 直接转发至 Provider。
 - Provider：`MiniMaxProvider.CreateSpeechOfficial`（`providers/minimaxi/speech.go:291-318`）读取原始 JSON 后调用上游。
 

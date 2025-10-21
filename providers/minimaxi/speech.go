@@ -524,11 +524,17 @@ func (p *MiniMaxProvider) QuerySpeechAsync(taskID string) (*http.Response, *type
 	query.Set("task_id", taskID)
 	parsed.RawQuery = query.Encode()
 
+	if p.Requester == nil {
+		return nil, common.StringErrorWrapperLocal("minimaxi requester not initialized", "channel_error", http.StatusServiceUnavailable)
+	}
+
 	httpReq, err := p.Requester.NewRequest(http.MethodGet, parsed.String(), p.Requester.WithHeader(p.GetRequestHeaders()))
 	if err != nil {
 		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
 	}
-	defer httpReq.Body.Close()
+	if httpReq.Body != nil {
+		defer httpReq.Body.Close()
+	}
 
 	queryResp := &types.MiniMaxAsyncSpeechQueryResponse{}
 	resp, errWithCode := p.Requester.SendRequest(httpReq, queryResp, true)

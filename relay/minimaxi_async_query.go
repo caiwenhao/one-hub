@@ -8,7 +8,6 @@ import (
 	"one-api/providers"
 	miniProvider "one-api/providers/minimaxi"
 	"one-api/types"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -23,43 +22,23 @@ func MiniMaxAsyncQuery(c *gin.Context) {
 		return
 	}
 
+	// 该查询接口不需要 channel_id，默认按分组择优遍历可用的 MiniMax 渠道
 	var channels []*model.Channel
-	if channelIDStr := strings.TrimSpace(c.Query("channel_id")); channelIDStr != "" {
-		channelID, err := strconv.Atoi(channelIDStr)
-		if err != nil {
-			err := common.StringErrorWrapperLocal("channel_id must be a number", "invalid_request", http.StatusBadRequest)
-			relayResponseWithOpenAIErr(c, err)
-			return
+	allChannels, dbErr := model.GetAllChannels()
+	if dbErr != nil {
+		errWithCode := common.ErrorWrapper(dbErr, "fetch_channels_failed", http.StatusInternalServerError)
+		relayResponseWithOpenAIErr(c, errWithCode)
+		return
+	}
+	group := strings.TrimSpace(c.GetString("token_group"))
+	for _, ch := range allChannels {
+		if ch == nil || ch.Status != config.ChannelStatusEnabled || ch.Type != config.ChannelTypeMiniMax {
+			continue
 		}
-		channel, err := model.GetChannelById(channelID)
-		if err != nil || channel == nil {
-			err := common.StringErrorWrapperLocal("channel not found", "channel_not_found", http.StatusServiceUnavailable)
-			relayResponseWithOpenAIErr(c, err)
-			return
+		if group != "" && !channelInGroup(ch, group) {
+			continue
 		}
-		if channel.Status != config.ChannelStatusEnabled || channel.Type != config.ChannelTypeMiniMax {
-			err := common.StringErrorWrapperLocal("channel not found", "channel_not_found", http.StatusServiceUnavailable)
-			relayResponseWithOpenAIErr(c, err)
-			return
-		}
-		channels = append(channels, channel)
-	} else {
-		allChannels, err := model.GetAllChannels()
-		if err != nil {
-			err := common.ErrorWrapper(err, "fetch_channels_failed", http.StatusInternalServerError)
-			relayResponseWithOpenAIErr(c, err)
-			return
-		}
-		group := strings.TrimSpace(c.GetString("token_group"))
-		for _, ch := range allChannels {
-			if ch == nil || ch.Status != config.ChannelStatusEnabled || ch.Type != config.ChannelTypeMiniMax {
-				continue
-			}
-			if group != "" && !channelInGroup(ch, group) {
-				continue
-			}
-			channels = append(channels, ch)
-		}
+		channels = append(channels, ch)
 	}
 
 	if len(channels) == 0 {

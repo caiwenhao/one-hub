@@ -41,7 +41,7 @@ func Path2Relay(c *gin.Context, path string) RelayBaseInterface {
 		relay = NewRelayImageEdits(c)
 	} else if strings.HasPrefix(path, "/v1/images/variations") {
 		relay = NewRelayImageVariations(c)
-	} else if strings.HasPrefix(path, "/v1/audio/speech") {
+	} else if strings.HasPrefix(path, "/v1/audio/speech") || strings.HasPrefix(path, "/v1/t2a_v2") {
 		relay = NewRelaySpeech(c)
 	} else if strings.HasPrefix(path, "/v1/audio/transcriptions") {
 		relay = NewRelayTranscriptions(c)
