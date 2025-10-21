@@ -47,6 +47,8 @@ func Path2Relay(c *gin.Context, path string) RelayBaseInterface {
 		relay = NewRelayTranscriptions(c)
 	} else if strings.HasPrefix(path, "/v1/audio/translations") {
 		relay = NewRelayTranslations(c)
+	} else if strings.HasPrefix(path, "/v1/t2a_async_v2") {
+		relay = NewRelayMiniMaxAsync(c)
 	} else if strings.HasPrefix(path, "/claude") {
 		relay = NewRelayClaudeOnly(c)
 	} else if strings.HasPrefix(path, "/gemini") {

@@ -330,6 +330,7 @@ const (
 	RelayModeVolcArkVideo
 	RelayModeVidu
 	RelayModeMiniMaxVideo
+	RelayModeMiniMaxSpeechAsync
 )
 
 type ContextKey string

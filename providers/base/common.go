@@ -22,6 +22,7 @@ type ProviderConfig struct {
 	Embeddings          string
 	Videos              string
 	AudioSpeech         string
+	AudioSpeechAsync    string
 	Moderation          string
 	AudioTranscriptions string
 	AudioTranslations   string
@@ -41,6 +42,7 @@ func (pc *ProviderConfig) SetAPIUri(customMapping map[string]interface{}) {
 		config.RelayModeEmbeddings:         &pc.Embeddings,
 		config.RelayModeOpenAIVideo:        &pc.Videos,
 		config.RelayModeAudioSpeech:        &pc.AudioSpeech,
+		config.RelayModeMiniMaxSpeechAsync: &pc.AudioSpeechAsync,
 		config.RelayModeAudioTranscription: &pc.AudioTranscriptions,
 		config.RelayModeAudioTranslation:   &pc.AudioTranslations,
 		config.RelayModeModerations:        &pc.Moderation,
@@ -194,6 +196,8 @@ func (p *BaseProvider) GetAPIUri(relayMode int) string {
 		return p.Config.Videos
 	case config.RelayModeAudioSpeech:
 		return p.Config.AudioSpeech
+	case config.RelayModeMiniMaxSpeechAsync:
+		return p.Config.AudioSpeechAsync
 	case config.RelayModeAudioTranscription:
 		return p.Config.AudioTranscriptions
 	case config.RelayModeAudioTranslation:
