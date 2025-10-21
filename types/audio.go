@@ -101,10 +101,10 @@ type MiniMaxAsyncAudioSetting struct {
 }
 
 type MiniMaxAsyncSpeechResponse struct {
-	TaskID          string               `json:"task_id,omitempty"`
-	FileID          json.RawMessage      `json:"file_id,omitempty"`
+	TaskID          StringOrNumber       `json:"task_id,omitempty"`
+	FileID          *StringOrNumber      `json:"file_id,omitempty"`
 	TaskToken       string               `json:"task_token,omitempty"`
-	UsageCharacters int                  `json:"usage_characters,omitempty"`
+	UsageCharacters *int                 `json:"usage_characters,omitempty"`
 	BaseResp        MiniMaxAsyncBaseResp `json:"base_resp"`
 	TraceID         string               `json:"trace_id,omitempty"`
 	ExtraInfo       json.RawMessage      `json:"extra_info,omitempty"`
@@ -113,6 +113,14 @@ type MiniMaxAsyncSpeechResponse struct {
 type MiniMaxAsyncBaseResp struct {
 	StatusCode int64  `json:"status_code"`
 	StatusMsg  string `json:"status_msg"`
+}
+
+type MiniMaxAsyncSpeechQueryResponse struct {
+	TaskID    StringOrNumber       `json:"task_id,omitempty"`
+	Status    string               `json:"status,omitempty"`
+	FileID    *StringOrNumber      `json:"file_id,omitempty"`
+	BaseResp  MiniMaxAsyncBaseResp `json:"base_resp"`
+	ExtraInfo json.RawMessage      `json:"extra_info,omitempty"`
 }
 
 type AudioRequest struct {

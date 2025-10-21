@@ -8,12 +8,19 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"one-api/common"
 	"one-api/common/config"
+	"one-api/common/logger"
 	"one-api/common/utils"
 	"one-api/types"
 	"strconv"
 	"strings"
+)
+
+const (
+	audioModeJSON = "json"
+	audioModeHex  = "hex"
 )
 
 func (p *MiniMaxProvider) GetVoiceMap() map[string][]string {
@@ -112,6 +119,65 @@ func (p *MiniMaxProvider) patchAsyncPayloadVoice(raw []byte) ([]byte, error) {
 	return updated, nil
 }
 
+func (p *MiniMaxProvider) getAudioMode() string {
+	customParams, err := p.CustomParameterHandler()
+	if err != nil || customParams == nil {
+		return audioModeJSON
+	}
+
+	candidates := []interface{}{}
+	if v, ok := customParams["audio_mode"]; ok {
+		candidates = append(candidates, v)
+	}
+	if audioRaw, ok := customParams["audio"]; ok {
+		if audioMap, ok := audioRaw.(map[string]interface{}); ok {
+			if v, ok := audioMap["mode"]; ok {
+				candidates = append(candidates, v)
+			}
+		}
+	}
+
+	for _, candidate := range candidates {
+		if mode := normalizeAudioMode(candidate); mode != "" {
+			return mode
+		}
+	}
+
+	return audioModeJSON
+}
+
+func normalizeAudioMode(value interface{}) string {
+	var mode string
+	switch v := value.(type) {
+	case string:
+		mode = v
+	case *string:
+		if v == nil {
+			return ""
+		}
+		mode = *v
+	default:
+		mode = fmt.Sprintf("%v", v)
+	}
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	switch mode {
+	case audioModeHex:
+		return audioModeHex
+	case audioModeJSON:
+		return audioModeJSON
+	default:
+		return ""
+	}
+}
+
+func (p *MiniMaxProvider) logAudioError(message string) {
+	if p.Context != nil && p.Context.Request != nil {
+		logger.LogError(p.Context.Request.Context(), message)
+		return
+	}
+	logger.SysError(message)
+}
+
 func (p *MiniMaxProvider) getRequestBody(request *types.SpeechAudioRequest) *SpeechRequest {
 
 	var voice, emotion string
@@ -195,11 +261,36 @@ func (p *MiniMaxProvider) CreateSpeech(request *types.SpeechAudioRequest) (*http
 		Header:     make(http.Header),
 	}
 
-	response.Header.Set("Content-Type", "audio/"+speechResponse.ExtraInfo.AudioFormat) // 例如 "audio/wav"
-	response.Header.Set("Content-Length", strconv.FormatInt(speechResponse.ExtraInfo.AudioSize, 10))
+	contentType := "application/octet-stream"
+	if speechResponse.ExtraInfo.AudioFormat != nil {
+		format := strings.TrimSpace(*speechResponse.ExtraInfo.AudioFormat)
+		if format != "" {
+			contentType = "audio/" + format
+		}
+	}
+	response.Header.Set("Content-Type", contentType)
 
-	p.Usage.PromptTokens = speechResponse.ExtraInfo.UsageCharacters
-	p.Usage.TotalTokens = speechResponse.ExtraInfo.UsageCharacters
+	if speechResponse.ExtraInfo.AudioSize != nil && *speechResponse.ExtraInfo.AudioSize > 0 {
+		response.Header.Set("Content-Length", strconv.FormatInt(*speechResponse.ExtraInfo.AudioSize, 10))
+	}
+
+	if speechResponse.Data.SubtitleFile != nil {
+		subtitle := strings.TrimSpace(*speechResponse.Data.SubtitleFile)
+		if subtitle != "" {
+			response.Header.Set("X-Minimax-Subtitle-URL", subtitle)
+		}
+	}
+
+	if speechResponse.ExtraInfo.AudioChannel != nil {
+		response.Header.Set("X-Minimax-Audio-Channel", strconv.FormatInt(*speechResponse.ExtraInfo.AudioChannel, 10))
+	}
+
+	usage := 0
+	if speechResponse.ExtraInfo.UsageCharacters != nil {
+		usage = *speechResponse.ExtraInfo.UsageCharacters
+	}
+	p.Usage.PromptTokens = usage
+	p.Usage.TotalTokens = usage
 
 	return response, nil
 }
@@ -248,8 +339,12 @@ func (p *MiniMaxProvider) CreateSpeechAsync(req *types.MiniMaxAsyncSpeechRequest
 		return nil, common.ErrorWrapper(errors.New(asyncResp.BaseResp.StatusMsg), "speech_async_error", http.StatusBadGateway)
 	}
 
-	p.Usage.PromptTokens = asyncResp.UsageCharacters
-	p.Usage.TotalTokens = asyncResp.UsageCharacters
+	usage := 0
+	if asyncResp.UsageCharacters != nil {
+		usage = *asyncResp.UsageCharacters
+	}
+	p.Usage.PromptTokens = usage
+	p.Usage.TotalTokens = usage
 
 	return resp, nil
 }
@@ -346,8 +441,104 @@ func (p *MiniMaxProvider) CreateSpeechOfficial(req *types.MiniMaxSpeechRequest, 
 		return nil, common.ErrorWrapper(errors.New(speechResponse.BaseResp.StatusMsg), "speech_error", http.StatusBadGateway)
 	}
 
-	p.Usage.PromptTokens = speechResponse.ExtraInfo.UsageCharacters
-	p.Usage.TotalTokens = speechResponse.ExtraInfo.UsageCharacters
+	usage := 0
+	if speechResponse.ExtraInfo.UsageCharacters != nil {
+		usage = *speechResponse.ExtraInfo.UsageCharacters
+	}
+	p.Usage.PromptTokens = usage
+	p.Usage.TotalTokens = usage
+
+	if p.getAudioMode() != audioModeHex {
+		return resp, nil
+	}
+
+	audioHex := strings.TrimSpace(speechResponse.Data.Audio)
+	if audioHex == "" {
+		err := errors.New("empty audio data in MiniMax response")
+		p.logAudioError(err.Error())
+		return nil, common.ErrorWrapper(err, "speech_decode_error", http.StatusBadGateway)
+	}
+
+	audioBytes, err := hex.DecodeString(audioHex)
+	if err != nil {
+		errMsg := fmt.Sprintf("decode MiniMax audio hex failed: %v", err)
+		p.logAudioError(errMsg)
+		return nil, common.ErrorWrapper(err, "speech_decode_error", http.StatusBadGateway)
+	}
+
+	if resp.Body != nil {
+		_ = resp.Body.Close()
+	}
+
+	body := io.NopCloser(bytes.NewReader(audioBytes))
+	result := &http.Response{
+		Status:     "200 OK",
+		StatusCode: http.StatusOK,
+		Body:       body,
+		Header:     make(http.Header),
+	}
+
+	contentType := "application/octet-stream"
+	if speechResponse.ExtraInfo.AudioFormat != nil {
+		format := strings.TrimSpace(*speechResponse.ExtraInfo.AudioFormat)
+		if format != "" {
+			contentType = "audio/" + format
+		}
+	}
+	result.Header.Set("Content-Type", contentType)
+
+	if speechResponse.ExtraInfo.AudioSize != nil && *speechResponse.ExtraInfo.AudioSize > 0 {
+		result.Header.Set("Content-Length", strconv.FormatInt(*speechResponse.ExtraInfo.AudioSize, 10))
+	}
+
+	if speechResponse.ExtraInfo.AudioChannel != nil {
+		result.Header.Set("X-Minimax-Audio-Channel", strconv.FormatInt(*speechResponse.ExtraInfo.AudioChannel, 10))
+	}
+
+	if speechResponse.Data.SubtitleFile != nil {
+		subtitle := strings.TrimSpace(*speechResponse.Data.SubtitleFile)
+		if subtitle != "" {
+			result.Header.Set("X-Minimax-Subtitle-URL", subtitle)
+		}
+	}
+
+	return result, nil
+}
+
+func (p *MiniMaxProvider) QuerySpeechAsync(taskID string) (*http.Response, *types.OpenAIErrorWithStatusCode) {
+	if strings.TrimSpace(taskID) == "" {
+		return nil, common.StringErrorWrapperLocal("task_id is required", "invalid_request", http.StatusBadRequest)
+	}
+
+	path, errWithCode := p.GetSupportedAPIUri(config.RelayModeMiniMaxSpeechAsyncQuery)
+	if errWithCode != nil {
+		return nil, errWithCode
+	}
+
+	fullURL := p.GetFullRequestURL(path, "")
+	parsed, err := url.Parse(fullURL)
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "invalid_request_url", http.StatusInternalServerError)
+	}
+	query := parsed.Query()
+	query.Set("task_id", taskID)
+	parsed.RawQuery = query.Encode()
+
+	httpReq, err := p.Requester.NewRequest(http.MethodGet, parsed.String(), p.Requester.WithHeader(p.GetRequestHeaders()))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	defer httpReq.Body.Close()
+
+	queryResp := &types.MiniMaxAsyncSpeechQueryResponse{}
+	resp, errWithCode := p.Requester.SendRequest(httpReq, queryResp, true)
+	if errWithCode != nil {
+		return nil, errWithCode
+	}
+
+	if queryResp.BaseResp.StatusCode != 0 {
+		return nil, common.ErrorWrapper(errors.New(queryResp.BaseResp.StatusMsg), "speech_async_query_error", http.StatusBadGateway)
+	}
 
 	return resp, nil
 }

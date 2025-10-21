@@ -606,12 +606,12 @@ type MiniMaxFileRetrieveResponse struct {
 }
 
 type MiniMaxFileObject struct {
-	FileID      StringOrNumber `json:"file_id,omitempty"`
-	Bytes       int64          `json:"bytes,omitempty"`
-	CreatedAt   int64          `json:"created_at,omitempty"`
-	Filename    string         `json:"filename,omitempty"`
-	Purpose     string         `json:"purpose,omitempty"`
-	DownloadURL string         `json:"download_url,omitempty"`
+	FileID      types.StringOrNumber `json:"file_id,omitempty"`
+	Bytes       int64                `json:"bytes,omitempty"`
+	CreatedAt   int64                `json:"created_at,omitempty"`
+	Filename    string               `json:"filename,omitempty"`
+	Purpose     string               `json:"purpose,omitempty"`
+	DownloadURL string               `json:"download_url,omitempty"`
 }
 
 type MiniMaxPPInfraExtra struct {

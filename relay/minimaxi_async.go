@@ -47,6 +47,10 @@ func (r *relayMiniMaxAsync) setRequest() error {
 		return fmt.Errorf("either text or text_file_id is required")
 	}
 
+	if r.request.VoiceSetting == nil || strings.TrimSpace(r.request.VoiceSetting.VoiceID) == "" {
+		return fmt.Errorf("voice_setting.voice_id is required")
+	}
+
 	r.setOriginalModel(r.request.Model)
 
 	return nil

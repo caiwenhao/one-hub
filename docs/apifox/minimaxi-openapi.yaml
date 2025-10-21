@@ -130,6 +130,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/MiniMaxVideoQueryResponse'
 
+  /v1/t2a_async_v2:
+    post:
+      summary: 官方别名 - 创建异步文本转语音任务
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MiniMaxAsyncSpeechRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxAsyncSpeechResponse'
+
+  /v1/query/t2a_async_query_v2:
+    get:
+      summary: 官方别名 - 查询异步文本转语音任务
+      parameters:
+        - in: query
+          name: task_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxAsyncSpeechQueryResponse'
+
   /minimaxi/v1/files/retrieve:
     get:
       summary: 获取文件下载信息（MiniMax 渠道）
@@ -192,6 +226,102 @@ paths:
               schema:
                 type: string
                 format: binary
+
+  /minimaxi/v1/audio/speech:
+    post:
+      summary: minimaxi 官方 - 同步文本转语音
+      description: |
+        与官方 `POST /v1/t2a_v2` 一致。默认返回 JSON，其中 `data.audio` 为 hex 编码音频；
+        当渠道启用 `audio_mode=hex` 时，One Hub 会将响应转换为真实音频流，并通过响应头暴露字幕与声道信息。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MiniMaxSpeechRequest'
+            example:
+              model: speech-2.5-hd-preview
+              text: 你好，欢迎来到 One Hub
+              stream: false
+              voice_setting:
+                voice_id: moss_audio_ce44fc67-7ce3-11f0-8de5-96e35d26fb85
+                speed: 1
+              audio_setting:
+                format: mp3
+                sample_rate: 32000
+                channel: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxSpeechResponse'
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+          headers:
+            X-Minimax-Subtitle-URL:
+              schema:
+                type: string
+                format: uri
+              description: 若开启字幕服务且存在字幕文件，会返回下载地址
+            X-Minimax-Audio-Channel:
+              schema:
+                type: string
+              description: 若返回为音频流，指示音频声道数
+
+  /minimaxi/v1/t2a_async_v2:
+    post:
+      summary: minimaxi 官方 - 创建异步文本转语音任务
+      description: 与官方接口一致，支持 `text` 或 `text_file_id` 两种输入方式。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MiniMaxAsyncSpeechRequest'
+            example:
+              model: speech-2.5-hd-preview
+              text: 真正的危险不是计算机像人一样思考，而是人像计算机一样思考。
+              voice_setting:
+                voice_id: moss_audio_ce44fc67-7ce3-11f0-8de5-96e35d26fb85
+              audio_setting:
+                format: mp3
+                audio_sample_rate: 32000
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxAsyncSpeechResponse'
+
+  /minimaxi/v1/query/t2a_async_query_v2:
+    get:
+      summary: minimaxi 官方 - 查询异步文本转语音任务
+      description: 默认按当前 Token 分组遍历可用的 MiniMax 渠道；也可通过 `channel_id` 强制指定渠道。
+      parameters:
+        - in: query
+          name: task_id
+          required: true
+          schema:
+            type: string
+          description: 创建任务时返回的 task_id
+        - in: query
+          name: channel_id
+          required: false
+          schema:
+            type: integer
+          description: 可选，强制指定渠道（调试或特殊路由使用）
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniMaxAsyncSpeechQueryResponse'
 
   # OpenAI 兼容别名 - 文件接口（仅下载/检索，服务端已做官方字段对齐与上游差异吸收）
   /v1/files/retrieve:
@@ -429,6 +559,7 @@ components:
       properties:
         file_id:
           type: string
+          description: 文件 ID
         bytes:
           type: integer
           format: int64
@@ -443,6 +574,273 @@ components:
         download_url:
           type: string
           format: uri
+
+    MiniMaxSpeechRequest:
+      type: object
+      required:
+        - model
+        - text
+      properties:
+        model:
+          type: string
+          description: 请求的模型，例如 speech-2.5-hd-preview
+        text:
+          type: string
+          description: 需要合成的文本
+        stream:
+          type: boolean
+          description: 是否开启流式返回
+        stream_options:
+          $ref: '#/components/schemas/MiniMaxStreamOptions'
+        voice_setting:
+          $ref: '#/components/schemas/MiniMaxVoiceSetting'
+        audio_setting:
+          $ref: '#/components/schemas/MiniMaxAudioSetting'
+        pronunciation_dict:
+          $ref: '#/components/schemas/MiniMaxPronunciationDict'
+        timber_weights:
+          type: array
+          items:
+            $ref: '#/components/schemas/MiniMaxTimbreWeight'
+        language_boost:
+          type: string
+          description: 语言增强配置
+        voice_modify:
+          $ref: '#/components/schemas/MiniMaxVoiceModify'
+        subtitle_enable:
+          type: boolean
+        output_format:
+          type: string
+          enum: [url, hex]
+          description: 默认 hex，设置为 url 时返回音频地址
+        aigc_watermark:
+          type: boolean
+
+    MiniMaxStreamOptions:
+      type: object
+      properties:
+        exclude_aggregated_audio:
+          type: boolean
+
+    MiniMaxVoiceSetting:
+      type: object
+      required:
+        - voice_id
+      properties:
+        voice_id:
+          type: string
+        speed:
+          type: number
+        vol:
+          type: number
+        pitch:
+          type: integer
+        emotion:
+          type: string
+        text_normalization:
+          type: boolean
+        latex_read:
+          type: boolean
+
+    MiniMaxAudioSetting:
+      type: object
+      properties:
+        sample_rate:
+          type: integer
+        bitrate:
+          type: integer
+        format:
+          type: string
+          enum: [mp3, pcm, flac, wav]
+        channel:
+          type: integer
+        force_cbr:
+          type: boolean
+
+    MiniMaxPronunciationDict:
+      type: object
+      properties:
+        tone:
+          type: array
+          items:
+            type: string
+
+    MiniMaxTimbreWeight:
+      type: object
+      properties:
+        voice_id:
+          type: string
+        weight:
+          type: integer
+
+    MiniMaxVoiceModify:
+      type: object
+      properties:
+        pitch:
+          type: integer
+        intensity:
+          type: integer
+        timbre:
+          type: integer
+        sound_effects:
+          type: string
+
+    MiniMaxSpeechResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            audio:
+              type: string
+              description: hex 编码音频或 `audio_mode=hex` 时的音频流在响应体中返回
+            subtitle_file:
+              type: string
+              format: uri
+            status:
+              type: integer
+        extra_info:
+          type: object
+          properties:
+            audio_length:
+              type: integer
+              format: int64
+            audio_sample_rate:
+              type: integer
+              format: int64
+            audio_size:
+              type: integer
+              format: int64
+            bitrate:
+              type: integer
+              format: int64
+            audio_channel:
+              type: integer
+            audio_format:
+              type: string
+            usage_characters:
+              type: integer
+            invisible_character_ratio:
+              type: number
+        trace_id:
+          type: string
+        base_resp:
+          type: object
+          properties:
+            status_code:
+              type: integer
+            status_msg:
+              type: string
+
+    MiniMaxAsyncSpeechRequest:
+      type: object
+      required:
+        - model
+      properties:
+        model:
+          type: string
+        text:
+          type: string
+          description: `text` 与 `text_file_id` 至少填写一个
+        text_file_id:
+          type: string
+          description: 通过文件上传接口获得的文本文件 ID
+        voice_setting:
+          $ref: '#/components/schemas/MiniMaxAsyncVoiceSetting'
+        audio_setting:
+          $ref: '#/components/schemas/MiniMaxAsyncAudioSetting'
+        pronunciation_dict:
+          $ref: '#/components/schemas/MiniMaxPronunciationDict'
+        language_boost:
+          type: string
+        voice_modify:
+          $ref: '#/components/schemas/MiniMaxVoiceModify'
+        aigc_watermark:
+          type: boolean
+        timber_weights:
+          type: array
+          items:
+            $ref: '#/components/schemas/MiniMaxTimbreWeight'
+        subtitle_enable:
+          type: boolean
+        output_format:
+          type: string
+        stream:
+          type: boolean
+        stream_options:
+          $ref: '#/components/schemas/MiniMaxStreamOptions'
+
+    MiniMaxAsyncVoiceSetting:
+      type: object
+      required:
+        - voice_id
+      properties:
+        voice_id:
+          type: string
+        speed:
+          type: number
+        vol:
+          type: number
+        pitch:
+          type: integer
+        emotion:
+          type: string
+        english_normalization:
+          type: boolean
+
+    MiniMaxAsyncAudioSetting:
+      type: object
+      properties:
+        audio_sample_rate:
+          type: integer
+        bitrate:
+          type: integer
+        format:
+          type: string
+          enum: [mp3, pcm, flac]
+        channel:
+          type: integer
+
+    MiniMaxAsyncSpeechResponse:
+      type: object
+      properties:
+        task_id:
+          type: string
+        file_id:
+          type: string
+          description: 若未生成可为空字符串
+        task_token:
+          type: string
+        usage_characters:
+          type: integer
+        trace_id:
+          type: string
+        base_resp:
+          type: object
+          properties:
+            status_code:
+              type: integer
+            status_msg:
+              type: string
+
+    MiniMaxAsyncSpeechQueryResponse:
+      type: object
+      properties:
+        task_id:
+          type: string
+        status:
+          type: string
+          description: success/failed/expired/processing
+        file_id:
+          type: string
+          description: 若任务尚未生成文件，可为空字符串
+        base_resp:
+          type: object
+          properties:
+            status_code:
+              type: integer
+            status_msg:
+              type: string
 
     MiniMaxSubjectReference:
       type: object

@@ -16,40 +16,42 @@ import (
 )
 
 type ProviderConfig struct {
-	BaseURL             string
-	Completions         string
-	ChatCompletions     string
-	Embeddings          string
-	Videos              string
-	AudioSpeech         string
-	AudioSpeechAsync    string
-	Moderation          string
-	AudioTranscriptions string
-	AudioTranslations   string
-	ImagesGenerations   string
-	ImagesEdit          string
-	ImagesVariations    string
-	ModelList           string
-	Rerank              string
-	ChatRealtime        string
-	Responses           string
+	BaseURL               string
+	Completions           string
+	ChatCompletions       string
+	Embeddings            string
+	Videos                string
+	AudioSpeech           string
+	AudioSpeechAsync      string
+	AudioSpeechAsyncQuery string
+	Moderation            string
+	AudioTranscriptions   string
+	AudioTranslations     string
+	ImagesGenerations     string
+	ImagesEdit            string
+	ImagesVariations      string
+	ModelList             string
+	Rerank                string
+	ChatRealtime          string
+	Responses             string
 }
 
 func (pc *ProviderConfig) SetAPIUri(customMapping map[string]interface{}) {
 	relayModeMap := map[int]*string{
-		config.RelayModeChatCompletions:    &pc.ChatCompletions,
-		config.RelayModeCompletions:        &pc.Completions,
-		config.RelayModeEmbeddings:         &pc.Embeddings,
-		config.RelayModeOpenAIVideo:        &pc.Videos,
-		config.RelayModeAudioSpeech:        &pc.AudioSpeech,
-		config.RelayModeMiniMaxSpeechAsync: &pc.AudioSpeechAsync,
-		config.RelayModeAudioTranscription: &pc.AudioTranscriptions,
-		config.RelayModeAudioTranslation:   &pc.AudioTranslations,
-		config.RelayModeModerations:        &pc.Moderation,
-		config.RelayModeImagesGenerations:  &pc.ImagesGenerations,
-		config.RelayModeImagesEdits:        &pc.ImagesEdit,
-		config.RelayModeImagesVariations:   &pc.ImagesVariations,
-		config.RelayModeResponses:          &pc.Responses,
+		config.RelayModeChatCompletions:         &pc.ChatCompletions,
+		config.RelayModeCompletions:             &pc.Completions,
+		config.RelayModeEmbeddings:              &pc.Embeddings,
+		config.RelayModeOpenAIVideo:             &pc.Videos,
+		config.RelayModeAudioSpeech:             &pc.AudioSpeech,
+		config.RelayModeMiniMaxSpeechAsync:      &pc.AudioSpeechAsync,
+		config.RelayModeMiniMaxSpeechAsyncQuery: &pc.AudioSpeechAsyncQuery,
+		config.RelayModeAudioTranscription:      &pc.AudioTranscriptions,
+		config.RelayModeAudioTranslation:        &pc.AudioTranslations,
+		config.RelayModeModerations:             &pc.Moderation,
+		config.RelayModeImagesGenerations:       &pc.ImagesGenerations,
+		config.RelayModeImagesEdits:             &pc.ImagesEdit,
+		config.RelayModeImagesVariations:        &pc.ImagesVariations,
+		config.RelayModeResponses:               &pc.Responses,
 	}
 
 	for key, value := range customMapping {
@@ -198,6 +200,8 @@ func (p *BaseProvider) GetAPIUri(relayMode int) string {
 		return p.Config.AudioSpeech
 	case config.RelayModeMiniMaxSpeechAsync:
 		return p.Config.AudioSpeechAsync
+	case config.RelayModeMiniMaxSpeechAsyncQuery:
+		return p.Config.AudioSpeechAsyncQuery
 	case config.RelayModeAudioTranscription:
 		return p.Config.AudioTranscriptions
 	case config.RelayModeAudioTranslation:

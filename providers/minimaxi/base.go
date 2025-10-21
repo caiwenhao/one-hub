@@ -1,17 +1,17 @@
 package minimaxi
 
 import (
-    "bytes"
-    "encoding/json"
-    "io"
-    "net/http"
-    "one-api/common/requester"
-    "one-api/model"
-    "one-api/providers/base"
-    "one-api/providers/openai"
-    "one-api/types"
+	"bytes"
+	"encoding/json"
+	"io"
+	"net/http"
+	"one-api/common/requester"
+	"one-api/model"
+	"one-api/providers/base"
+	"one-api/providers/openai"
+	"one-api/types"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 type MiniMaxProviderFactory struct{}
@@ -58,40 +58,41 @@ func (p *MiniMaxProvider) GetVideoClient() *MiniMaxVideoClient {
 }
 
 func getConfig() base.ProviderConfig {
-    return base.ProviderConfig{
-        // 对齐 minimaxi 官方 OpenAI 兼容入口
-        BaseURL:         "https://api.minimaxi.com",
-        ChatCompletions: "/v1/chat/completions",
-        // 同步 TTS：/v1/t2a_v2；异步长文本：/v1/t2a_async_v2（如需可在渠道自定义路径覆盖）
-        AudioSpeech:     "/v1/t2a_v2",
-        AudioSpeechAsync: "/v1/t2a_async_v2",
-        // Embeddings:      "/v1/embeddings",
-        // OpenAI 兼容的模型列举（若上游不支持，将在 GetModelList 内降级到本地静态列表）
-        ModelList:       "/v1/models",
-    }
+	return base.ProviderConfig{
+		// 对齐 minimaxi 官方 OpenAI 兼容入口
+		BaseURL:         "https://api.minimaxi.com",
+		ChatCompletions: "/v1/chat/completions",
+		// 同步 TTS：/v1/t2a_v2；异步长文本：/v1/t2a_async_v2（如需可在渠道自定义路径覆盖）
+		AudioSpeech:           "/v1/t2a_v2",
+		AudioSpeechAsync:      "/v1/t2a_async_v2",
+		AudioSpeechAsyncQuery: "/v1/query/t2a_async_query_v2",
+		// Embeddings:      "/v1/embeddings",
+		// OpenAI 兼容的模型列举（若上游不支持，将在 GetModelList 内降级到本地静态列表）
+		ModelList: "/v1/models",
+	}
 }
 
 // 请求错误处理
 func requestErrorHandle(resp *http.Response) *types.OpenAIError {
-    // 读取响应体，支持多次反序列化尝试
-    bodyBytes, err := io.ReadAll(resp.Body)
-    if err == nil {
-        resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-    }
+	// 读取响应体，支持多次反序列化尝试
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err == nil {
+		resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	}
 
-    // 先尝试 OpenAI 标准错误（提升与 OpenAI 兼容度）
-    var openaiErrResp types.OpenAIErrorResponse
-    if err := json.Unmarshal(bodyBytes, &openaiErrResp); err == nil && openaiErrResp.Error.Message != "" {
-        return &openaiErrResp.Error
-    }
+	// 先尝试 OpenAI 标准错误（提升与 OpenAI 兼容度）
+	var openaiErrResp types.OpenAIErrorResponse
+	if err := json.Unmarshal(bodyBytes, &openaiErrResp); err == nil && openaiErrResp.Error.Message != "" {
+		return &openaiErrResp.Error
+	}
 
-    // 再尝试 minimaxi base_resp 错误
-    var wrap MiniMaxBaseResp
-    if err := json.Unmarshal(bodyBytes, &wrap); err == nil {
-        return errorHandle(&wrap.BaseResp)
-    }
+	// 再尝试 minimaxi base_resp 错误
+	var wrap MiniMaxBaseResp
+	if err := json.Unmarshal(bodyBytes, &wrap); err == nil {
+		return errorHandle(&wrap.BaseResp)
+	}
 
-    return nil
+	return nil
 }
 
 // 错误处理

@@ -172,6 +172,7 @@ func setMiniMaxRouter(router *gin.Engine) {
 		minimaxiRouter.GET("/v1/query/video_generation", minimax.RelayTaskFetch)
 		minimaxiRouter.GET("/v1/files/retrieve", minimax.RelayFileRetrieve)
 		minimaxiRouter.GET("/v1/files/retrieve_content", minimax.RelayFileRetrieveContent)
+		minimaxiRouter.GET("/v1/query/t2a_async_query_v2", relay.MiniMaxAsyncQuery)
 
 		// 其他能力：生文本/生图/生语音
 		minimaxiRouter.POST("/v1/chat/completions", relay.MiniMaxRelay)

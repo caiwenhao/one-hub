@@ -331,6 +331,7 @@ const (
 	RelayModeVidu
 	RelayModeMiniMaxVideo
 	RelayModeMiniMaxSpeechAsync
+	RelayModeMiniMaxSpeechAsyncQuery
 )
 
 type ContextKey string
