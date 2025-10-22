@@ -242,7 +242,7 @@ export default function ModelPrice() {
       <FilterBar sx={{ p: 0 }}>
         {/* 顶部：搜索 + Unit + 行为（重置/折叠全部） */}
         <Grid container spacing={2} sx={{ p: 2, pb: 1 }} alignItems="center">
-          <Grid item xs={12} md={isAdmin ? 5 : 10}>
+          <Grid item xs={12} md={isAdmin ? 4 : 10} sx={{ maxWidth: isAdmin ? 420 : '100%' }}>
             <Paper
               component="form"
               sx={{
@@ -250,6 +250,7 @@ export default function ModelPrice() {
                 display: 'flex',
                 alignItems: 'center',
                 width: '100%',
+                maxWidth: 420,
                 borderRadius: '8px',
                 border: 'none',
                 boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.05)',
@@ -269,8 +270,8 @@ export default function ModelPrice() {
             </Paper>
           </Grid>
           {isAdmin && (
-            <Grid item xs={12} md={6}>
-              <FormControl size="small" fullWidth>
+            <Grid item xs={12} md={5} sx={{ maxWidth: 400 }}>
+              <FormControl size="small" fullWidth sx={{ maxWidth: 360 }}>
                 <InputLabel id="channel-filter-label">{t('channel')}</InputLabel>
                 <Select
                   labelId="channel-filter-label"
@@ -289,8 +290,8 @@ export default function ModelPrice() {
               </FormControl>
             </Grid>
           )}
-          <Grid item xs={12} md={1}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Grid item xs={12} md={isAdmin ? 3 : 2} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: 'fit-content' }}>
               <Typography variant="body2" color="text.secondary">
                 Unit:
               </Typography>

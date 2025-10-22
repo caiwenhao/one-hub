@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import {
@@ -27,6 +27,7 @@ import { useTheme } from '@mui/material/styles';
 import Label from 'ui-component/Label';
 import ToggleButtonGroup from 'ui-component/ToggleButton';
 import { alpha } from '@mui/material/styles';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { getUnitPreference, setUnitPreference, PAGE_KEYS, UNIT_OPTIONS } from 'utils/unitPreferences';
 
 const UnifiedPricingTable = () => {
@@ -44,7 +45,8 @@ const UnifiedPricingTable = () => {
   const [selectedOwnedBy, setSelectedOwnedBy] = useState('all');
   // 使用偏好存储的单位默认值（M单位）
   const [unit, setUnit] = useState(() => getUnitPreference(PAGE_KEYS.UNIFIED_PRICING));
-  const [onlyShowAvailable, setOnlyShowAvailable] = useState(false);
+  const [onlyShowAvailable, setOnlyShowAvailable] = useState(true);
+  const [expanded, setExpanded] = useState({});
 
   const fetchAvailableModels = useCallback(async () => {
     try {
@@ -95,6 +97,11 @@ const UnifiedPricingTable = () => {
             }
           : { input: t('modelpricePage.noneGroup'), output: t('modelpricePage.noneGroup') };
 
+        const normVariants = (model.variants || []).map((v) => ({
+          model: v.model,
+          priceDisplay: v.price_display
+        }));
+
         const formatPrice = (value, type) => {
           if (typeof value === 'number') {
             let nowUnit = '';
@@ -118,7 +125,9 @@ const UnifiedPricingTable = () => {
           type: model.price.type,
           input: formatPrice(price.input, model.price.type),
           output: formatPrice(price.output, model.price.type),
-          extraRatios: model.price?.extra_ratios
+          extraRatios: model.price?.extra_ratios,
+          priceDisplay: model.price_display,
+          variants: normVariants
         };
       });
 
@@ -153,6 +162,10 @@ const UnifiedPricingTable = () => {
 
   const toggleOnlyShowAvailable = () => {
     setOnlyShowAvailable((prev) => !prev);
+  };
+
+  const toggleExpand = (model) => {
+    setExpanded((prev) => ({ ...prev, [model]: !prev[model] }));
   };
 
   const uniqueOwnedBy = ['all', ...new Set(Object.values(availableModels).map((model) => model.owned_by))];
@@ -192,15 +205,6 @@ const UnifiedPricingTable = () => {
             }}
           >
             {t('modelpricePage.detailedPricing')}
-          </Typography>
-          <Typography
-            variant="h6"
-            sx={{
-              color: theme.palette.text.secondary,
-              fontWeight: 300
-            }}
-          >
-            {t('modelpricePage.pricingDescription')}
           </Typography>
         </Box>
 
@@ -651,23 +655,27 @@ const UnifiedPricingTable = () => {
               </TableHead>
               <TableBody>
                 {filteredRows.length > 0 ? (
-                  filteredRows.map((row, index) => (
-                    <TableRow
-                      key={row.id}
-                      sx={{
-                        '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark'
-                            ? 'rgba(255,255,255,0.05)'
-                            : 'rgba(0,0,0,0.02)',
-                          transform: 'translateY(-1px)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                        },
-                        transition: 'all 0.2s ease',
-                        borderBottom: index === filteredRows.length - 1 ? 'none' : undefined
-                      }}
-                    >
-                      <TableCell sx={{ py: 2, px: 3 }}>
+                  filteredRows.map((row, index) => {
+                    const rowContent = (() => {
+                      const p = row.priceDisplay;
+                      let tip;
+                      if (p) {
+                        if (p.unit === 'USD/sec') {
+                          tip = `单价：$${p.input_usd ?? p.input_rmb} / 秒`;
+                        } else {
+                          tip = p.type === 'times'
+                            ? `单价：$${p.input_usd ?? p.input_rmb} / 次`
+                            : `基础单价：输入 $${p.input_usd ?? p.input_rmb} / 1k，输出 $${p.output_usd ?? p.output_rmb} / 1k`;
+                        }
+                      }
+
+                      const content = (
                         <Stack direction="row" justifyContent="flex-start" alignItems="center" spacing={1}>
+                          {row.variants && row.variants.length > 0 && (
+                            <IconButton size="small" onClick={() => toggleExpand(row.model)}>
+                              {expanded[row.model] ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                            </IconButton>
+                          )}
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>
                             {row.model}
                           </Typography>
@@ -675,89 +683,209 @@ const UnifiedPricingTable = () => {
                             <Icon icon="eva:copy-outline" width={16} height={16} />
                           </IconButton>
                         </Stack>
-                      </TableCell>
-                      <TableCell sx={{ py: 2, px: 3 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Avatar
-                            src={getIconByName(row.provider)}
-                            alt={row.provider}
-                            sx={{
-                              width: 20,
-                              height: 20,
-                              backgroundColor: theme.palette.mode === 'dark' ? '#fff' : theme.palette.background.paper,
-                              '.MuiAvatar-img': {
-                                objectFit: 'contain',
-                                padding: '2px'
-                              }
-                            }}
-                          >
-                            {row.provider?.charAt(0).toUpperCase()}
-                          </Avatar>
-                          <Typography variant="body2">{row.provider}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ py: 2, px: 3 }}>
-                        {row.type === 'tokens' ? (
-                          <Label
-                            color="primary"
-                            sx={{
-                              borderRadius: '6px',
-                              fontWeight: 500,
-                              fontSize: '0.75rem',
-                              py: 0.25,
-                              px: 0.75
-                            }}
-                          >
-                            {t('modelpricePage.tokens')}
-                          </Label>
-                        ) : (
-                          <Label
-                            color="secondary"
-                            sx={{
-                              borderRadius: '6px',
-                              fontWeight: 500,
-                              fontSize: '0.75rem',
-                              py: 0.25,
-                              px: 0.75
-                            }}
-                          >
-                            {t('modelpricePage.times')}
-                          </Label>
+                      );
+
+                      return tip ? (
+                        <Tooltip title={tip} placement="top">
+                          <span>{content}</span>
+                        </Tooltip>
+                      ) : (
+                        content
+                      );
+                    })();
+
+                    return (
+                      <Fragment key={row.id}>
+                        <TableRow
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: theme.palette.mode === 'dark'
+                                ? 'rgba(255,255,255,0.05)'
+                                : 'rgba(0,0,0,0.02)',
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                            },
+                            transition: 'all 0.2s ease',
+                            borderBottom: index === filteredRows.length - 1 && !(row.variants && row.variants.length > 0 && expanded[row.model]) ? 'none' : undefined
+                          }}
+                        >
+                          <TableCell sx={{ py: 2, px: 3 }}>{rowContent}</TableCell>
+                          <TableCell sx={{ py: 2, px: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Avatar
+                                src={getIconByName(row.provider)}
+                                alt={row.provider}
+                                sx={{
+                                  width: 20,
+                                  height: 20,
+                                  backgroundColor: theme.palette.mode === 'dark' ? '#fff' : theme.palette.background.paper,
+                                  '.MuiAvatar-img': {
+                                    objectFit: 'contain',
+                                    padding: '2px'
+                                  }
+                                }}
+                              >
+                                {row.provider?.charAt(0).toUpperCase()}
+                              </Avatar>
+                              <Typography variant="body2">{row.provider}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ py: 2, px: 3 }}>
+                            {row.variants && row.variants.length > 0 ? (
+                              <Label
+                                color="warning"
+                                sx={{
+                                  borderRadius: '6px',
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  py: 0.25,
+                                  px: 0.75
+                                }}
+                              >
+                                按组合计费
+                              </Label>
+                            ) : row.type === 'tokens' ? (
+                              <Label
+                                color="primary"
+                                sx={{
+                                  borderRadius: '6px',
+                                  fontWeight: 500,
+                                  fontSize: '0.75rem',
+                                  py: 0.25,
+                                  px: 0.75
+                                }}
+                              >
+                                {t('modelpricePage.tokens')}
+                              </Label>
+                            ) : (
+                              <Label
+                                color="secondary"
+                                sx={{
+                                  borderRadius: '6px',
+                                  fontWeight: 500,
+                                  fontSize: '0.75rem',
+                                  py: 0.25,
+                                  px: 0.75
+                                }}
+                              >
+                                {t('modelpricePage.times')}
+                              </Label>
+                            )}
+                          </TableCell>
+                          <TableCell sx={{ py: 2, px: 3 }}>
+                            {row.variants && row.variants.length > 0 ? (
+                              <Typography variant="body2" color="text.disabled">
+                                —
+                              </Typography>
+                            ) : (
+                              <Label
+                                color="info"
+                                variant="outlined"
+                                sx={{
+                                  borderRadius: '6px',
+                                  fontWeight: 500,
+                                  fontSize: '0.75rem',
+                                  py: 0.25,
+                                  px: 0.75
+                                }}
+                              >
+                                {row.input}
+                              </Label>
+                            )}
+                          </TableCell>
+                          <TableCell sx={{ py: 2, px: 3 }}>
+                            {row.variants && row.variants.length > 0 ? (
+                              <Typography variant="body2" color="text.disabled">
+                                —
+                              </Typography>
+                            ) : (
+                              <Label
+                                color="info"
+                                variant="outlined"
+                                sx={{
+                                  borderRadius: '6px',
+                                  fontWeight: 500,
+                                  fontSize: '0.75rem',
+                                  py: 0.25,
+                                  px: 0.75
+                                }}
+                              >
+                                {row.output}
+                              </Label>
+                            )}
+                          </TableCell>
+                          <TableCell sx={{ py: 2, px: 3 }}>{getOther(t, row.extraRatios)}</TableCell>
+                        </TableRow>
+                        {row.variants && row.variants.length > 0 && expanded[row.model] && (
+                          <TableRow>
+                            <TableCell colSpan={6} sx={{ py: 1.5, px: 3, backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)' }}>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell sx={{ fontWeight: 600 }}>精确计费模型</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>收费类型</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>输入价格</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>输出价格</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {row.variants.map((v) => {
+                                    const vp = v.priceDisplay || {};
+                                    const typeText = vp.unit === 'USD/sec' ? '按秒' : vp.type === 'times' ? '按次' : '按 Tokens';
+                                    return (
+                                      <TableRow key={v.model}>
+                                        <TableCell>
+                                          <Stack direction="row" alignItems="center" spacing={1}>
+                                            <Typography variant="body2">{v.model}</Typography>
+                                            <IconButton size="small" onClick={() => copy(v.model)}>
+                                              <Icon icon="eva:copy-outline" width={16} height={16} />
+                                            </IconButton>
+                                          </Stack>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Label color="secondary" variant="soft" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
+                                            {typeText}
+                                          </Label>
+                                        </TableCell>
+                                        <TableCell>
+                                          {vp.input_usd || vp.input_rmb ? (
+                                            <Label color="info" variant="outlined" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
+                                              {vp.unit === 'USD/sec'
+                                                ? `$${vp.input_usd ?? vp.input_rmb} / 秒`
+                                                : vp.type === 'times'
+                                                  ? `$${vp.input_usd ?? vp.input_rmb} / 次`
+                                                  : `$${vp.input_usd ?? vp.input_rmb} / 1k`}
+                                            </Label>
+                                          ) : (
+                                            <Typography variant="body2" color="text.disabled">
+                                              —
+                                            </Typography>
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          {vp.output_usd || vp.output_rmb ? (
+                                            <Label color="info" variant="outlined" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
+                                              {vp.type === 'times'
+                                                ? `$${vp.output_usd ?? vp.output_rmb} / 次`
+                                                : `$${vp.output_usd ?? vp.output_rmb} / 1k`}
+                                            </Label>
+                                          ) : (
+                                            <Typography variant="body2" color="text.disabled">
+                                              —
+                                            </Typography>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </TableCell>
+                          </TableRow>
                         )}
-                      </TableCell>
-                      <TableCell sx={{ py: 2, px: 3 }}>
-                        <Label
-                          color="info"
-                          variant="outlined"
-                          sx={{
-                            borderRadius: '6px',
-                            fontWeight: 500,
-                            fontSize: '0.75rem',
-                            py: 0.25,
-                            px: 0.75
-                          }}
-                        >
-                          {row.input}
-                        </Label>
-                      </TableCell>
-                      <TableCell sx={{ py: 2, px: 3 }}>
-                        <Label
-                          color="info"
-                          variant="outlined"
-                          sx={{
-                            borderRadius: '6px',
-                            fontWeight: 500,
-                            fontSize: '0.75rem',
-                            py: 0.25,
-                            px: 0.75
-                          }}
-                        >
-                          {row.output}
-                        </Label>
-                      </TableCell>
-                      <TableCell sx={{ py: 2, px: 3 }}>{getOther(t, row.extraRatios)}</TableCell>
-                    </TableRow>
-                  ))
+                      </Fragment>
+                    );
+                  })
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 6 }}>

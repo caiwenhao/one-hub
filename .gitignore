@@ -26,3 +26,4 @@ docs/swagger/
 .DS_Store
 venv
 .DS_Store
+.spec-workflow/
