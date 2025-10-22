@@ -1,4 +1,4 @@
-FROM node:18 as builder
+FROM node:22 AS builder
 
 WORKDIR /build
 
@@ -32,6 +32,9 @@ RUN go mod download
 
 # 复制所有源码
 COPY . .
+
+# 生成 Swagger 文档
+RUN go generate ./...
 
 # 从第一阶段复制构建好的前端文件
 COPY --from=builder /build/build ./web/build
