@@ -1,0 +1,24 @@
+---
+title: "MiniMaxi API"
+description: "基于 OneHub 的 MiniMaxi 视频接口（来自 minimaxi-openapi.yaml）"
+---
+
+> 本页对应规范：`/apifox/minimaxi-openapi.yaml`。
+
+本平台提供 MiniMaxi 视频生成相关能力的统一代理。接口与官方保持一致，并对部分上游响应做字段对齐与状态映射，便于统一接入与兼容。
+
+## 常用入口
+
+<CardGroup cols={2}>
+  <Card title="创建视频任务" icon="film" href="#/paths/~1minimaxi~1v1~1video_generation/post">
+    文/图/主体/首尾帧视频生成，自动根据请求体识别模式。
+  </Card>
+  <Card title="查询任务状态" icon="clock" href="#/paths/~1minimaxi~1v1~1query~1video_generation/get">
+    通过 `task_id` 查询任务执行进度与结果。
+  </Card>
+</CardGroup>
+
+<Note>
+  认证方式：在 Playground 认证栏填写 `Bearer <你的 OneHub Token>`。
+</Note>
+

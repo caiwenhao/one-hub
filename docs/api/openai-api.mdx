@@ -1,0 +1,30 @@
+---
+title: "OpenAI API"
+description: "基于 OneHub 的 OpenAI 兼容接口（来自 openai-openapi.yaml）"
+---
+
+> 本页对应规范：`/apifox/openai-openapi.yaml`。
+
+本平台提供与 OpenAI 路由完全兼容的代理接口，统一使用 OneHub 的用户 Token 进行认证。你可以在左侧导航中浏览自动生成的接口详情与示例，并直接在内置 Playground 中调试请求。
+
+## 常用入口
+
+<CardGroup cols={2}>
+  <Card title="聊天补全" icon="comments" href="#/paths/~1v1~1chat~1completions/post">
+    兼容 `/v1/chat/completions`，支持流式与工具调用。
+  </Card>
+  <Card title="Responses" icon="wand-magic-sparkles" href="#/paths/~1v1~1responses/post">
+    统一多模态请求接口，适合复杂工作流。
+  </Card>
+  <Card title="Embeddings" icon="vector-square" href="#/paths/~1v1~1embeddings/post">
+    文本向量生成。
+  </Card>
+  <Card title="Moderations" icon="shield" href="#/paths/~1v1~1moderations/post">
+    内容合规与安全审查。
+  </Card>
+</CardGroup>
+
+<Note>
+  认证方式：在 Playground 认证栏填写 `Bearer <你的 OneHub Token>`。
+</Note>
+
