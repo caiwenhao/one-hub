@@ -52,7 +52,16 @@ export default defineConfig({
       {
         text: '开发',
         items: [
-          { text: '开发说明', link: '/dev/index' }
+          { text: '开发说明', link: '/dev/index' },
+          { text: '功能更新', link: '/dev/feature-updates' },
+          {
+            text: '渠道集成',
+            collapsed: false,
+            items: [
+              { text: 'Kling', link: '/dev/providers/kling' },
+              { text: 'Vidu', link: '/dev/providers/vidu' }
+            ]
+          }
         ]
       },
       {
