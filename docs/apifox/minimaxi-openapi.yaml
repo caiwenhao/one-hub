@@ -741,7 +741,7 @@ components:
           type: string
         text:
           type: string
-          description: `text` 与 `text_file_id` 至少填写一个
+          description: "`text` 与 `text_file_id` 至少填写一个"
         text_file_id:
           type: string
           description: 通过文件上传接口获得的文本文件 ID
