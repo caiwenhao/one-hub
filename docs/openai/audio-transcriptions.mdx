@@ -1,0 +1,50 @@
+---
+title: "Audio · Transcriptions"
+description: "上传音频文件并使用 Whisper 系列模型获取转写结果。"
+---
+
+> 规范参考：`#/paths/~1v1~1audio~1transcriptions/post`
+
+`POST /v1/audio/transcriptions` 采用 `multipart/form-data`，支持常见音频格式（mp3、wav 等）。
+
+## 请求示例
+
+<Tabs>
+<Tab title="cURL">
+  ```bash
+  curl -X POST "$ONEHUB_BASE_URL/v1/audio/transcriptions" \
+    -H "Authorization: Bearer $ONEHUB_TOKEN" \
+    -F "model=whisper-1" \
+    -F "file=@sample.wav"
+  ```
+</Tab>
+
+<Tab title="Python">
+  ```python
+  import os
+  import requests
+
+  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
+  token = os.environ["ONEHUB_TOKEN"]
+
+  with open("sample.wav", "rb") as audio:
+      files = {"file": audio}
+      data = {"model": "whisper-1"}
+      resp = requests.post(
+          f"{base_url}/v1/audio/transcriptions",
+          headers={"Authorization": f"Bearer {token}"},
+          data=data,
+          files=files,
+          timeout=120,
+      )
+  resp.raise_for_status()
+  print(resp.json()["text"])
+  ```
+</Tab>
+</Tabs>
+
+## 最佳实践
+
+- 支持的额外字段包括 `temperature`、`prompt`、`language` 等，可提升特定领域的识别准确率。
+- 对于大文件，推荐在上传前进行压缩或切片，并开启 OneHub 的分片存储能力。
+- 若需要实时逐字稿，可结合 Responses 接口或 MiniMaxi 提供的流式语音能力。

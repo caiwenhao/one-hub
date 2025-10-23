@@ -1,0 +1,44 @@
+---
+title: "Models"
+description: "查询当前 Token 可以使用的模型清单，了解可用能力与属性。"
+---
+
+> 规范参考：`#/paths/~1v1~1models/get`
+
+`GET /v1/models` 返回与当前 Token 绑定的所有模型，包含模型 ID、类型、可用状态等信息。
+
+## 请求示例
+
+<Tabs>
+<Tab title="cURL">
+  ```bash
+  curl "$ONEHUB_BASE_URL/v1/models" \
+    -H "Authorization: Bearer $ONEHUB_TOKEN"
+  ```
+</Tab>
+
+<Tab title="Python">
+  ```python
+  import os
+  import requests
+
+  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
+  token = os.environ["ONEHUB_TOKEN"]
+
+  resp = requests.get(
+      f"{base_url}/v1/models",
+      headers={"Authorization": f"Bearer {token}"},
+      timeout=10,
+  )
+  resp.raise_for_status()
+  for item in resp.json().get("data", []):
+      print(item["id"], item.get("owned_by"))
+  ```
+</Tab>
+</Tabs>
+
+## 业务场景
+
+- 动态能力探测：根据返回的模型列表决定是否显示某些功能入口。
+- 监控与灰度：结合 OneHub 控制台的配额策略，可在模型级别做灰度发布。
+- SDK 初始化：许多第三方 SDK 允许通过提前拉取模型列表进行本地缓存，避免硬编码。

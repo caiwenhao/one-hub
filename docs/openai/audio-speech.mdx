@@ -1,0 +1,62 @@
+---
+title: "Audio · Speech"
+description: "使用文本转语音接口生成 MP3/PCM 音频，可自定义音色与格式。"
+---
+
+> 规范参考：`#/paths/~1v1~1audio~1speech/post`
+
+`POST /v1/audio/speech` 返回二进制音频流。支持 `gpt-4o-mini-tts`、`gpt-4o-audio-preview` 等模型。
+
+## 请求示例
+
+<Tabs>
+<Tab title="cURL">
+  ```bash
+  curl -X POST "$ONEHUB_BASE_URL/v1/audio/speech" \
+    -H "Authorization: Bearer $ONEHUB_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "model": "gpt-4o-mini-tts",
+      "voice": "alloy",
+      "input": "你好，欢迎使用 OneHub！"
+    }' \
+    --output onehub-tts.mp3
+  ```
+</Tab>
+
+<Tab title="Python">
+  ```python
+  import os
+  import requests
+
+  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
+  token = os.environ["ONEHUB_TOKEN"]
+
+  payload = {
+      "model": "gpt-4o-mini-tts",
+      "voice": "alloy",
+      "input": "你好，欢迎使用 OneHub！",
+  }
+
+  resp = requests.post(
+      f"{base_url}/v1/audio/speech",
+      headers={"Authorization": f"Bearer {token}"},
+      json=payload,
+      timeout=60,
+  )
+  resp.raise_for_status()
+  with open("onehub-tts.mp3", "wb") as f:
+      f.write(resp.content)
+  ```
+</Tab>
+</Tabs>
+
+## 参数速览
+
+- `voice`：音色 ID，兼容 OpenAI 官网上所有可用选项。
+- `response_format`：控制输出封装，例如 `mp3-1-32000-128000`、`wav` 等。
+- `speed`：语速（0.25 ~ 4）。
+
+<Callout type="tip">
+  如果希望直接返回音频 URL，可结合 OneHub 的媒体存储服务或使用 MiniMaxi 文档中的 `files/retrieve` 接口。
+</Callout>

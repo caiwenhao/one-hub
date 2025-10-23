@@ -56,6 +56,62 @@
         ]
       },
       {
+        "tab": "OpenAI",
+        "groups": [
+          {
+            "group": "快速开始",
+            "pages": [
+              "openai/overview"
+            ]
+          },
+          {
+            "group": "文本与多模态",
+            "pages": [
+              "openai/chat-completions",
+              "openai/responses"
+            ]
+          },
+          {
+            "group": "向量与安全",
+            "pages": [
+              "openai/embeddings",
+              "openai/moderations"
+            ]
+          },
+          {
+            "group": "音频",
+            "pages": [
+              "openai/audio-speech",
+              "openai/audio-transcriptions"
+            ]
+          },
+          {
+            "group": "图像与视频",
+            "pages": [
+              "openai/images",
+              "openai/video"
+            ]
+          },
+          {
+            "group": "模型管理",
+            "pages": [
+              "openai/models"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "MiniMaxi",
+        "groups": [
+          {
+            "group": "相关文档",
+            "pages": [
+              "api/minimaxi-api"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "帮助",
         "groups": [
           {

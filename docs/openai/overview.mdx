@@ -1,0 +1,81 @@
+---
+title: "OpenAI · 概览"
+description: "了解如何通过 OneHub 使用 OpenAI 兼容接口，并快速跳转到常用能力。"
+---
+
+> 本系列页面基于 `/apifox/openai-openapi.yaml` 生成，涵盖 Chat、Responses、音视频、图像等全部兼容接口。
+
+OneHub 为 OpenAI 生态提供完全兼容的代理层：
+
+- **同样的路径与参数**：保持与官方 REST API 一致，可直接复用现有 SDK/代码。
+- **统一认证**：使用 OneHub 控制台签发的 Token 即可访问多个渠道，支持细粒度的密钥权限与监控。
+- **多云路由**：同一套调用可在 OneHub 控制台中按需切换后端供应商或冗余策略。
+
+<Note>
+  填写 `Authorization: Bearer <OneHub Token>` 作为认证头；也可在 Mintlify Playground 中统一配置。
+</Note>
+
+```bash
+export ONEHUB_BASE_URL="https://onehub.example.com"
+export ONEHUB_TOKEN="oh-xxxxxxxxxxxxxxxx"
+```
+
+配置好环境变量后，任一请求都可以通过 cURL 或 Python 一键调试：
+
+<Tabs>
+<Tab title="cURL">
+  ```bash
+  curl "$ONEHUB_BASE_URL/v1/models" \
+    -H "Authorization: Bearer $ONEHUB_TOKEN"
+  ```
+</Tab>
+
+<Tab title="Python">
+  ```python
+  import os
+  import requests
+
+  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
+  token = os.environ["ONEHUB_TOKEN"]
+
+  resp = requests.get(
+      f"{base_url}/v1/models",
+      headers={"Authorization": f"Bearer {token}"},
+      timeout=10,
+  )
+  resp.raise_for_status()
+  print([model["id"] for model in resp.json().get("data", [])])
+  ```
+</Tab>
+</Tabs>
+
+## 快速入口
+
+<CardGroup cols={2}>
+  <Card title="聊天补全" icon="comments" href="/openai/chat-completions">
+    经典对话、函数调用与流式输出。
+  </Card>
+  <Card title="Responses 多模态" icon="wand-magic-sparkles" href="/openai/responses">
+    统一回应接口，支持文本、图像、结构化输出。
+  </Card>
+  <Card title="向量检索" icon="vector-square" href="/openai/embeddings">
+    text-embedding 系列模型生成语义向量。
+  </Card>
+  <Card title="内容安全" icon="shield" href="/openai/moderations">
+    omni moderation 的风险检测。
+  </Card>
+  <Card title="音频处理" icon="music" href="/openai/audio-speech">
+    文本转语音、语音转写能力。
+  </Card>
+  <Card title="图像与视频" icon="photo-film" href="/openai/images">
+    gpt-image-1、Sora 视频生成与管理。
+  </Card>
+</CardGroup>
+
+## 使用建议
+
+- 推荐将 Base URL 抽象为环境变量或配置项，方便在多个环境间切换。
+- 若需要流式响应，请在 cURL 中加入 `-N` 并处理分块；Python `requests` 可设置 `stream=True`。
+- 对于大文件上传（语音转写、图片编辑），优先使用 SDK 的流式上传能力以避免内存溢出。
+
+更多接口详情请通过左侧导航进入对应页面，或直接展开自动生成的 OpenAPI 参考。
