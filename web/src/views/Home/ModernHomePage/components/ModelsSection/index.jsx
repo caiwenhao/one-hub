@@ -41,7 +41,7 @@ const ModelsSection = () => {
       iconText: 'GEM'
     },
     {
-      name: 'Claude Sonnet 4',
+      name: 'Claude Sonnet 4.5',
       provider: 'Anthropic',
       description: 'Anthropic顶级模型，安全可靠的AI助手',
       tag: '🔥 火爆',
