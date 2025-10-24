@@ -2,6 +2,7 @@ package relay_util
 
 import (
     "context"
+    "encoding/json"
     "errors"
     "math"
     "net/http"
@@ -219,6 +220,42 @@ func (q *Quota) GetLogMeta(usage *types.Usage) map[string]any {
         "group_ratio":  q.groupRatio,
         "input_ratio":  q.price.GetInput(),
         "output_ratio": q.price.GetOutput(),
+    }
+
+    // 标注 MiniMax 上游来源（official/ppinfra），用于对账与观测
+    if q.channelId > 0 {
+        if ch, err := model.GetChannelById(q.channelId); err == nil && ch != nil {
+            if ch.Type == config.ChannelTypeMiniMax {
+                upstream := "official"
+                raw := ch.GetCustomParameter()
+                if strings.TrimSpace(raw) != "" {
+                    var payload map[string]json.RawMessage
+                    if json.Unmarshal([]byte(raw), &payload) == nil {
+                        if vRaw, ok := payload["audio"]; ok {
+                            var audio map[string]any
+                            if json.Unmarshal(vRaw, &audio) == nil {
+                                if up, ok2 := audio["upstream"].(string); ok2 && strings.TrimSpace(up) != "" {
+                                    upstream = strings.ToLower(strings.TrimSpace(up))
+                                }
+                            }
+                        }
+                        if upstream == "official" {
+                            if upRaw, ok := payload["upstream"]; ok {
+                                var up string
+                                if json.Unmarshal(upRaw, &up) == nil && strings.TrimSpace(up) != "" {
+                                    upstream = strings.ToLower(strings.TrimSpace(up))
+                                }
+                            }
+                        }
+                    }
+                }
+                base := strings.ToLower(strings.TrimSpace(ch.GetBaseURL()))
+                if upstream == "official" && base != "" && strings.Contains(base, "ppinfra") {
+                    upstream = "ppinfra"
+                }
+                meta["upstream"] = upstream
+            }
+        }
     }
 
     // 对 Sora（sora-2 系列）标注秒单位，并记录视频秒数（由 usage.PromptTokens 提供）

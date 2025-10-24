@@ -1,18 +1,18 @@
 package model
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"net/http"
-	"one-api/common/config"
-	"one-api/common/logger"
-	"one-api/common/utils"
-	"sort"
-	"strings"
-	"sync"
-	"time"
+    "encoding/json"
+    "errors"
+    "fmt"
+    "io"
+    "net/http"
+    "one-api/common/config"
+    "one-api/common/logger"
+    "one-api/common/utils"
+    "sort"
+    "strings"
+    "sync"
+    "time"
 
 	"github.com/spf13/viper"
 )
@@ -113,8 +113,10 @@ func (p *Pricing) Init() error {
 
 // GetPrice returns the price of a model
 func (p *Pricing) GetPrice(modelName string) *Price {
-	p.RLock()
-	defer p.RUnlock()
+    // 统一别名，避免因端点名/别名导致的默认价回退
+    modelName = normalizeModelAlias(strings.TrimSpace(modelName))
+    p.RLock()
+    defer p.RUnlock()
 
 	if price, ok := p.Prices[modelName]; ok {
 		price.Normalize()
@@ -145,6 +147,17 @@ func (p *Pricing) GetPrice(modelName string) *Price {
 	fallback.Normalize()
 
 	return fallback
+}
+
+// normalizeModelAlias 规范化已知模型别名，确保与定价清单对齐
+func normalizeModelAlias(model string) string {
+    lower := strings.ToLower(strings.TrimSpace(model))
+    switch lower {
+    case "minimax-speech-02-hd":
+        return "speech-02-hd"
+    default:
+        return model
+    }
 }
 
 func normalizeLegacyViduModelName(modelName string) (string, bool) {

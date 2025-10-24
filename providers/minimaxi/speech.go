@@ -1,21 +1,21 @@
 package minimaxi
 
 import (
-	"bytes"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"one-api/common"
-	"one-api/common/config"
-	"one-api/common/logger"
-	"one-api/common/utils"
-	"one-api/types"
-	"strconv"
-	"strings"
+    "bytes"
+    "encoding/hex"
+    "encoding/json"
+    "errors"
+    "fmt"
+    "io"
+    "net/http"
+    "net/url"
+    "one-api/common"
+    "one-api/common/config"
+    "one-api/common/logger"
+    "one-api/common/utils"
+    "one-api/types"
+    "strconv"
+    "strings"
 )
 
 const (
@@ -221,27 +221,59 @@ func (p *MiniMaxProvider) getRequestBody(request *types.SpeechAudioRequest) *Spe
 	return speechRequest
 }
 
+// isPPInfraSpeechUpstream 检测语音是否使用 PPInfra 上游（来自渠道 custom_parameter）
+func (p *MiniMaxProvider) isPPInfraSpeechUpstream() bool {
+    if p.Channel == nil || p.Channel.CustomParameter == nil || *p.Channel.CustomParameter == "" {
+        return false
+    }
+    var payload map[string]any
+    if err := json.Unmarshal([]byte(*p.Channel.CustomParameter), &payload); err != nil {
+        return false
+    }
+    // audio 块优先
+    if v, ok := payload["audio"]; ok {
+        if audioMap, ok2 := v.(map[string]any); ok2 {
+            if up, ok3 := audioMap["upstream"].(string); ok3 {
+                return strings.ToLower(strings.TrimSpace(up)) == "ppinfra"
+            }
+        }
+    }
+    if up, ok := payload["upstream"].(string); ok {
+        return strings.ToLower(strings.TrimSpace(up)) == "ppinfra"
+    }
+    return false
+}
+
 func (p *MiniMaxProvider) CreateSpeech(request *types.SpeechAudioRequest) (*http.Response, *types.OpenAIErrorWithStatusCode) {
-	url, errWithCode := p.GetSupportedAPIUri(config.RelayModeAudioSpeech)
-	if errWithCode != nil {
-		return nil, errWithCode
-	}
-	fullRequestURL := p.GetFullRequestURL(url, request.Model)
-	headers := p.GetRequestHeaders()
+    url, errWithCode := p.GetSupportedAPIUri(config.RelayModeAudioSpeech)
+    if errWithCode != nil {
+        return nil, errWithCode
+    }
+    fullRequestURL := p.GetFullRequestURL(url, request.Model)
+    headers := p.GetRequestHeaders()
 
-	requestBody := p.getRequestBody(request)
+    requestBody := p.getRequestBody(request)
 
-	req, err := p.Requester.NewRequest(http.MethodPost, fullRequestURL, p.Requester.WithBody(requestBody), p.Requester.WithHeader(headers))
-	if err != nil {
-		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-	}
-	defer req.Body.Close()
+    req, err := p.Requester.NewRequest(http.MethodPost, fullRequestURL, p.Requester.WithBody(requestBody), p.Requester.WithHeader(headers))
+    if err != nil {
+        return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+    }
+    defer req.Body.Close()
 
-	speechResponse := &SpeechResponse{}
-	_, errWithCode = p.Requester.SendRequest(req, speechResponse, false)
-	if errWithCode != nil {
-		return nil, errWithCode
-	}
+    // PPInfra 上游：直接透传（JSON 或 SSE），避免按官方结构解码失败
+    if p.isPPInfraSpeechUpstream() {
+        resp, errWith := p.Requester.SendRequestRaw(req)
+        if errWith != nil {
+            return nil, errWith
+        }
+        return resp, nil
+    }
+
+    speechResponse := &SpeechResponse{}
+    _, errWithCode = p.Requester.SendRequest(req, speechResponse, false)
+    if errWithCode != nil {
+        return nil, errWithCode
+    }
 
 	if speechResponse.BaseResp.StatusCode != 0 {
 		return nil, common.ErrorWrapper(errors.New(speechResponse.BaseResp.StatusMsg), "speech_error", http.StatusInternalServerError)
@@ -384,10 +416,10 @@ func (p *MiniMaxProvider) normalizeOfficialSpeechRequest(req *types.MiniMaxSpeec
 }
 
 func (p *MiniMaxProvider) CreateSpeechOfficial(req *types.MiniMaxSpeechRequest, rawBody []byte) (*http.Response, *types.OpenAIErrorWithStatusCode) {
-	url, errWithCode := p.GetSupportedAPIUri(config.RelayModeAudioSpeech)
-	if errWithCode != nil {
-		return nil, errWithCode
-	}
+    url, errWithCode := p.GetSupportedAPIUri(config.RelayModeAudioSpeech)
+    if errWithCode != nil {
+        return nil, errWithCode
+    }
 
 	modelName := p.GetOriginalModel()
 	if req != nil && req.Model != "" {
@@ -423,13 +455,22 @@ func (p *MiniMaxProvider) CreateSpeechOfficial(req *types.MiniMaxSpeechRequest, 
 		streaming = true
 	}
 
-	if streaming {
-		resp, errWithCode := p.Requester.SendRequestRaw(httpReq)
-		if errWithCode != nil {
-			return nil, errWithCode
-		}
-		return resp, nil
-	}
+    if streaming {
+        resp, errWithCode := p.Requester.SendRequestRaw(httpReq)
+        if errWithCode != nil {
+            return nil, errWithCode
+        }
+        return resp, nil
+    }
+
+    // 非流式 + PPInfra 上游：直接透传 JSON（可能为 url 或 hex），不按官方结构解码
+    if p.isPPInfraSpeechUpstream() {
+        resp, errWithCode := p.Requester.SendRequestRaw(httpReq)
+        if errWithCode != nil {
+            return nil, errWithCode
+        }
+        return resp, nil
+    }
 
 	speechResponse := &SpeechResponse{}
 	resp, errWithCode := p.Requester.SendRequest(httpReq, speechResponse, true)
@@ -448,9 +489,9 @@ func (p *MiniMaxProvider) CreateSpeechOfficial(req *types.MiniMaxSpeechRequest, 
 	p.Usage.PromptTokens = usage
 	p.Usage.TotalTokens = usage
 
-	if p.getAudioMode() != audioModeHex {
-		return resp, nil
-	}
+    if p.getAudioMode() != audioModeHex {
+        return resp, nil
+    }
 
 	audioHex := strings.TrimSpace(speechResponse.Data.Audio)
 	if audioHex == "" {
