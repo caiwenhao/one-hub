@@ -113,8 +113,8 @@ func (p *Pricing) Init() error {
 
 // GetPrice returns the price of a model
 func (p *Pricing) GetPrice(modelName string) *Price {
-    // 统一别名，避免因端点名/别名导致的默认价回退
-    modelName = normalizeModelAlias(strings.TrimSpace(modelName))
+    // 不做模型别名映射，保持独立模型定价
+    modelName = strings.TrimSpace(modelName)
     p.RLock()
     defer p.RUnlock()
 
@@ -150,10 +150,13 @@ func (p *Pricing) GetPrice(modelName string) *Price {
 }
 
 // normalizeModelAlias 规范化已知模型别名，确保与定价清单对齐
-func normalizeModelAlias(model string) string {
+// NormalizeModelAlias 规范化已知模型别名，用于路由/计费一致性
+// 注意：此函数可被路由层用于“通道选择回退”，以及计费层用于价格匹配
+func NormalizeModelAlias(model string) string {
     lower := strings.ToLower(strings.TrimSpace(model))
     switch lower {
     case "minimax-speech-02-hd":
+        // 历史别名，兼容最早接入
         return "speech-02-hd"
     default:
         return model

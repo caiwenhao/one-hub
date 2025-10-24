@@ -66,7 +66,8 @@ func docMiniMaxAsyncSpeechQuery(*gin.Context) {}
 // @Param        request body types.MiniMaxAsyncSpeechRequest true "异步文本转语音请求体"
 // @Success      200 {object} types.MiniMaxAsyncSpeechResponse
 // @Router       /v1/t2a_async_v2 [post]
-func docMiniMaxAsyncSpeechCreateAlias(*gin.Context) {}
+// 已移除：不再提供 /v1/t2a_async_v2 别名文档
+// func docMiniMaxAsyncSpeechCreateAlias(*gin.Context) {}
 
 // docMiniMaxAsyncSpeechQueryAlias 用于 OpenAI 兼容前缀文档描述。
 // @Summary      minimaxi 官方接口 - 查询异步文本转语音任务（别名）
@@ -77,7 +78,8 @@ func docMiniMaxAsyncSpeechCreateAlias(*gin.Context) {}
 // @Param        task_id query string true "任务 ID"
 // @Success      200 {object} types.MiniMaxAsyncSpeechQueryResponse
 // @Router       /v1/query/t2a_async_query_v2 [get]
-func docMiniMaxAsyncSpeechQueryAlias(*gin.Context) {}
+// 已移除：不再提供 /v1/query/t2a_async_query_v2 别名文档
+// func docMiniMaxAsyncSpeechQueryAlias(*gin.Context) {}
 
 // docMiniMaxVideoCreate 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 创建视频任务

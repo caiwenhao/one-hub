@@ -40,8 +40,8 @@ func (f MiniMaxProviderFactory) Create(channel *model.Channel) base.ProviderInte
 }
 
 type MiniMaxProvider struct {
-	openai.OpenAIProvider
-	VideoClient *MiniMaxVideoClient
+    openai.OpenAIProvider
+    VideoClient *MiniMaxVideoClient
 }
 
 func (p *MiniMaxProvider) SetContext(c *gin.Context) {
@@ -55,7 +55,7 @@ func (p *MiniMaxProvider) SetContext(c *gin.Context) {
 }
 
 func (p *MiniMaxProvider) GetVideoClient() *MiniMaxVideoClient {
-	return p.VideoClient
+    return p.VideoClient
 }
 
 func getConfig(channel *model.Channel) base.ProviderConfig {

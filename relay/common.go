@@ -141,15 +141,16 @@ func fetchChannelByModel(c *gin.Context, modelName string) (*model.Channel, erro
 		filters = append(filters, model.FilterDisabledStream(modelName))
 	}
 
-	channel, err := model.ChannelGroup.Next(group, modelName, filters...)
-	if err != nil {
-		message := fmt.Sprintf("当前分组 %s 下对于模型 %s 无可用渠道", group, modelName)
-		if channel != nil {
-			logger.SysError(fmt.Sprintf("渠道不存在：%d", channel.Id))
-			message = "数据库一致性已被破坏，请联系管理员"
-		}
-		return nil, errors.New(message)
-	}
+    // 先按原始模型名选择（不做任何别名回退）
+    channel, err := model.ChannelGroup.Next(group, modelName, filters...)
+    if err != nil {
+        message := fmt.Sprintf("当前分组 %s 下对于模型 %s 无可用渠道", group, modelName)
+        if channel != nil {
+            logger.SysError(fmt.Sprintf("渠道不存在：%d", channel.Id))
+            message = "数据库一致性已被破坏，请联系管理员"
+        }
+        return nil, errors.New(message)
+    }
 
 	return channel, nil
 }
