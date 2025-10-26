@@ -324,7 +324,13 @@ func GeminiOperations(c *gin.Context) {
 
         var data any
         if _, e := gp.Requester.SendRequest(req, &data, false); e != nil {
-            common.SendOpenAIError(c, e)
+            // 统一返回 Gemini 风格的错误
+            gemErr := gemini.OpenaiErrToGeminiErr(e)
+            status := e.StatusCode
+            if status == 0 {
+                status = http.StatusBadRequest
+            }
+            c.JSON(status, gemErr.GeminiErrorResponse)
             return
         }
         // 若提供了 duration（秒）或可从返回中解析，则按秒计费
