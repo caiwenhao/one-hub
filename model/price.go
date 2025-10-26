@@ -230,13 +230,13 @@ type ModelType struct {
 }
 
 var ownedByKeywordRules = []struct {
-	Type     int
-	Keywords []string
+    Type     int
+    Keywords []string
 }{
 	{config.ChannelTypeDeepseek, []string{"deepseek"}},
 	{config.ChannelTypeAnthropic, []string{"claude", "anthropic/"}},
-	{config.ChannelTypeOpenAI, []string{"gpt-", "gpt", "davinci", "curie", "babbage", "ada", "whisper", "dall-e", "text-embedding", "o1-", "o3-", "sora-"}},
-	{config.ChannelTypeGemini, []string{"gemini", "palm-"}},
+    {config.ChannelTypeOpenAI, []string{"gpt-", "gpt", "davinci", "curie", "babbage", "ada", "whisper", "dall-e", "text-embedding", "o1-", "o3-", "sora-"}},
+    {config.ChannelTypeGemini, []string{"gemini", "palm-", "imagen", "veo-"}},
 	{config.ChannelTypeAli, []string{"qwen", "tongyi"}},
 	{config.ChannelTypeLLAMA, []string{"llama", "meta-llama"}},
 	{config.ChannelTypeMistral, []string{"mistral", "mixtral"}},
@@ -424,6 +424,31 @@ func GetDefaultPrice() []*Price {
 		"gemini-1.5-flash":        {[]float64{0.175, 0.265}, config.ChannelTypeGemini},
 		"gemini-1.5-flash-latest": {[]float64{0.175, 0.265}, config.ChannelTypeGemini},
 		"gemini-ultra":            {[]float64{1, 1}, config.ChannelTypeGemini},
+
+		// Gemini 2.x 系列（按官方计价换算为系统基准 1=$0.002/1k tokens）
+		"gemini-2.5-flash":              {[]float64{0.15, 1.25}, config.ChannelTypeGemini}, // 输入 $0.30/M → 0.0003/1k → 0.15；输出 $2.50/M → 0.0025/1k → 1.25
+		"gemini-2.5-flash-image":       {[]float64{0.15, 15}, config.ChannelTypeGemini},   // 输入同 Flash；图片输出 $30/M image tokens → 0.03/1k → 15
+		"gemini-2.5-pro":                {[]float64{0.625, 5}, config.ChannelTypeGemini},  // 输入 $1.25/M → 0.00125/1k → 0.625；输出 $10/M → 0.01/1k → 5
+		"gemini-2.5-flash-latest":       {[]float64{0.15, 1.25}, config.ChannelTypeGemini},
+		"gemini-2.0-flash":              {[]float64{0.05, 0.2}, config.ChannelTypeGemini},  // 输入 $0.10/M → 0.0001/1k → 0.05；输出 $0.40/M → 0.0004/1k → 0.2
+		"gemini-2.0-flash-exp":          {[]float64{0.05, 0.2}, config.ChannelTypeGemini},
+		"gemini-2.5-flash-image-preview":{[]float64{0.15, 15}, config.ChannelTypeGemini},
+		"gemini-embedding-001":          {[]float64{0.075, 0.075}, config.ChannelTypeGemini}, // 输入 $0.15/M → 0.00015/1k → 0.075
+
+		// Imagen 系列（按张计费，折算为“输出 image tokens=1290/张”）
+		// per-1k-tokens 价格 = (每张价格 / 1290) * 1000；ratio = (per-1k / 0.002)
+		"imagen-4.0-fast-generate-001":   {[]float64{0, 7.75}, config.ChannelTypeGemini},  // $0.02/张 → ratio≈7.75（四舍五入）
+		"imagen-4.0-generate-001":        {[]float64{0, 15.5}, config.ChannelTypeGemini},  // $0.04/张 → ratio≈15.5
+		"imagen-4.0-ultra-generate-001":  {[]float64{0, 23.25}, config.ChannelTypeGemini}, // $0.06/张 → ratio≈23.25
+		"imagen-3.0-generate-002":        {[]float64{0, 11.63}, config.ChannelTypeGemini}, // $0.03/张 → ratio≈11.63
+
+		// Veo 系列（按秒计费）：使用 tokens 口径，按 seconds×1000 作为 tokens 结算
+		// ratio = ($/sec) / 0.002；具体换算在 quota 中对 "veo-*" 模型将 promptTokens×1000
+		"veo-3.1-generate-preview":       {[]float64{200, 0}, config.ChannelTypeGemini},  // $0.40/sec → 200
+		"veo-3.1-fast-generate-preview":  {[]float64{75, 0}, config.ChannelTypeGemini},   // $0.15/sec → 75
+		"veo-3.0-generate-001":           {[]float64{200, 0}, config.ChannelTypeGemini},  // $0.40/sec → 200
+		"veo-3.0-fast-generate-001":      {[]float64{75, 0}, config.ChannelTypeGemini},   // $0.15/sec → 75
+		"veo-2.0-generate-001":           {[]float64{175, 0}, config.ChannelTypeGemini},  // $0.35/sec → 175
 
 		// ￥0.005 / 1k tokens
 		"glm-3-turbo": {[]float64{0.3572, 0.3572}, config.ChannelTypeZhipu},

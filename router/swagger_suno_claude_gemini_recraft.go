@@ -52,14 +52,14 @@ func docClaudeModels(*gin.Context) {}
 
 // Gemini endpoints
 
-// @Summary      Gemini generate content
+// @Summary      Gemini model actions (chat/images/video)
 // @Tags         Gemini
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        version path string true "API Version"
-// @Param        model   path string true "Model"
-// @Param        request body map[string]interface{} true "Gemini request"
+// @Param        version path string true "API Version (e.g. v1beta)"
+// @Param        model   path string true "Full model action, e.g.: gemini-2.5-flash:generateContent | gemini-2.5-flash:streamGenerateContent?alt=sse | imagen-4.0-generate-001:predict | veo-3.1-generate-preview:predictLongRunning"
+// @Param        request body map[string]interface{} true "Request body (generateContent/predict)"
 // @Success      200 {object} map[string]interface{}
 // @Router       /gemini/{version}/models/{model} [post]
 func docGeminiGenerate(*gin.Context) {}
@@ -72,6 +72,18 @@ func docGeminiGenerate(*gin.Context) {}
 // @Success      200 {object} map[string]interface{}
 // @Router       /gemini/{version}/models [get]
 func docGeminiListModels(*gin.Context) {}
+
+// @Summary      Gemini operations polling (Veo long-running jobs)
+// @Tags         Gemini
+// @Produce      json
+// @Security     BearerAuth
+// @Param        version path string true "API Version (e.g. v1beta)"
+// @Param        name    path string true "Operation resource name (operations/...) from predictLongRunning response"
+// @Param        model   query string false "Model used for selecting channel (e.g. veo-3.1-generate-preview). Default: gemini-2.5-pro"
+// @Param        duration query int false "Video duration seconds (optional override for billing if not present in response)"
+// @Success      200 {object} map[string]interface{}
+// @Router       /gemini/{version}/operations/{name} [get]
+func docGeminiOperations(*gin.Context) {}
 
 // Recraft endpoints
 
@@ -127,4 +139,3 @@ func docRecraftGenerativeUpscale(*gin.Context) {}
 // @Security     BearerAuth
 // @Router       /recraftAI/v1/styles [post]
 func docRecraftStyles(*gin.Context) {}
-

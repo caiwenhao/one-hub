@@ -1,17 +1,18 @@
 package gemini
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"one-api/common/requester"
-	"one-api/model"
-	"one-api/providers/base"
-	"one-api/providers/openai"
-	"one-api/types"
-	"strings"
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "one-api/common"
+    "one-api/common/requester"
+    "one-api/model"
+    "one-api/providers/base"
+    "one-api/providers/openai"
+    "one-api/types"
+    "strings"
 )
 
 type GeminiProviderFactory struct{}
@@ -56,9 +57,9 @@ func (f GeminiProviderFactory) Create(channel *model.Channel) base.ProviderInter
 }
 
 type GeminiProvider struct {
-	openai.OpenAIProvider
-	UseOpenaiAPI     bool
-	UseCodeExecution bool
+    openai.OpenAIProvider
+    UseOpenaiAPI     bool
+    UseCodeExecution bool
 }
 
 func getConfig(version string) base.ProviderConfig {
@@ -136,9 +137,40 @@ func (p *GeminiProvider) GetFullRequestURL(requestURL string, modelName string) 
 
 // 获取请求头
 func (p *GeminiProvider) GetRequestHeaders() (headers map[string]string) {
-	headers = make(map[string]string)
-	p.CommonRequestHeaders(headers)
-	headers["x-goog-api-key"] = p.Channel.Key
+    headers = make(map[string]string)
+    p.CommonRequestHeaders(headers)
+    headers["x-goog-api-key"] = p.Channel.Key
 
-	return headers
+    return headers
+}
+
+// RelayModelAction 透传任意 models/<model>:<action> 原生请求（非流式）。
+// 适配 Imagen 的 :predict 与 Veo 的 :predictLongRunning 初始化调用。
+func (p *GeminiProvider) RelayModelAction(modelName, action string) (any, *types.OpenAIErrorWithStatusCode) {
+    baseURL := strings.TrimSuffix(p.GetBaseURL(), "/")
+    version := "v1beta"
+    if p.Channel.Other != "" { version = p.Channel.Other }
+    if v := p.Context.Param("version"); v != "" { version = v }
+
+    fullRequestURL := fmt.Sprintf("%s/%s/models/%s:%s", baseURL, version, modelName, action)
+    headers := p.GetRequestHeaders()
+
+    body, ok := p.GetRawBody()
+    if !ok {
+        return nil, common.StringErrorWrapperLocal("request body not found", "request_body_not_found", http.StatusInternalServerError)
+    }
+
+    req, err := p.Requester.NewRequest(http.MethodPost, fullRequestURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+    if err != nil {
+        return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+    }
+    defer req.Body.Close()
+
+    // 动态解析为通用 map（避免定义所有变体的结构体）
+    var resp any
+    _, errWithCode := p.Requester.SendRequest(req, &resp, false)
+    if errWithCode != nil {
+        return nil, errWithCode
+    }
+    return resp, nil
 }

@@ -136,12 +136,14 @@ func setClaudeRouter(router *gin.Engine) {
 }
 
 func setGeminiRouter(router *gin.Engine) {
-	relayGeminiRouter := router.Group("/gemini")
-	relayGeminiRouter.Use(middleware.APIEnabled("gemini"), middleware.RelayGeminiPanicRecover(), middleware.GeminiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-	{
-		relayGeminiRouter.POST("/:version/models/:model", relay.Relay)
-		relayGeminiRouter.GET("/:version/models", relay.ListGeminiModelsByToken)
-	}
+    relayGeminiRouter := router.Group("/gemini")
+    relayGeminiRouter.Use(middleware.APIEnabled("gemini"), middleware.RelayGeminiPanicRecover(), middleware.GeminiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+    {
+        relayGeminiRouter.POST("/:version/models/:model", relay.Relay)
+        relayGeminiRouter.GET("/:version/models", relay.ListGeminiModelsByToken)
+        // Operations 代理：用于 Veo 等长任务轮询
+        relayGeminiRouter.GET("/:version/operations/*name", relay.GeminiOperations)
+    }
 }
 
 func setRecraftRouter(router *gin.Engine) {

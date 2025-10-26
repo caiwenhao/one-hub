@@ -325,9 +325,22 @@ func ConvertToChatOpenai(provider base.ProviderInterface, response *GeminiChatRe
 		openaiResponse.Choices = append(openaiResponse.Choices, candidate.ToOpenAIChoice(request))
 	}
 
-	usage := provider.GetUsage()
-	*usage = ConvertOpenAIUsage(response.UsageMetadata)
-	openaiResponse.Usage = usage
+    usage := provider.GetUsage()
+    *usage = ConvertOpenAIUsage(response.UsageMetadata)
+    // 若返回包含图片片段，补偿 image tokens（1290/张）以匹配 $30/M image tokens 的定价口径
+    imgCount := 0
+    for _, cand := range response.Candidates {
+        for _, part := range cand.Content.Parts {
+            if part.InlineData != nil && strings.HasPrefix(strings.ToLower(part.InlineData.MimeType), "image/") && strings.TrimSpace(part.InlineData.Data) != "" {
+                imgCount++
+            }
+        }
+    }
+    if imgCount > 0 {
+        usage.CompletionTokens += imgCount * 1290
+        usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+    }
+    openaiResponse.Usage = usage
 
 	return
 }
@@ -369,16 +382,23 @@ func (h *GeminiStreamHandler) convertToOpenaiStream(geminiResponse *GeminiChatRe
 		// Choices: choices,
 	}
 
-	choices := make([]types.ChatCompletionStreamChoice, 0, len(geminiResponse.Candidates))
+    choices := make([]types.ChatCompletionStreamChoice, 0, len(geminiResponse.Candidates))
+    // 统计本片段包含的图片数量，用于 image tokens 补偿（1290/张）
+    imgCount := 0
 
-	isStop := false
-	for _, candidate := range geminiResponse.Candidates {
-		if candidate.FinishReason != nil && *candidate.FinishReason == "STOP" {
-			isStop = true
-			candidate.FinishReason = nil
-		}
-		choices = append(choices, candidate.ToOpenAIStreamChoice(h.Request))
-	}
+    isStop := false
+    for _, candidate := range geminiResponse.Candidates {
+        if candidate.FinishReason != nil && *candidate.FinishReason == "STOP" {
+            isStop = true
+            candidate.FinishReason = nil
+        }
+        choices = append(choices, candidate.ToOpenAIStreamChoice(h.Request))
+        for _, part := range candidate.Content.Parts {
+            if part.InlineData != nil && strings.HasPrefix(strings.ToLower(part.InlineData.MimeType), "image/") && strings.TrimSpace(part.InlineData.Data) != "" {
+                imgCount++
+            }
+        }
+    }
 
 	if len(choices) > 0 && (choices[0].Delta.ToolCalls != nil || choices[0].Delta.FunctionCall != nil) {
 		choices := choices[0].ConvertOpenaiStream()
@@ -414,10 +434,13 @@ func (h *GeminiStreamHandler) convertToOpenaiStream(geminiResponse *GeminiChatRe
 		return
 	}
 
-	usage := ConvertOpenAIUsage(geminiResponse.UsageMetadata)
-
-	usage.TextBuilder = h.Usage.TextBuilder
-	*h.Usage = usage
+    usage := ConvertOpenAIUsage(geminiResponse.UsageMetadata)
+    usage.TextBuilder = h.Usage.TextBuilder
+    *h.Usage = usage
+    if imgCount > 0 {
+        h.Usage.CompletionTokens += imgCount * 1290
+        h.Usage.TotalTokens = h.Usage.PromptTokens + h.Usage.CompletionTokens
+    }
 }
 
 const tokenThreshold = 1000000

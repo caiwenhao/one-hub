@@ -53,6 +53,19 @@ func NewQuota(c *gin.Context, modelName string, promptTokens int) *Quota {
 	quota.inputRatio = quota.price.GetInput() * quota.groupRatio
 	quota.outputRatio = quota.price.GetOutput() * quota.groupRatio
 
+    // 动态价档：Gemini 2.5 Pro 大上下文（>200k tokens）按更高档计价
+    lowerModel := strings.ToLower(strings.TrimSpace(quota.modelName))
+    if strings.HasPrefix(lowerModel, "gemini-2.5-pro") && promptTokens > 200000 {
+        // 输入 $2.50/M → 0.0025/1k → 1.25；输出 $15/M → 0.015/1k → 7.5
+        quota.inputRatio = 1.25 * quota.groupRatio
+        quota.outputRatio = 7.5 * quota.groupRatio
+    }
+
+    // 动态模态：Gemini 2.5 Flash 若包含音频输入，输入单价切换至 $1.00/M（ratio=0.5）
+    if strings.HasPrefix(lowerModel, "gemini-2.5-flash") && c.GetBool("gemini_audio_input") {
+        quota.inputRatio = 0.5 * quota.groupRatio
+    }
+
 	return quota
 }
 
@@ -266,6 +279,13 @@ func (q *Quota) GetLogMeta(usage *types.Usage) map[string]any {
             meta["video_seconds"] = usage.PromptTokens
         }
     }
+    // 对 Veo（veo-* 系列）标注秒单位
+    if strings.HasPrefix(lowerModel, "veo-") {
+        meta["unit"] = "sec"
+        if usage != nil && usage.PromptTokens > 0 {
+            meta["video_seconds"] = usage.PromptTokens
+        }
+    }
 
 	firstResponseTime := q.GetFirstResponseTime()
 	if firstResponseTime > 0 {
@@ -301,6 +321,10 @@ func (q *Quota) GetTotalQuota(promptTokens, completionTokens int, extraBilling m
         // Sora（OpenAI /v1/videos）按秒计费：内部换算为 seconds × 1000（对齐 tokens 基线 1k）
         lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
         if strings.HasPrefix(lowerModel, "sora-2") {
+            promptTokens = promptTokens * 1000
+        }
+        // Veo（Gemini /models/veo-*）按秒计费：同样按 seconds × 1000 结算
+        if strings.HasPrefix(lowerModel, "veo-") {
             promptTokens = promptTokens * 1000
         }
         quota = int(math.Ceil((float64(promptTokens) * q.inputRatio) + (float64(completionTokens) * q.outputRatio)))

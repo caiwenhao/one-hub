@@ -71,9 +71,10 @@ func (p *GeminiProvider) CreateImageGenerations(request *types.ImageRequest) (*t
 		})
 	}
 
-	usage := p.GetUsage()
-	usage.PromptTokens = imageCount * 258
-	usage.TotalTokens = usage.PromptTokens
+    // 计费按“每张 1290 image tokens”折算，匹配 Imagen 定价；输入按需另计（此处忽略）
+    usage := p.GetUsage()
+    usage.CompletionTokens = imageCount * 1290
+    usage.TotalTokens = usage.CompletionTokens
 
 	return openaiResponse, nil
 }
