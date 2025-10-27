@@ -1,0 +1,13 @@
+---
+title: "Embeddings"
+description: "POST /gemini/v1beta/models/{model}:embedContent"
+openapi: 'POST /gemini/v1beta/models/{model}:embedContent'
+---
+
+ 
+```bash
+curl -X POST "$BASE_URL/gemini/v1beta/models/text-embedding-004:embedContent" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"content":{"parts":[{"text":"kapon 是一个多云模型网关。"}]}}'
+```

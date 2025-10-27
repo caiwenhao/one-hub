@@ -1,15 +1,15 @@
 openapi: 3.0.3
 info:
-  title: One Hub - OpenAI 渠道 API
+  title: kapon - OpenAI 渠道 API
   version: 1.0.0
   description: |
-    One Hub 提供的 OpenAI 渠道代理接口（完全兼容 OpenAI 路由）。
-    - 认证：使用 One Hub 的用户 Token（非 OpenAI 平台 Key）
-    - 域名：导入后可在 Apifox 环境中替换为你的 One Hub 地址
+    kapon 提供的 OpenAI 渠道代理接口（完全兼容 OpenAI 路由）。
+    - 认证：使用 kapon 的用户 Token（非 OpenAI 平台 Key）
+    - 域名：导入后可在 Apifox 环境中替换为你的 kapon 地址
     - 兼容性：除标准文本/多模态接口外，包含 Sora 视频 API（/v1/videos）
 servers:
-  - url: https://onehub.example.com
-    description: 你的 One Hub 服务地址（导入后可在 Apifox 环境改成实际值）
+  - url: https://models.kapon.cloud
+    description: kapon 模型服务（生产环境 Base URL）
 security:
   - bearerAuth: []
 paths:
@@ -133,7 +133,7 @@ paths:
               properties:
                 model: { type: string, example: gpt-4o-mini-tts }
                 voice: { type: string, example: alloy }
-                input: { type: string, example: 你好，欢迎使用 One Hub！ }
+                input: { type: string, example: 你好，欢迎使用 kapon！ }
       responses:
         '200':
           description: 返回音频流

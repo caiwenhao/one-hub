@@ -1,51 +1,24 @@
 ---
 title: "Moderations"
 description: "调用 omni moderation 接口进行文本内容安全检测。"
+openapi: 'POST /v1/moderations'
 ---
 
-> 规范参考：`#/paths/~1v1~1moderations/post`
 
-`POST /v1/moderations` 可识别仇恨、暴力、自残等敏感类别，帮助业务在生成与审核环节落地合规策略。
 
-## 请求示例
+`POST /v1/moderations` 可识别仇恨、暴力、自残等敏感类别，帮助业务在生成与审核环节落地合规策略。你可以在右侧 Playground 直接调试。
 
-<Tabs>
-<Tab title="cURL">
-  ```bash
-  curl -X POST "$ONEHUB_BASE_URL/v1/moderations" \
-    -H "Authorization: Bearer $ONEHUB_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "model": "omni-moderation-latest",
-      "input": "请描述一次危险的实验"
-    }'
-  ```
-</Tab>
+## 请求示例（cURL）
 
-<Tab title="Python">
-  ```python
-  import os
-  import requests
-
-  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
-  token = os.environ["ONEHUB_TOKEN"]
-
-  payload = {
-      "model": "omni-moderation-latest",
-      "input": "请描述一次危险的实验",
-  }
-
-  resp = requests.post(
-      f"{base_url}/v1/moderations",
-      headers={"Authorization": f"Bearer {token}"},
-      json=payload,
-      timeout=15,
-  )
-  resp.raise_for_status()
-  print(resp.json()["results"][0])
-  ```
-</Tab>
-</Tabs>
+```bash
+curl -X POST "$BASE_URL/v1/moderations" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "omni-moderation-latest",
+    "input": "请描述一次危险的实验"
+  }'
+```
 
 ## 结果说明
 

@@ -1,0 +1,29 @@
+---
+title: "文件接口"
+description: "下载与元数据检索（retrieve / retrieve_content）"
+openapi: 'GET /minimaxi/v1/files/retrieve'
+---
+
+> 常见路径：
+> - `GET /minimaxi/v1/files/retrieve?file_id=...`
+> - `GET /minimaxi/v1/files/retrieve_content?file_id=...`
+
+<Tabs>
+<Tab title="下载内容">
+
+```bash
+curl -L "$BASE_URL/minimaxi/v1/files/retrieve_content?file_id=$FILE_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  --output "$FILE_ID.bin"
+```
+
+</Tab>
+<Tab title="查询元数据">
+
+```bash
+curl "$BASE_URL/minimaxi/v1/files/retrieve?file_id=$FILE_ID" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+</Tab>
+</Tabs>

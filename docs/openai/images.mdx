@@ -1,20 +1,16 @@
 ---
 title: "Images"
 description: "使用 gpt-image-1 进行图像生成、编辑与变体创建。"
+openapi: 'POST /v1/images/generations'
 ---
 
-> 规范参考：
-> - 生成：`#/paths/~1v1~1images~1generations/post`
-> - 编辑：`#/paths/~1v1~1images~1edits/post`
-> - 变体：`#/paths/~1v1~1images~1variations/post`
+ 
 
 ## 生成图片
 
-<Tabs>
-<Tab title="cURL">
   ```bash
-  curl -X POST "$ONEHUB_BASE_URL/v1/images/generations" \
-    -H "Authorization: Bearer $ONEHUB_TOKEN" \
+  curl -X POST "$BASE_URL/v1/images/generations" \
+    -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d '{
       "model": "gpt-image-1",
@@ -22,105 +18,26 @@ description: "使用 gpt-image-1 进行图像生成、编辑与变体创建。"
       "size": "1024x1024"
     }'
   ```
-</Tab>
-
-<Tab title="Python">
-  ```python
-  import os
-  import requests
-
-  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
-  token = os.environ["ONEHUB_TOKEN"]
-
-  resp = requests.post(
-      f"{base_url}/v1/images/generations",
-      headers={"Authorization": f"Bearer {token}"},
-      json={
-          "model": "gpt-image-1",
-          "prompt": "A futuristic skyline at dusk",
-          "size": "1024x1024",
-      },
-      timeout=60,
-  )
-  resp.raise_for_status()
-  print(resp.json()["data"][0]["url"])
-  ```
-</Tab>
-</Tabs>
 
 ## 编辑图片
 
-<Tabs>
-<Tab title="cURL">
   ```bash
-  curl -X POST "$ONEHUB_BASE_URL/v1/images/edits" \
-    -H "Authorization: Bearer $ONEHUB_TOKEN" \
+  curl -X POST "$BASE_URL/v1/images/edits" \
+    -H "Authorization: Bearer $TOKEN" \
     -F "model=gpt-image-1" \
     -F "image=@base.png" \
     -F "mask=@mask.png" \
     -F "prompt=在天空中加入热气球"
   ```
-</Tab>
-
-<Tab title="Python">
-  ```python
-  import os
-  import requests
-
-  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
-  token = os.environ["ONEHUB_TOKEN"]
-
-  with open("base.png", "rb") as base, open("mask.png", "rb") as mask:
-      files = {"image": base, "mask": mask}
-      data = {"model": "gpt-image-1", "prompt": "在天空中加入热气球"}
-      resp = requests.post(
-          f"{base_url}/v1/images/edits",
-          headers={"Authorization": f"Bearer {token}"},
-          data=data,
-          files=files,
-          timeout=60,
-      )
-  resp.raise_for_status()
-  print(resp.json()["data"][0]["url"])
-  ```
-</Tab>
-</Tabs>
 
 ## 创建变体
 
-<Tabs>
-<Tab title="cURL">
   ```bash
-  curl -X POST "$ONEHUB_BASE_URL/v1/images/variations" \
-    -H "Authorization: Bearer $ONEHUB_TOKEN" \
+  curl -X POST "$BASE_URL/v1/images/variations" \
+    -H "Authorization: Bearer $TOKEN" \
     -F "model=gpt-image-1" \
     -F "image=@origin.png"
   ```
-</Tab>
-
-<Tab title="Python">
-  ```python
-  import os
-  import requests
-
-  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
-  token = os.environ["ONEHUB_TOKEN"]
-
-  with open("origin.png", "rb") as image:
-      files = {"image": image}
-      data = {"model": "gpt-image-1"}
-      resp = requests.post(
-          f"{base_url}/v1/images/variations",
-          headers={"Authorization": f"Bearer {token}"},
-          data=data,
-          files=files,
-          timeout=60,
-      )
-  resp.raise_for_status()
-  print(resp.json()["data"][0]["url"])
-  ```
-</Tab>
-</Tabs>
 
 <Callout type="info">
   所有接口均支持 `n`、`quality`、`background` 等附加参数。若需返回 base64，可设置 `response_format`。

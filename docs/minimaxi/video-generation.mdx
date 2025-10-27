@@ -1,0 +1,17 @@
+---
+title: "视频生成"
+description: "POST /minimaxi/v1/video_generation（含官方别名）"
+openapi: 'POST /minimaxi/v1/video_generation'
+---
+
+ 
+```bash
+curl -X POST "$BASE_URL/minimaxi/v1/video_generation" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"MiniMax-Hailuo-02","prompt":"sunset beach, UHD","duration":6}'
+```
+
+<Callout type="info">
+也支持官方别名：`POST /v1/video_generation`（同参）。
+</Callout>

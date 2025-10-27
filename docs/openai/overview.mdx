@@ -1,53 +1,31 @@
 ---
 title: "OpenAI · 概览"
-description: "了解如何通过 OneHub 使用 OpenAI 兼容接口，并快速跳转到常用能力。"
+description: "了解如何通过 kapon 使用 OpenAI 兼容接口，并快速跳转到常用能力。"
 ---
 
 > 本系列页面基于 `/apifox/openai-openapi.yaml` 生成，涵盖 Chat、Responses、音视频、图像等全部兼容接口。
 
-OneHub 为 OpenAI 生态提供完全兼容的代理层：
+kapon 为 OpenAI 生态提供完全兼容的代理层：
 
 - **同样的路径与参数**：保持与官方 REST API 一致，可直接复用现有 SDK/代码。
-- **统一认证**：使用 OneHub 控制台签发的 Token 即可访问多个渠道，支持细粒度的密钥权限与监控。
-- **多云路由**：同一套调用可在 OneHub 控制台中按需切换后端供应商或冗余策略。
+- **统一认证**：使用 kapon 控制台签发的 Token 即可访问多个渠道，支持细粒度的密钥权限与监控。
+- **多云路由**：同一套调用可在 kapon 控制台中按需切换后端供应商或冗余策略。
 
 <Note>
-  填写 `Authorization: Bearer <OneHub Token>` 作为认证头；也可在 Mintlify Playground 中统一配置。
+  填写 `Authorization: Bearer <kapon Token>` 作为认证头；也可在 Mintlify Playground 中统一配置。
 </Note>
 
 ```bash
-export ONEHUB_BASE_URL="https://onehub.example.com"
-export ONEHUB_TOKEN="oh-xxxxxxxxxxxxxxxx"
+export BASE_URL="https://models.kapon.cloud"
+export TOKEN="oh-xxxxxxxxxxxxxxxx"
 ```
 
-配置好环境变量后，任一请求都可以通过 cURL 或 Python 一键调试：
+配置好环境变量后，可直接用 cURL 调试：
 
-<Tabs>
-<Tab title="cURL">
-  ```bash
-  curl "$ONEHUB_BASE_URL/v1/models" \
-    -H "Authorization: Bearer $ONEHUB_TOKEN"
-  ```
-</Tab>
-
-<Tab title="Python">
-  ```python
-  import os
-  import requests
-
-  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
-  token = os.environ["ONEHUB_TOKEN"]
-
-  resp = requests.get(
-      f"{base_url}/v1/models",
-      headers={"Authorization": f"Bearer {token}"},
-      timeout=10,
-  )
-  resp.raise_for_status()
-  print([model["id"] for model in resp.json().get("data", [])])
-  ```
-</Tab>
-</Tabs>
+```bash
+curl "$BASE_URL/v1/models" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
 ## 快速入口
 

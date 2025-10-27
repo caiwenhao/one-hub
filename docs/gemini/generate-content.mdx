@@ -1,0 +1,13 @@
+---
+title: "GenerateContent"
+description: "POST /gemini/v1beta/models/{model}:generateContent"
+openapi: 'POST /gemini/v1beta/models/{model}:generateContent'
+---
+
+ 
+```bash
+curl -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:generateContent" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"contents":[{"parts":[{"text":"用三句话介绍 kapon。"}]}]}'
+```

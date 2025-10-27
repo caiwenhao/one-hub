@@ -1,15 +1,15 @@
 openapi: 3.0.3
 info:
-  title: One Hub - minimaxi 渠道 API
+  title: kapon - minimaxi 渠道 API
   version: 1.0.0
   description: |
-    One Hub 提供的 minimaxi 渠道代理接口（OpenAI 兼容 + 视频官方路径）。
-    - 认证：使用 One Hub 的用户 Token（非 minimaxi 平台 Key）
-    - 域名：导入后可在 Apifox 环境中替换为你的 One Hub 地址
+    kapon 提供的 minimaxi 渠道代理接口（OpenAI 兼容 + 视频官方路径）。
+    - 认证：使用 kapon 的用户 Token（非 minimaxi 平台 Key）
+    - 域名：导入后可在 Apifox 环境中替换为你的 kapon 地址
 
 servers:
-  - url: https://onehub.example.com
-    description: 你的 One Hub 服务地址（导入后可在 Apifox 环境改成实际值）
+  - url: https://models.kapon.cloud
+    description: kapon 模型服务（生产环境 Base URL）
 
 security:
   - bearerAuth: []
@@ -232,7 +232,7 @@ paths:
       summary: minimaxi 官方 - 同步文本转语音
       description: |
         与官方 `POST /v1/t2a_v2` 一致。默认返回 JSON，其中 `data.audio` 为 hex 编码音频；
-        当渠道启用 `audio_mode=hex` 时，One Hub 会将响应转换为真实音频流，并通过响应头暴露字幕与声道信息。
+        当渠道启用 `audio_mode=hex` 时，kapon 会将响应转换为真实音频流，并通过响应头暴露字幕与声道信息。
       requestBody:
         required: true
         content:
@@ -241,7 +241,7 @@ paths:
               $ref: '#/components/schemas/MiniMaxSpeechRequest'
             example:
               model: speech-2.5-hd-preview
-              text: 你好，欢迎来到 One Hub
+              text: 你好，欢迎来到 kapon
               stream: false
               voice_setting:
                 voice_id: moss_audio_ce44fc67-7ce3-11f0-8de5-96e35d26fb85
@@ -911,7 +911,7 @@ components:
           type: string
         voice:
           type: string
-          description: One Hub 会将 openai 声音映射到 minimaxi 音色
+          description: kapon 会将 openai 声音映射到 minimaxi 音色
           example: alloy
         speed:
           type: number

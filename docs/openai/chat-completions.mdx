@@ -1,59 +1,43 @@
 ---
 title: "Chat Completions"
-description: "通过 OneHub 兼容 OpenAI 的对话补全与工具调用接口。"
+description: "通过 kapon 兼容 OpenAI 的对话补全与工具调用接口。"
+openapi: 'POST /v1/chat/completions'
 ---
 
-> 规范参考：`#/paths/~1v1~1chat~1completions/post`
+<style>
+{`
+  /* 仅本页：缩小正文字体（不影响代码块） */
+  #chatcom-page p,
+  #chatcom-page li,
+  #chatcom-page blockquote {
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+  #chatcom-page h2 {
+    font-size: 1.15rem;
+  }
+`}
+</style>
+
+<div id="chatcom-page">
 
 `POST /v1/chat/completions` 是最常用的对话生成接口，支持流式输出、函数调用（tools/functions）以及 JSON mode。
 
 ## 请求示例
 
-<Tabs>
-<Tab title="cURL">
-  ```bash
-  curl -X POST "$ONEHUB_BASE_URL/v1/chat/completions" \
-    -H "Authorization: Bearer $ONEHUB_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "model": "gpt-4o-mini",
-      "messages": [
-        {"role": "system", "content": "你是 OneHub 的产品助理。"},
-        {"role": "user", "content": "用三句话介绍 OneHub。"}
-      ],
-      "temperature": 0.7
-    }'
-  ```
-</Tab>
-
-<Tab title="Python">
-  ```python
-  import os
-  import requests
-
-  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
-  token = os.environ["ONEHUB_TOKEN"]
-
-  payload = {
-      "model": "gpt-4o-mini",
-      "messages": [
-          {"role": "system", "content": "你是 OneHub 的产品助理。"},
-          {"role": "user", "content": "用三句话介绍 OneHub。"},
-      ],
-      "temperature": 0.7,
-  }
-
-  resp = requests.post(
-      f"{base_url}/v1/chat/completions",
-      headers={"Authorization": f"Bearer {token}"},
-      json=payload,
-      timeout=30,
-  )
-  resp.raise_for_status()
-  print(resp.json()["choices"][0]["message"]["content"])
-  ```
-</Tab>
-</Tabs>
+```bash
+curl -X POST "$BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [
+      {"role": "system", "content": "你是 kapon 的产品助理。"},
+      {"role": "user", "content": "用三句话介绍 kapon。"}
+    ],
+    "temperature": 0.7
+  }'
+```
 
 ## 常见用法
 
@@ -62,5 +46,7 @@ description: "通过 OneHub 兼容 OpenAI 的对话补全与工具调用接口�
 - **JSON 约束**：配合 `response_format` 设置为 `{"type": "json_schema"}`，可让模型严格返回结构化数据。
 
 <Callout type="info">
-  OneHub 会自动对齐常见第三方兼容实现中的差异字段，减少模型切换带来的适配成本。
+  kapon 会自动对齐常见第三方兼容实现中的差异字段，减少模型切换带来的适配成本。
 </Callout>
+
+</div>

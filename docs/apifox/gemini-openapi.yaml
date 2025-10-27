@@ -1,0 +1,129 @@
+openapi: 3.0.3
+info:
+  title: kapon - Gemini 渠道 API
+  version: 1.0.0
+  description: |
+    kapon 提供的 Gemini 渠道代理接口。
+    - 认证：使用 kapon 的用户 Token（Bearer）
+    - 域名：生产环境 Base URL 为 https://models.kapon.cloud
+    - 兼容性：建议优先通过 OpenAI 兼容路径配合 Gemini 模型名调用；也提供 Gemini 官方风格路径以便迁移。
+servers:
+  - url: https://models.kapon.cloud
+    description: kapon 模型服务（生产环境 Base URL）
+security:
+  - bearerAuth: []
+paths:
+  /gemini/v1beta/models/{model}:generateContent:
+    post:
+      summary: Gemini 文本/多模态生成（generateContent）
+      description: 兼容 Gemini 官方 `models.generateContent`。提交文本或多模态 parts 生成内容。
+      parameters:
+        - name: model
+          in: path
+          required: true
+          schema: { type: string, example: gemini-1.5-pro }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeminiGenerateContentRequest'
+            examples:
+              text:
+                summary: 纯文本生成
+                value:
+                  contents:
+                    - parts:
+                        - text: "用三句话介绍 kapon。"
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeminiGenerateContentResponse'
+  /gemini/v1beta/models/{model}:embedContent:
+    post:
+      summary: Gemini 文本向量（embedContent）
+      description: 兼容 Gemini 官方 `models.embedContent`。返回表示输入文本的向量。
+      parameters:
+        - name: model
+          in: path
+          required: true
+          schema: { type: string, example: text-embedding-004 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeminiEmbedContentRequest'
+            examples:
+              basic:
+                value:
+                  content:
+                    parts:
+                      - text: "kapon 是一个多云模型网关。"
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeminiEmbedContentResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    GeminiPart:
+      type: object
+      properties:
+        text: { type: string }
+        # 可扩展：inline_data / file_data 等
+    GeminiContent:
+      type: object
+      properties:
+        role: { type: string, example: user }
+        parts:
+          type: array
+          items: { $ref: '#/components/schemas/GeminiPart' }
+    GeminiGenerateContentRequest:
+      type: object
+      properties:
+        contents:
+          type: array
+          items: { $ref: '#/components/schemas/GeminiContent' }
+        generationConfig:
+          type: object
+          properties:
+            temperature: { type: number, example: 0.7 }
+            maxOutputTokens: { type: integer, example: 1024 }
+            topP: { type: number, example: 0.95 }
+            topK: { type: integer, example: 40 }
+    GeminiGenerateContentResponse:
+      type: object
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            properties:
+              content:
+                $ref: '#/components/schemas/GeminiContent'
+              finishReason: { type: string }
+    GeminiEmbedContentRequest:
+      type: object
+      properties:
+        content:
+          $ref: '#/components/schemas/GeminiContent'
+    GeminiEmbedContentResponse:
+      type: object
+      properties:
+        embedding:
+          type: object
+          properties:
+            values:
+              type: array
+              items: { type: number }

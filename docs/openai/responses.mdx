@@ -1,19 +1,16 @@
 ---
 title: "Responses"
 description: "统一的多模态响应接口，支持 JSON mode、工具序列与图文混合。"
+openapi: 'POST /v1/responses'
 ---
 
-> 规范参考：`#/paths/~1v1~1responses/post`
+`POST /v1/responses` 是 OpenAI 新一代的统一接口，能在一次请求中混合文本、图像等类型的输入，并以结构化格式返回结果。你可以在右侧 Playground 直接调试。
 
-`POST /v1/responses` 是 OpenAI 新一代的统一接口，能在一次请求中混合文本、图像等类型的输入，并以结构化格式返回结果。
+## 请求示例（cURL）
 
-## 请求示例
-
-<Tabs>
-<Tab title="cURL">
   ```bash
-  curl -X POST "$ONEHUB_BASE_URL/v1/responses" \
-    -H "Authorization: Bearer $ONEHUB_TOKEN" \
+  curl -X POST "$BASE_URL/v1/responses" \
+    -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d '{
       "model": "gpt-4.1",
@@ -28,42 +25,10 @@ description: "统一的多模态响应接口，支持 JSON mode、工具序列�
       "response_format": {"type": "json_schema"}
     }'
   ```
-</Tab>
-
-<Tab title="Python">
-  ```python
-  import os
-  import requests
-
-  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
-  token = os.environ["ONEHUB_TOKEN"]
-
-  payload = {
-      "model": "gpt-4.1",
-      "input": [
-          {
-              "role": "user",
-              "content": [{"type": "text", "text": "请总结附件要点"}],
-          }
-      ],
-      "response_format": {"type": "json_schema"},
-  }
-
-  resp = requests.post(
-      f"{base_url}/v1/responses",
-      headers={"Authorization": f"Bearer {token}"},
-      json=payload,
-      timeout=60,
-  )
-  resp.raise_for_status()
-  print(resp.json())
-  ```
-</Tab>
-</Tabs>
 
 ## 技巧与注意事项
 
 - `input` 字段可以是字符串或复合数组，推荐使用数组以便在其中混合文本、图像、文件引用等内容。
 - 对话历史可通过继续在 `input` 中添加多轮 `role`/`content` 分段。
-- `response_format` 支持 `json_schema`、`text` 等选项；结合 OneHub 的流控策略，可实现结构化自动化处理。
+- `response_format` 支持 `json_schema`、`text` 等选项；结合 kapon 的流控策略，可实现结构化自动化处理。
 - 若需要工具调用，请在 `tools` 中声明可选函数，返回结果将出现在 `output` 的 `tool_calls` 字段里。

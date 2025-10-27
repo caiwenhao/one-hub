@@ -1,50 +1,22 @@
 ---
 title: "Embeddings"
 description: "使用 text-embedding 系列模型生成语义向量，适用于检索与推荐场景。"
+openapi: 'POST /v1/embeddings'
 ---
 
-> 规范参考：`#/paths/~1v1~1embeddings/post`
+`POST /v1/embeddings` 可以将文本或批量文档转化为浮点向量，后续用于 ANN 检索、重排或特征工程。你可以在右侧 Playground 直接调试。
 
-`POST /v1/embeddings` 可以将文本或批量文档转化为浮点向量，后续用于 ANN 检索、重排或特征工程。
+## 请求示例（cURL）
 
-## 请求示例
-
-<Tabs>
-<Tab title="cURL">
-  ```bash
-  curl -X POST "$ONEHUB_BASE_URL/v1/embeddings" \
-    -H "Authorization: Bearer $ONEHUB_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "model": "text-embedding-3-small",
-      "input": "吾尝终日而思矣，不如须臾之所学也"
-    }'
-  ```
-</Tab>
-
-<Tab title="Python">
-  ```python
-  import os
-  import requests
-
-  base_url = os.environ.get("ONEHUB_BASE_URL", "https://onehub.example.com")
-  token = os.environ["ONEHUB_TOKEN"]
-
-  resp = requests.post(
-      f"{base_url}/v1/embeddings",
-      headers={"Authorization": f"Bearer {token}"},
-      json={
-          "model": "text-embedding-3-small",
-          "input": "吾尝终日而思矣，不如须臾之所学也",
-      },
-      timeout=30,
-  )
-  resp.raise_for_status()
-  vector = resp.json()["data"][0]["embedding"]
-  print(len(vector), vector[:8])
-  ```
-</Tab>
-</Tabs>
+```bash
+curl -X POST "$BASE_URL/v1/embeddings" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "text-embedding-3-small",
+    "input": "吾尝终日而思矣，不如须臾之所学也"
+  }'
+```
 
 ## 使用建议
 

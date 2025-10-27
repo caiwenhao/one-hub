@@ -1,0 +1,36 @@
+---
+title: "语音合成（TTS）"
+description: "同步 t2a_v2、异步 t2a_async_v2 与查询"
+openapi: 'POST /minimaxi/v1/t2a_v2'
+---
+
+ 
+
+<Tabs>
+<Tab title="同步合成">
+
+```bash
+curl -X POST "$BASE_URL/minimaxi/v1/t2a_v2" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"speech-2.5-hd-preview","text":"欢迎使用 kapon"}' \
+  --output minimaxi-tts.mp3
+```
+
+</Tab>
+
+ 
+<Tab title="异步合成与查询">
+
+```bash
+curl -X POST "$BASE_URL/minimaxi/v1/t2a_async_v2" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"speech-2.5-hd-preview","text":"hello"}'
+
+curl "$BASE_URL/minimaxi/v1/query/t2a_async_query_v2?task_id=$TASK_ID" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+</Tab>
+</Tabs>

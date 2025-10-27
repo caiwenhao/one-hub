@@ -1,0 +1,25 @@
+---
+title: "MiniMaxi · 概览"
+description: "基于 kapon 的 MiniMaxi 渠道能力与入口"
+---
+
+> 本系列页面对应 `/apifox/minimaxi-openapi.yaml`，可在 API Playground 中直接调试（Base URL: https://models.kapon.cloud）。
+
+kapon 提供 MiniMaxi 视频与语音等能力的统一代理：
+
+- 路由兼容：支持官方路径与 OpenAI 兼容别名
+- 鉴权统一：Bearer kapon Token
+- 多云策略：可在控制台按需切换后端与灰度
+
+```bash
+export BASE_URL="https://models.kapon.cloud"
+export TOKEN="oh-xxxxxxxxxxxxxxxx"
+```
+
+<CardGroup>
+  <Card title="视频生成" href="/minimaxi/video-generation" icon="film" />
+  <Card title="任务查询" href="/minimaxi/video-query" icon="magnifying-glass" />
+  <Card title="语音合成" href="/minimaxi/tts" icon="speaker-wave" />
+  <Card title="文件接口" href="/minimaxi/files" icon="folder" />
+</CardGroup>
+

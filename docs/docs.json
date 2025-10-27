@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "OneHub 用户文档",
+  "name": "kapon 用户文档",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
@@ -11,46 +11,17 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "概览",
+        "tab": "开发指南",
         "groups": [
           {
             "group": "入门",
             "pages": [
               "index",
-              "quickstart",
-              "console"
-            ]
-          },
-          {
-            "group": "账号与支持",
-            "pages": [
-              "account-billing",
-              "support",
-              "security"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "开发者",
-        "groups": [
-          {
-            "group": "API",
-            "pages": [
-              "api/openai-api",
-              "api/minimaxi-api",
-              "api/overview",
-              "api/authentication",
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "接口示例",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "guide/quickstart",
+              "guide/console",
+              "guide/account-billing",
+              "guide/support",
+              "guide/security"
             ]
           }
         ]
@@ -59,42 +30,17 @@
         "tab": "OpenAI",
         "groups": [
           {
-            "group": "快速开始",
+            "group": "OpenAI",
             "pages": [
-              "openai/overview"
-            ]
-          },
-          {
-            "group": "文本与多模态",
-            "pages": [
+              "openai/overview",
               "openai/chat-completions",
-              "openai/responses"
-            ]
-          },
-          {
-            "group": "向量与安全",
-            "pages": [
+              "openai/responses",
               "openai/embeddings",
-              "openai/moderations"
-            ]
-          },
-          {
-            "group": "音频",
-            "pages": [
+              "openai/moderations",
               "openai/audio-speech",
-              "openai/audio-transcriptions"
-            ]
-          },
-          {
-            "group": "图像与视频",
-            "pages": [
+              "openai/audio-transcriptions",
               "openai/images",
-              "openai/video"
-            ]
-          },
-          {
-            "group": "模型管理",
-            "pages": [
+              "openai/video",
               "openai/models"
             ]
           }
@@ -104,9 +50,26 @@
         "tab": "MiniMaxi",
         "groups": [
           {
-            "group": "相关文档",
+            "group": "MiniMaxi",
             "pages": [
-              "api/minimaxi-api"
+              "minimaxi/overview",
+              "minimaxi/video-generation",
+              "minimaxi/video-query",
+              "minimaxi/tts",
+              "minimaxi/files"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Gemini",
+        "groups": [
+          {
+            "group": "Gemini",
+            "pages": [
+              "gemini/overview",
+              "gemini/generate-content",
+              "gemini/embeddings"
             ]
           }
         ]
@@ -117,8 +80,8 @@
           {
             "group": "文档",
             "pages": [
-              "faq",
-              "changelog"
+              "help/faq",
+              "help/changelog"
             ]
           }
         ]
@@ -126,8 +89,8 @@
     ]
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "https://models.kapon.cloud/logo.png",
+    "dark": "https://models.kapon.cloud/logo.png"
   },
   "api": {
     "auth": {
@@ -139,31 +102,26 @@
   },
   "openapi": [
     "/apifox/openai-openapi.yaml",
-    "/apifox/minimaxi-openapi.yaml"
+    "/apifox/minimaxi-openapi.yaml",
+    "/apifox/gemini-openapi.yaml"
   ],
   "navbar": {
     "links": [
       {
         "label": "支持",
-        "href": "mailto:hi@mintlify.com"
+        "href": "https://models.kapon.cloud/contact"
       }
     ],
     "primary": {
       "type": "button",
       "label": "控制台",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://models.kapon.cloud/panel"
     }
   },
   "contextual": {
     "options": [
      "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
+     "view"
    ]
   },
   "footer": {

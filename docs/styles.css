@@ -1,0 +1,26 @@
+/* 全局正文字体适度缩小，不影响代码块与导航 */
+:root {
+  --page-text-size: 0.90rem; /* 进一步缩小，页面更紧凑 */
+  --page-heading-2: 1.06rem;
+  --page-heading-3: 1.00rem;
+  --page-line-height: 1.60;
+}
+
+main :where(p, li, blockquote) {
+  font-size: var(--page-text-size);
+  line-height: var(--page-line-height);
+}
+
+main :where(h2) {
+  font-size: var(--page-heading-2);
+}
+
+main :where(h3) {
+  font-size: var(--page-heading-3);
+}
+
+/* 不影响代码块与内联代码 */
+pre, code, pre *, code * {
+  font-size: inherit;
+  line-height: 1.45;
+}
