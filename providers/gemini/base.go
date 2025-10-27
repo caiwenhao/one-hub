@@ -19,8 +19,8 @@ type GeminiProviderFactory struct{}
 
 // 创建 GeminiProvider
 func (f GeminiProviderFactory) Create(channel *model.Channel) base.ProviderInterface {
-	useOpenaiAPI := false
-	useCodeExecution := false
+    useOpenaiAPI := false
+    useCodeExecution := false
 
 	if channel.Plugin != nil {
 		plugin := channel.Plugin.Data()
@@ -37,23 +37,40 @@ func (f GeminiProviderFactory) Create(channel *model.Channel) base.ProviderInter
 		}
 	}
 
-	version := "v1beta"
-	if channel.Other != "" {
-		version = channel.Other
-	}
+    version := "v1beta"
+    if channel.Other != "" {
+        version = channel.Other
+    }
 
-	return &GeminiProvider{
-		OpenAIProvider: openai.OpenAIProvider{
-			BaseProvider: base.BaseProvider{
-				Config:    getConfig(version),
-				Channel:   channel,
-				Requester: requester.NewHTTPRequester(*channel.Proxy, RequestErrorHandle(channel.Key)),
-			},
-			SupportStreamOptions: true,
-		},
-		UseOpenaiAPI:     useOpenaiAPI,
-		UseCodeExecution: useCodeExecution,
-	}
+    // 根据是否启用 OpenAI 兼容模式与 BaseURL 判断：
+    // - 默认（未设置 BaseURL 或指向 Google 官方域名）：使用 Google 的 OpenAI 兼容路径 `/{version}/chat/completions`，错误解析保留 Gemini 形态
+    // - 若 BaseURL 指向非 Google 域名：使用标准 OpenAI 路径 `/v1/chat/completions`，错误解析采用 OpenAI 形态
+    baseURL := channel.GetBaseURL()
+    useGoogleCompat := (baseURL == "" || strings.Contains(baseURL, "generativelanguage.googleapis.com"))
+
+    cfg := getConfig(useOpenaiAPI, version, baseURL)
+
+    // 选择错误处理器
+    errHandler := RequestErrorHandle(channel.Key)
+    if useOpenaiAPI && !useGoogleCompat {
+        // 非 Google 官方域名时，假定为标准 OpenAI 风格错误
+        errHandler = openai.RequestErrorHandle
+    }
+
+    provider := &GeminiProvider{
+        OpenAIProvider: openai.OpenAIProvider{
+            BaseProvider: base.BaseProvider{
+                Config:    cfg,
+                Channel:   channel,
+                Requester: requester.NewHTTPRequester(*channel.Proxy, errHandler),
+            },
+            SupportStreamOptions: true,
+        },
+        UseOpenaiAPI:     useOpenaiAPI,
+        UseCodeExecution: useCodeExecution,
+    }
+
+    return provider
 }
 
 type GeminiProvider struct {
@@ -62,13 +79,26 @@ type GeminiProvider struct {
     UseCodeExecution bool
 }
 
-func getConfig(version string) base.ProviderConfig {
-	return base.ProviderConfig{
-		BaseURL:           "https://generativelanguage.googleapis.com",
-		ChatCompletions:   fmt.Sprintf("/%s/chat/completions", version),
-		ModelList:         "/models",
-		ImagesGenerations: "1",
-	}
+func getConfig(useOpenaiAPI bool, version string, baseURL string) base.ProviderConfig {
+    // 默认使用 Google 官方兼容端点
+    cfg := base.ProviderConfig{
+        BaseURL:           "https://generativelanguage.googleapis.com",
+        ChatCompletions:   fmt.Sprintf("/%s/chat/completions", version),
+        ModelList:         "/models",
+        ImagesGenerations: "1",
+    }
+
+    // 若用户设置了自定义 BaseURL，则覆盖
+    if baseURL != "" {
+        cfg.BaseURL = baseURL
+    }
+
+    // 当启用 OpenAI API 且 BaseURL 指向非 Google 官方域名时，改为标准 OpenAI 路径
+    if useOpenaiAPI && baseURL != "" && !strings.Contains(baseURL, "generativelanguage.googleapis.com") {
+        cfg.ChatCompletions = "/v1/chat/completions"
+    }
+
+    return cfg
 }
 
 // 请求错误处理

@@ -53,16 +53,20 @@ func NewQuota(c *gin.Context, modelName string, promptTokens int) *Quota {
 	quota.inputRatio = quota.price.GetInput() * quota.groupRatio
 	quota.outputRatio = quota.price.GetOutput() * quota.groupRatio
 
-    // 动态价档：Gemini 2.5 Pro 大上下文（>200k tokens）按更高档计价
+    // 动态价档：Gemini 2.5 Pro（含 computer-use 族）大上下文（>200k tokens）按更高档计价
     lowerModel := strings.ToLower(strings.TrimSpace(quota.modelName))
-    if strings.HasPrefix(lowerModel, "gemini-2.5-pro") && promptTokens > 200000 {
+    if (strings.HasPrefix(lowerModel, "gemini-2.5-pro") || strings.HasPrefix(lowerModel, "gemini-2.5-computer-use")) && promptTokens > 200000 {
         // 输入 $2.50/M → 0.0025/1k → 1.25；输出 $15/M → 0.015/1k → 7.5
         quota.inputRatio = 1.25 * quota.groupRatio
         quota.outputRatio = 7.5 * quota.groupRatio
     }
 
-    // 动态模态：Gemini 2.5 Flash 若包含音频输入，输入单价切换至 $1.00/M（ratio=0.5）
-    if strings.HasPrefix(lowerModel, "gemini-2.5-flash") && c.GetBool("gemini_audio_input") {
+    // 动态模态：Gemini 2.5 Flash（非 lite/image/native-audio）若包含音频输入，输入单价切换至 $1.00/M（ratio=0.5）
+    if strings.HasPrefix(lowerModel, "gemini-2.5-flash") &&
+        !strings.Contains(lowerModel, "flash-lite") &&
+        !strings.Contains(lowerModel, "image") &&
+        !strings.Contains(lowerModel, "native-audio") &&
+        c.GetBool("gemini_audio_input") {
         quota.inputRatio = 0.5 * quota.groupRatio
     }
 

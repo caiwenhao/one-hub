@@ -221,12 +221,12 @@ func (p *OpenAIProvider) createOfficialVideo(request *types.VideoCreateRequest) 
 }
 
 func (p *OpenAIProvider) retrieveOfficialVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-	fullURL := p.buildOfficialVideoURL(videoID, "")
-	req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(p.GetRequestHeaders()))
-	if err != nil {
-		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-	}
-	defer req.Body.Close()
+    fullURL := p.buildOfficialVideoURL(videoID, "")
+    req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(p.GetRequestHeaders()))
+    if err != nil {
+        return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+    }
+    if req.Body != nil { defer req.Body.Close() }
 
 	response := &openAIVideoResponse{}
 	_, errWithCode := p.Requester.SendRequest(req, response, false)

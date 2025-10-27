@@ -53,18 +53,21 @@ func docClaudeModels(*gin.Context) {}
 // Gemini endpoints
 
 // @Summary      Gemini model actions (chat/images/video)
+// @Description  仅支持官方 Google Gemini 端点。开启渠道插件“使用OpenAI API”后，将对接 Google 的 OpenAI 兼容接口；否则走 Gemini 原生 generateContent/streamGenerateContent。Imagen 使用 :predict，Veo 使用 :predictLongRunning。
 // @Tags         Gemini
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Param        version path string true "API Version (e.g. v1beta)"
 // @Param        model   path string true "Full model action, e.g.: gemini-2.5-flash:generateContent | gemini-2.5-flash:streamGenerateContent?alt=sse | imagen-4.0-generate-001:predict | veo-3.1-generate-preview:predictLongRunning"
+// @Param        X-Goog-Api-Key header string false "Google API key (可选，亦可使用 Authorization: Bearer)"
 // @Param        request body map[string]interface{} true "Request body (generateContent/predict)"
 // @Success      200 {object} map[string]interface{}
 // @Router       /gemini/{version}/models/{model} [post]
 func docGeminiGenerate(*gin.Context) {}
 
 // @Summary      Gemini list models
+// @Description  基于当前令牌分组与定价映射（channel_type=25）过滤可用 Gemini 模型。
 // @Tags         Gemini
 // @Produce      json
 // @Security     BearerAuth
@@ -74,6 +77,7 @@ func docGeminiGenerate(*gin.Context) {}
 func docGeminiListModels(*gin.Context) {}
 
 // @Summary      Gemini operations polling (Veo long-running jobs)
+// @Description  转发 /gemini/{version}/operations/*name 到 Gemini 原生 operations 资源；当渠道为 Gemini 原生 Provider 时使用其 BaseURL 构建请求。
 // @Tags         Gemini
 // @Produce      json
 // @Security     BearerAuth

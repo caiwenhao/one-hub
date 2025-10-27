@@ -19,7 +19,8 @@ const defaultConfig = {
     disabled_stream: [],
     compatible_response: false,
     minimax_upstream: 'official',
-    openai_upstream: 'official'
+    openai_upstream: 'official',
+    gemini_upstream: 'official'
   },
   inputLabel: {
     name: '渠道名称',
@@ -273,8 +274,25 @@ const typeConfig = {
       provider_models_list: '从Gemini获取模型列表'
     },
     input: {
-      models: ['gemini-pro', 'gemini-pro-vision', 'gemini-1.0-pro', 'gemini-1.5-pro'],
-      test_model: 'gemini-pro'
+      models: [
+        // 通用对话 / 推理
+        'gemini-2.5-pro',
+        'gemini-2.5-flash',
+        'gemini-2.5-flash-lite',
+        // 图像生成（Imagen）
+        'gemini-2.5-flash-image',
+        'imagen-4.0-generate-001',
+        'imagen-4.0-fast-generate-001',
+        'imagen-4.0-ultra-generate-001',
+        // 视频（Veo）
+        'veo-3.1-generate-preview',
+        'veo-3.1-fast-generate-preview',
+        // 辅助能力
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-embedding-001'
+      ],
+      test_model: 'gemini-2.5-pro'
     },
     prompt: {
       other: '请输入版本号，例如：v1'

@@ -88,6 +88,15 @@ const OPENAI_UPSTREAM_OPTIONS = [
   { value: 'mountsea', label: 'MountSea' }
 ];
 
+// Gemini 上游供应商选项（官方原生 / 官方 OpenAI 兼容 / 第三方 OpenAI 兼容）
+const GEMINI_UPSTREAM_OPTIONS = [
+  { value: '', label: '默认（官方原生）' },
+  { value: 'official', label: '官方原生（/gemini 路由）' },
+  { value: 'google_openai', label: '官方（OpenAI 兼容）' },
+  { value: 'openrouter', label: 'OpenRouter（第三方 OpenAI 兼容）' },
+  { value: 'mountsea', label: 'MountSea（第三方 OpenAI 兼容）' }
+];
+
 const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, modelOptions, prices }) => {
   const { t } = useTranslation();
   const { t: customizeT } = useCustomizeT();
@@ -453,7 +462,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
         if (data.plugin === null) {
           data.plugin = {};
         }
-        // 解析 custom_parameter 顶层 upstream 作为 UI 展示的上游选项（minimax/openai）
+        // 解析 custom_parameter 顶层 upstream 作为 UI 展示的上游选项（minimax/openai）。Gemini 渠道不使用第三方聚合上游。
         if ((data.type === 27 || data.type === 1) && data.custom_parameter) {
           try {
             const obj = JSON.parse(data.custom_parameter);
@@ -649,6 +658,60 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                     </Select>
                     <FormHelperText id="helper-tex-openai-upstream-label">
                       可选官方 / OpenRouter / MountSea。选择 OpenRouter/MountSea 将自动切换基础地址与 custom_parameter.upstream；如使用 MountSea，请确认 API 基础地址为你的 MountSea 端点。
+                    </FormHelperText>
+                  </FormControl>
+                )}
+
+                {/* Gemini 专用：上游供应商选择（官方原生 / 官方 OpenAI 兼容 / 第三方 OpenAI 兼容） */}
+                {!isTag && values.type === 25 && (
+                  <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
+                    <InputLabel id="gemini-upstream-label">上游供应商</InputLabel>
+                    <Select
+                      labelId="gemini-upstream-label"
+                      id="gemini-upstream"
+                      name="gemini_upstream"
+                      value={values.gemini_upstream || ''}
+                      label="上游供应商"
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setFieldValue('gemini_upstream', next);
+                        // 基础地址与插件开关联动：
+                        // - official / '' 走官方原生（/gemini），关闭 use_openai_api
+                        // - google_openai 使用官方域名 + 开启 use_openai_api（/{version}/chat/completions）
+                        // - openrouter/mountsea 使用对应第三方域名 + 开启 use_openai_api（/v1/chat/completions）
+                        if (next === 'official' || next === '') {
+                          setFieldValue('base_url', 'https://generativelanguage.googleapis.com');
+                          // 关闭 OpenAI 兼容插件
+                          setFieldValue('plugin.use_openai_api.enable', false);
+                        } else if (next === 'google_openai') {
+                          setFieldValue('base_url', 'https://generativelanguage.googleapis.com');
+                          setFieldValue('plugin.use_openai_api.enable', true);
+                        } else if (next === 'openrouter') {
+                          setFieldValue('base_url', 'https://openrouter.ai/api');
+                          setFieldValue('plugin.use_openai_api.enable', true);
+                        } else if (next === 'mountsea') {
+                          // MountSea 需根据实际部署端点覆盖
+                          setFieldValue('base_url', 'https://api.mountsea.ai');
+                          setFieldValue('plugin.use_openai_api.enable', true);
+                        }
+                        // Gemini 渠道不使用第三方聚合 upstream 字段，保持 custom_parameter 干净
+                        try {
+                          const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};
+                          if (obj && typeof obj === 'object' && 'upstream' in obj) delete obj.upstream;
+                          setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
+                        } catch (_) {
+                          // 不打断提交流程，交由用户自行修正 JSON
+                        }
+                      }}
+                    >
+                      {GEMINI_UPSTREAM_OPTIONS.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText id="helper-tex-gemini-upstream-label">
+                      默认直连官方原生；可选官方 OpenAI 兼容或第三方（OpenRouter/MountSea）。选择兼容模式将自动启用插件“使用OpenAI API”。
                     </FormHelperText>
                   </FormControl>
                 )}

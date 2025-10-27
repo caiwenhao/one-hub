@@ -427,13 +427,22 @@ func GetDefaultPrice() []*Price {
 
 		// Gemini 2.x 系列（按官方计价换算为系统基准 1=$0.002/1k tokens）
 		"gemini-2.5-flash":              {[]float64{0.15, 1.25}, config.ChannelTypeGemini}, // 输入 $0.30/M → 0.0003/1k → 0.15；输出 $2.50/M → 0.0025/1k → 1.25
+		"gemini-2.5-flash-preview-09-2025": {[]float64{0.15, 1.25}, config.ChannelTypeGemini},
 		"gemini-2.5-flash-image":       {[]float64{0.15, 15}, config.ChannelTypeGemini},   // 输入同 Flash；图片输出 $30/M image tokens → 0.03/1k → 15
 		"gemini-2.5-pro":                {[]float64{0.625, 5}, config.ChannelTypeGemini},  // 输入 $1.25/M → 0.00125/1k → 0.625；输出 $10/M → 0.01/1k → 5
 		"gemini-2.5-flash-latest":       {[]float64{0.15, 1.25}, config.ChannelTypeGemini},
+		"gemini-2.5-flash-lite":         {[]float64{0.05, 0.2}, config.ChannelTypeGemini},   // 输入 $0.10/M → 0.0001/1k → 0.05；输出 $0.40/M → 0.0004/1k → 0.2
+		"gemini-2.5-flash-lite-preview-09-2025": {[]float64{0.05, 0.2}, config.ChannelTypeGemini},
+		"gemini-2.5-flash-native-audio-preview-09-2025": {[]float64{1.5, 6}, config.ChannelTypeGemini}, // 输入（音频/视频）$3.00/M → 1.5；输出（音频）$12.00/M → 6
+		"gemini-2.5-flash-preview-tts":  {[]float64{0.25, 5}, config.ChannelTypeGemini},    // 输入（文本）$0.50/M → 0.0005/1k → 0.25；输出（音频）$10/M → 0.01/1k → 5
+		"gemini-2.5-pro-preview-tts":    {[]float64{1.0, 10}, config.ChannelTypeGemini},    // 输入（文本）$1.00/M → 1.0；输出（音频）$20/M → 10
 		"gemini-2.0-flash":              {[]float64{0.05, 0.2}, config.ChannelTypeGemini},  // 输入 $0.10/M → 0.0001/1k → 0.05；输出 $0.40/M → 0.0004/1k → 0.2
 		"gemini-2.0-flash-exp":          {[]float64{0.05, 0.2}, config.ChannelTypeGemini},
+		"gemini-2.0-flash-lite":         {[]float64{0.0375, 0.15}, config.ChannelTypeGemini}, // 输入 $0.075/M → 0.000075/1k → 0.0375；输出 $0.30/M → 0.0003/1k → 0.15
 		"gemini-2.5-flash-image-preview":{[]float64{0.15, 15}, config.ChannelTypeGemini},
 		"gemini-embedding-001":          {[]float64{0.075, 0.075}, config.ChannelTypeGemini}, // 输入 $0.15/M → 0.00015/1k → 0.075
+		"gemini-robotics-er-1.5-preview": {[]float64{0.15, 1.25}, config.ChannelTypeGemini},   // 与 Flash 相同：输入 $0.30/M → 0.15；输出 $2.50/M → 1.25
+		"gemini-2.5-computer-use-preview-10-2025": {[]float64{0.625, 5}, config.ChannelTypeGemini}, // 与 2.5 Pro 档一致（>200k 动态上调）
 
 		// Imagen 系列（按张计费，折算为“输出 image tokens=1290/张”）
 		// per-1k-tokens 价格 = (每张价格 / 1290) * 1000；ratio = (per-1k / 0.002)
