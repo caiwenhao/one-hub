@@ -39,9 +39,11 @@
               "openai/moderations",
               "openai/audio-speech",
               "openai/audio-transcriptions",
+              "openai/audio-translations",
               "openai/images",
               "openai/video",
-              "openai/models"
+              "openai/models",
+              "openai/realtime"
             ]
           }
         ]
@@ -56,7 +58,9 @@
               "minimaxi/video-generation",
               "minimaxi/video-query",
               "minimaxi/tts",
-              "minimaxi/files"
+              "minimaxi/files",
+              "minimaxi/chat-completions",
+              "minimaxi/images"
             ]
           }
         ]
@@ -69,7 +73,11 @@
             "pages": [
               "gemini/overview",
               "gemini/generate-content",
-              "gemini/embeddings"
+              "gemini/embeddings",
+              "gemini/images",
+              "gemini/video",
+              "gemini/openai-compat",
+              "gemini/troubleshooting"
             ]
           }
         ]

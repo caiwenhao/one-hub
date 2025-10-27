@@ -34,3 +34,44 @@ curl "$BASE_URL/minimaxi/v1/query/t2a_async_query_v2?task_id=$TASK_ID" \
 
 </Tab>
 </Tabs>
+
+## 音色别名与情感（voice alias）
+
+- 为了与 OpenAI 风格保持一致，kapon 为常见音色提供别名到 MiniMax 实际音色的映射：
+  - `alloy` → `female-chengshu`（女声-成熟）
+  - `echo` → `male-qn-qingse`（男声-青年-清色）
+  - `fable` → `male-qn-jingying`（男声-青年-精英）
+  - `onyx` → `presenter_male`
+  - `nova` → `presenter_female`
+  - `shimmer` → `audiobook_female_1`
+
+- 如果你在请求体中填写 `voice_id` 为上述别名，kapon 会自动转换为 MiniMax 要求的 `voice_id`；当该音色存在默认情感时，会在未显式指定 `emotion` 时自动补全。
+
+自定义别名（渠道自定义参数示例）
+
+```json
+{
+  "voice": {
+    "alloy": "female-chengshu|sad",
+    "echo": "male-qn-qingse|happy"
+  }
+}
+```
+
+## 返回格式（audio_mode）
+
+- 通过渠道自定义参数可设置音频返回模式：
+  - `audio_mode = json`（默认）：响应体以 JSON 返回（含音频 URL 或 base64 字段）。
+  - `audio_mode = hex`：将音频内容以十六进制字符串返回，便于某些后端链路传输（再在客户端解码为二进制）。
+
+配置示例（渠道自定义参数）
+
+```json
+{
+  "audio_mode": "hex"
+}
+```
+
+<Callout type="tip">
+  异步合成任务（t2a_async_v2）在返回 JSON 载荷中会原样保留你的 `voice_id` 与参数；若你使用了别名，kapon 会在上游请求前进行一次转换与情感补全。
+ </Callout>

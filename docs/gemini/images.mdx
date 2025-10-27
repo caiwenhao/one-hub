@@ -1,0 +1,43 @@
+---
+title: "Images"
+description: "POST /gemini/{version}/models/{model}:predict（Imagen 系列生图）"
+openapi: 'POST /gemini/v1beta/models/{model}:predict'
+---
+
+概述
+
+- 路径：`POST /gemini/v1beta/models/{model}:predict`
+- 鉴权：`x-goog-api-key: <Token>`（由 kapon 渠道签发）
+- 模型：如 `imagen-3.0-generate-001`（示例）
+
+请求示例（cURL）
+
+```bash
+curl -X POST "$BASE_URL/gemini/v1beta/models/imagen-3.0-generate-001:predict" \
+  -H "x-goog-api-key: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instances": [{ "prompt": "a panda reading a book in the library, cinematic lighting" }],
+    "parameters": {
+      "aspectRatio": "1:1",
+      "sampleCount": 2,
+      "personGeneration": "allow_adult"
+    }
+  }'
+```
+
+参数与映射
+
+- `instances[0].prompt`：文生图提示词
+- `parameters.aspectRatio`：比例，常用 `1:1`、`16:9`、`9:16`
+  - 若你使用 OpenAI 风格的 `size`：`1024x1792` → `9:16`，`1792x1024` → `16:9`，其他 → `1:1`
+- `parameters.sampleCount`：返回图片张数
+
+返回
+
+- `predictions[].bytesBase64Encoded`：Base64 图片数据
+- 时间/用量按张数折算（由网关计费）
+
+<Callout type="tip">
+  也可用 OpenAI 兼容路径 `POST /v1/images/generations` 搭配 Gemini 的生图模型名，kapon 会自动做字段映射。
+</Callout>

@@ -1,0 +1,63 @@
+---
+title: "Videos"
+description: "POST /gemini/{version}/models/{model}:predictLongRunning（Veo 系列视频生成） + GET /gemini/{version}/operations/{id}"
+openapi: 'POST /gemini/v1beta/models/{model}:predictLongRunning'
+---
+
+概述
+
+- 初始化：`POST /gemini/v1beta/models/{model}:predictLongRunning`
+- 轮询任务：`GET /gemini/v1beta/operations/{operation_id}`（可选 query `model` 指定用于选择渠道的模型）
+- 鉴权：`x-goog-api-key: <Token>`
+- 模型：如 `veo-1.5`/`veo-2.0`（示例）
+
+创建任务（cURL）
+
+```bash
+curl -X POST "$BASE_URL/gemini/v1beta/models/veo-1.5:predictLongRunning" \
+  -H "x-goog-api-key: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": {
+      "prompt": "a drone rises from a beach at sunset, 8s, cinematic, 24fps"
+    },
+    "config": {
+      "durationSeconds": 8,
+      "aspectRatio": "16:9"
+    }
+  }'
+```
+
+查询进度
+
+```bash
+curl "$BASE_URL/gemini/v1beta/operations/$OP_ID?model=gemini-2.5-pro" \
+  -H "x-goog-api-key: $TOKEN"
+```
+
+- `done` 为 true 表示任务完成；返回内含 `response.generateVideoResponse.generatedSamples[]`，其中包含素材链接与元数据（如 `metadata.durationSeconds`）。
+- 下载通常为直链（签名 URL），可用 `curl -L` 直接保存。
+
+注意
+
+- 该路由为官方风格直透；若你更偏好统一风格，可使用 OpenAI `POST /v1/videos`（若你的渠道映射到了 OpenAI 视频供应商）。
+- kapon 在 `operations` 返回中会根据解析到的时长（秒）进行用量记账；若无法解析，你也可在查询时带上 `?duration=8` 明确计费口径。
+
+## 常见返回字段速查
+
+- `done`：布尔，表示任务是否完成。
+- `name`：字符串，operation ID（可用于后续查询）。
+- `response.generateVideoResponse.generatedSamples[]`：数组，视频素材条目。
+  - `uri`：素材下载直链（可能为签名 URL）。
+  - `metadata.durationSeconds`：视频时长（秒）。
+  - 其他如 `resolution`、`aspectRatio` 等可能随模型版本返回。
+
+## 下载示例（curl -L）
+
+假设已从查询接口得到一个样本地址 `SAMPLE_URL`：
+
+```bash
+curl -L "$SAMPLE_URL" --output output.mp4
+```
+
+若有多条 `generatedSamples`，可按需求挑选分辨率或时长匹配的条目下载。

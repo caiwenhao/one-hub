@@ -1,0 +1,28 @@
+---
+title: "Audio · Translations"
+description: "将音频翻译为目标语言文本，支持多种输出格式（JSON/SRT/VTT）。"
+openapi: 'POST /v1/audio/translations'
+---
+
+接口说明
+
+- 路径：`POST /v1/audio/translations`（multipart/form-data）。
+- 输入：音频文件（`file`），可带 `prompt`、`language`、`temperature` 等字段。
+- 输出：默认 JSON；也可通过 `response_format` 指定 `text`/`srt`/`vtt`。
+
+请求示例（cURL）
+
+```bash
+curl -X POST "$BASE_URL/v1/audio/translations" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "model=whisper-1" \
+  -F "file=@sample.wav" \
+  -F "response_format=srt"
+```
+
+最佳实践
+
+- 大文件建议预处理（降采样/切片），缩短时延并提升稳定性。
+- 需要纯文本可选 `response_format=text`；字幕场景推荐 `srt`/`vtt`。
+- 若你已在“转写（Transcriptions）”拿到原文，可复用 `prompt` 做辅助提示，提升翻译通顺度。
+

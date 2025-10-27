@@ -1,0 +1,42 @@
+---
+title: "Chat Completions"
+description: "MiniMaxi 对话生成（OpenAI 兼容），支持流式与工具调用"
+openapi: 'POST /minimaxi/v1/chat/completions'
+---
+
+概述
+
+- 路径：`POST /minimaxi/v1/chat/completions`
+- 兼容：与 OpenAI Chat Completions 请求体一致（messages/tools/response_format/stream 等）。
+- 工具调用：kapon 会自动将 `tools[x].function.parameters` 序列化为 JSON 字符串，以适配 MiniMax 上游要求。
+
+请求示例（cURL）
+
+```bash
+curl -N -X POST "$BASE_URL/minimaxi/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "abab6.5-chat",   
+    "messages": [
+      {"role":"system","content":"你是一个有帮助的助手"},
+      {"role":"user","content":"帮我生成 3 条节日祝福"}
+    ],
+    "stream": true,
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "save_to_notes",
+        "description": "保存文本到笔记",
+        "parameters": {"type":"object","properties":{"text":{"type":"string"}}}
+      }
+    }]
+  }'
+```
+
+说明
+
+- `stream: true` 支持 SSE 增量输出；若关闭则一次性返回。
+- `tools[].function.parameters` 可使用 JSON Schema；kapon 会自动序列化为字符串后转发给 MiniMax 上游。
+- 其余字段（temperature/top_p/response_format 等）按 OpenAI 兼容规范处理。
+

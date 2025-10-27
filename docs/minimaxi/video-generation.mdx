@@ -15,3 +15,26 @@ curl -X POST "$BASE_URL/minimaxi/v1/video_generation" \
 <Callout type="info">
 也支持官方别名：`POST /v1/video_generation`（同参）。
 </Callout>
+
+## 可选参数
+
+- `images`：参考图数组（URLs），用于风格或构图提示。
+- `input_reference`：主体参考（URL），用于人物/物体一致性。
+- `size`/`orientation`：分辨率与方向，如 `1280x720`、`portrait`。
+- `seed`：随机种子，便于复现。
+- `callback_url`：异步回调地址（若渠道已配置，优先使用渠道默认回调）。
+
+示例（带参考图与回调）
+
+```bash
+curl -X POST "$BASE_URL/minimaxi/v1/video_generation" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model":"MiniMax-Hailuo-02",
+    "prompt":"a cat walking on the piano",
+    "seconds":6,
+    "images":["https://example.com/ref1.jpg"],
+    "callback_url":"https://your.service/callback"
+  }'
+```

@@ -5,7 +5,21 @@ description: "基于 kapon 的 Gemini 渠道能力与入口"
 
 > 本系列页面对应 `/apifox/gemini-openapi.yaml`，可在 API Playground 中直接调试（Base URL: https://models.kapon.cloud）。
 
-推荐优先使用 OpenAI 兼容路径配合 Gemini 模型名（统一网关、便于切换），亦提供官方风格路径。
+认证与网关
+
+- OpenAI 兼容路径：使用 `Authorization: Bearer <Token>`（推荐，便于跨厂商切换）。
+- Gemini 官方路径：优先读取 `x-goog-api-key`；也兼容 `?key=` 或 `Authorization`。
+
+版本与路由
+
+- 版本默认 `v1beta`；可通过渠道配置覆盖，或在路由中显式写 `/:version/`（例如 `gemini/v1`）。
+- 官方风格：`/gemini/{version}/models/{model}:<action>`（generateContent/streamGenerateContent/predict/predictLongRunning）。
+- 长任务查询：`/gemini/{version}/operations/{name}`（视频生成等）。
+
+使用建议
+
+- 普通对话/多模态优先用 OpenAI 兼容路径（Chat/Responses），只需把 `model` 填为 Gemini 型号。
+- 官方路径用于迁移兼容 Imagen（生图）/Veo（视频）等原生接口；kapon 会统一计费与错误格式。
 
 ```bash
 export BASE_URL="https://models.kapon.cloud"
@@ -15,5 +29,11 @@ export TOKEN="oh-xxxxxxxxxxxxxxxx"
 <CardGroup>
   <Card title="GenerateContent" href="/gemini/generate-content" icon="sparkles" />
   <Card title="Embeddings" href="/gemini/embeddings" icon="rows-3" />
+  <Card title="Images (Imagen)" href="/gemini/images" icon="photo" />
+  <Card title="Videos (Veo)" href="/gemini/video" icon="film" />
+  <Card title="OpenAI 兼容" href="/gemini/openai-compat" icon="arrows-right-left" />
 </CardGroup>
 
+<Callout>
+  官方路径的直透仅允许“品牌归属”为 Gemini 的模型；否则请使用 OpenAI 兼容路径调用。
+</Callout>

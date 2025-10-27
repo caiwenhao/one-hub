@@ -1,0 +1,45 @@
+---
+title: "Realtime"
+description: "通过 WebSocket 使用 OpenAI Realtime 接口（语音/多模态实时对话）。"
+openapi: 'GET /v1/realtime'
+---
+
+概述
+
+- 协议：WebSocket（需设置 `OpenAI-Beta: realtime=v1`）。
+- 入口：`wss://$BASE_HOST/v1/realtime?model=$MODEL`。
+- 认证：`Authorization: Bearer $TOKEN`（Azure 渠道用 `api-key`）。
+
+快速开始（JavaScript）
+
+```js
+const url = `${location.origin.replace('http', 'ws')}/v1/realtime?model=gpt-4o-realtime-preview`;
+const headers = {
+  Authorization: `Bearer ${TOKEN}`,
+  'OpenAI-Beta': 'realtime=v1'
+};
+const ws = new WebSocket(url, [], { headers });
+
+ws.onopen = () => {
+  // 发送会话初始化事件/输入事件（简化示例）
+  ws.send(JSON.stringify({ type: 'response.create', response: { modalities: ['text'] } }));
+};
+ws.onmessage = (e) => {
+  const event = JSON.parse(e.data);
+  // 处理 response.partial / response.completed 等事件
+  console.log(event.type, event);
+};
+```
+
+使用建议
+
+- 必要头：`OpenAI-Beta: realtime=v1`；模型示例：`gpt-4o-realtime-preview`。
+- 媒体流：支持双向音频（需发送/接收音频 buffer 事件）。
+- 计费与限速：与对应 Realtime 模型一致；若出现 401/429，请检查 Token 权限与并发策略。
+
+排错
+
+- 连接失败：确认以 `wss://` 访问，且反向代理已放行 WebSocket。
+- 401：检查 `Authorization` 头或 Azure 渠道的 `api-key`。
+- 无事件返回：确保首条消息为 `response.create` 或符合官方事件规范。
+

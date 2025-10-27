@@ -26,9 +26,16 @@ openapi: 'POST /v1/responses'
     }'
   ```
 
+## 流式与兼容
+
+- 流式输出：设置 `stream: true` 可获得服务端事件（SSE）增量；
+  - 需要兼容 Chat Completions 流格式时，可在 SSE 客户端侧做转换（kapon 已内置向后兼容处理）。
+- 工具事件：在流中会以 `response.output_item.added` 体现工具调用；结束时携带 `usage` 聚合令牌统计。
+
 ## 技巧与注意事项
 
 - `input` 字段可以是字符串或复合数组，推荐使用数组以便在其中混合文本、图像、文件引用等内容。
 - 对话历史可通过继续在 `input` 中添加多轮 `role`/`content` 分段。
 - `response_format` 支持 `json_schema`、`text` 等选项；结合 kapon 的流控策略，可实现结构化自动化处理。
 - 若需要工具调用，请在 `tools` 中声明可选函数，返回结果将出现在 `output` 的 `tool_calls` 字段里。
+- 费用提示：当启用 Web Search Preview、Code Interpreter、File Search 等工具时，kapon 会在 `usage` 中附加额外计费元数据用于对账。

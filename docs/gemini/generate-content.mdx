@@ -11,3 +11,44 @@ curl -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:generateContent" \
   -H "Content-Type: application/json" \
   -d '{"contents":[{"parts":[{"text":"用三句话介绍 kapon。"}]}]}'
 ```
+
+## 多模态输入
+
+```bash
+curl -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:generateContent" \
+  -H "x-goog-api-key: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contents": [{
+      "parts": [
+        { "text": "请根据图片内容写标题" },
+        { "inline_data": { "mime_type": "image/png", "data": "<BASE64_IMAGE>" } }
+      ]
+    }]}
+  '
+```
+
+<Callout type="tip">
+  若你使用 OpenAI 兼容路径（Chat/Responses），kapon 会自动在网关侧将 messages 映射为 `contents/parts`。
+</Callout>
+
+## 流式（SSE）
+
+- 将路径改为 `:streamGenerateContent?alt=sse`，并设置 `Accept: text/event-stream`：
+
+```bash
+curl -N -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:streamGenerateContent?alt=sse" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: text/event-stream" \
+  -H "Content-Type: application/json" \
+  -d '{"contents":[{"parts":[{"text":"逐字输出一段文案"}]}]}'
+```
+
+## 多模态与语音
+
+- 文图混合：在 `parts` 中加入 `inline_data` 或图像 URL。
+- 语音输出：使用带 `-tts` 后缀的模型，并在 `generationConfig.responseModalities` 指定 `AUDIO`。
+
+<Callout type="info">
+  如果你更偏向 OpenAI 兼容风格（messages/tools/JSON mode），可直接使用 Chat Completions 路径搭配 Gemini 模型名，见《OpenAI 兼容》章节。
+</Callout>

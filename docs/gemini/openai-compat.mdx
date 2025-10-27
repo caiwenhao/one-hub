@@ -1,0 +1,41 @@
+---
+title: "OpenAI 兼容"
+description: "使用 Chat Completions/Responses 调用 Gemini 模型（便于统一网关与切换）"
+openapi: 'POST /v1/chat/completions'
+---
+
+在 kapon 中，你可以直接使用 OpenAI 风格的路径与请求体来调用 Gemini 模型：
+
+### Chat Completions
+
+```bash
+curl -X POST "$BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-1.5-pro",
+    "messages": [
+      {"role":"system","content":"你是一个友好的助手"},
+      {"role":"user","content":"用要点说明优势"}
+    ],
+    "stream": true
+  }'
+```
+
+### Responses（统一多模态）
+
+```bash
+curl -X POST "$BASE_URL/v1/responses" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-1.5-pro",
+    "input": [{"role":"user","content":[{"type":"text","text":"输出 JSON"}]}],
+    "text": {"format": {"type":"json_schema","name":"Spec","schema":{"type":"object"}}}
+  }'
+```
+
+说明
+
+- kapon 会在网关侧完成 OpenAI→Gemini 的字段映射（messages → contents/parts 等）。
+- 支持流式（SSE）与工具调用；部分安全阈值与多模态配置会在后台做合理默认。

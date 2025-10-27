@@ -1,0 +1,33 @@
+---
+title: "生图（Images)"
+description: "MiniMaxi 图像生成（OpenAI 兼容）"
+openapi: 'POST /minimaxi/v1/images/generations'
+---
+
+概述
+
+- 路径：`POST /minimaxi/v1/images/generations`
+- 兼容：与 OpenAI Images Generations 请求体一致（model/prompt/size/quality/n 等）。
+
+请求示例
+
+```bash
+curl -X POST "$BASE_URL/minimaxi/v1/images/generations" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "abab6.5-vision",
+    "prompt": "A panda reading a book in the library",
+    "size": "1024x1024",
+    "n": 1
+  }'
+```
+
+返回
+
+- `data[].b64_json`：Base64 图像数据；或根据配置返回 URL。
+
+注意
+
+- 若你的调用来自 OpenAI SDK，也可直接使用统一的 `/v1/images/generations` 路径并选择 MiniMaxi 渠道，kapon 会按路由与模型归属自动转发。
+

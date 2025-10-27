@@ -1,0 +1,32 @@
+---
+title: "排错与限制"
+description: "常见错误、权限与品牌限制、用量计费口径"
+---
+
+常见错误
+
+- 401 未授权：
+  - 官方路径请使用 `x-goog-api-key` 或 `?key=`；OpenAI 兼容路径使用 `Authorization: Bearer`。
+  - 令牌无对应权限或已过期，请联系管理员。
+- 400/422 参数错误：
+  - Imagen 生图：检查 `instances/parameters` 字段；`aspectRatio` 取值 `1:1/16:9/9:16`。
+  - Veo 视频：检查 `predictLongRunning` 载荷与必填项（prompt/durationSeconds）。
+- 403 品牌限制：
+  - 官方路径直透仅允许归属 Gemini 的模型；若模型来源为其他供应商，请改用 OpenAI 兼容路径。
+
+权限与版本
+
+- 版本默认 `v1beta`；可通过渠道配置覆盖，也可在 URL 指定 `/:version/`。
+- 官方路径路由：`/gemini/{version}/models/{model}:<action>`；查询：`/gemini/{version}/operations/{name}`。
+
+计费与用量
+
+- GenerateContent：按 token 口径计费（与模型定价规则保持一致）。
+- Imagen 生图：按返回张数折算图片 token（网关侧聚合）。
+- Veo 视频：按 `durationSeconds` 计费；若返回数据不能解析时，可在查询时携带 `?duration=秒` 明确计费口径。
+
+建议
+
+- 通用业务优先用 OpenAI 兼容路径（便于多云切换）；需要使用 Imagen/Veo 原生能力时再使用官方路径。
+- 若需同时使用流式与工具调用，可考虑使用 Responses 统一接口（见 OpenAI 兼容章节）。
+
