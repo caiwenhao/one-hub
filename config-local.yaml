@@ -1,0 +1,124 @@
+# One Hub 开发环境配置文件
+# 服务器设置
+port: 3000 # 后端服务端口
+gin_mode: "debug" # 开发模式使用 debug
+log_level: "debug" # 开发环境使用 debug 级别日志
+log_dir: "./logs" # 日志目录
+session_secret: "dev_session_secret_key_12345678" # 开发环境会话密钥
+disable_token_encoders: false
+trusted_header: ""
+language: "zh_CN"
+favicon: ""
+
+logs:
+  filename: "one-hub-dev.log" # 开发环境日志文件名
+  max_size: 100
+  max_backups: 10
+  max_age: 7
+  compress: false
+
+# 数据库设置 - 连接本地 Docker MySQL
+sql_dsn: "oneapi:123456@tcp(192.168.193.40:3306)/one-api?charset=utf8mb4&parseTime=True&loc=Local"
+sqlite_path: "one-api-dev.db" # 备用 SQLite 数据库
+sqlite_busy_timeout: 3000
+redis_conn_string: "redis://192.168.193.40:6379" # 连接本地 Docker Redis
+redis_db: 0
+
+memory_cache_enabled: true # 开发环境启用内存缓存
+sync_frequency: 600
+node_type: "master"
+frontend_base_url: ""
+polling_interval: 0
+batch_update_interval: 5
+batch_update_enabled: false
+auto_price_updates: false
+auto_price_updates_mode: "system"
+auto_price_updates_interval: 1440
+update_price_service: "https://raw.githubusercontent.com/MartialBE/one-api/prices/prices.json"
+user_invoice_month: false
+github_proxy: ""
+
+# 令牌设置
+user_token_secret: "dev_user_token_secret_key_32_chars_long" # 开发环境用户令牌密钥
+hashids_salt: "abcdefghijklmnopqrstuvwxyz0123456789"
+
+# 全局设置 - 开发环境放宽限制
+global:
+  api_rate_limit: 1000 # 开发环境放宽 API 限制
+  web_rate_limit: 500 # 开发环境放宽 Web 限制
+
+# 频道更新设置
+channel:
+  update_frequency: 0
+  test_frequency: 0
+
+# 连接设置
+relay_timeout: 30 # 开发环境适当延长超时时间
+connect_timeout: 10
+
+# Token 编码缓存
+tiktoken_cache_dir: "./cache/tiktoken"
+data_gym_cache_dir: "./cache/data_gym"
+
+# 开发环境可以禁用以下通知功能
+notify:
+  email:
+    disable: true
+  wecom:
+    disable: true
+  dingTalk:
+    token: ""
+    secret: ""
+    keyWord: ""
+  lark:
+    token: ""
+    secret: ""
+    keyWord: ""
+  pushdeer:
+    url: ""
+    pushkey: ""
+  telegram:
+    bot_api_key: ""
+    chat_id: ""
+    http_proxy: ""
+
+# 存储设置 - 开发环境可选
+storage:
+  smms:
+    secret: ""
+  imgur:
+    client_id: ""
+  alioss:
+    endpoint: ""
+    bucketName: ""
+    accessKeyId: ""
+    accessKeySecret: ""
+  s3:
+    endpoint: ""
+    cdnurl: ""
+    bucketName: ""
+    accessKeyId: ""
+    accessKeySecret: ""
+    expirationDays: 3
+
+# Metrics - 开发环境可选
+metrics:
+  user: ""
+  password: ""
+
+# 搜索功能 - 开发环境可选
+search:
+  searxng:
+    url: ""
+  tavily:
+    key: ""
+
+# MCP 服务 - 开发环境可选
+mcp:
+  enable: false
+
+# Uptime Kuma - 开发环境可选
+uptime_kuma:
+  enable: false
+  domain: ""
+  status_page_name: ""

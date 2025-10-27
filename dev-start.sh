@@ -135,15 +135,39 @@ stop_database() {
 # 启动后端服务
 start_backend() {
     log_step "启动后端服务..."
-    
+
     cd "$PROJECT_ROOT"
-    
+
     # 检查配置文件
     if [ ! -f "config-dev.yaml" ]; then
         log_error "开发配置文件 config-dev.yaml 不存在"
         exit 1
     fi
-    
+
+    # 生成 Swagger 文档（docs/swagger）
+    log_info "生成 Swagger 文档..."
+    if ! go generate ./...; then
+        log_warn "go generate 执行失败，请检查生成工具或网络后重试"
+    fi
+
+    # 确保嵌入资源存在（web/build）以满足 go:embed
+    if [ ! -d "web/build" ]; then
+        log_info "未检测到 web/build，开始构建前端静态资源用于嵌入..."
+        pushd "$WEB_DIR" >/dev/null
+        if [ ! -d "node_modules" ]; then
+            log_info "安装前端依赖..."
+            yarn install
+        fi
+        if ! yarn build; then
+            log_warn "前端构建失败，尝试创建最小占位文件以通过编译..."
+            mkdir -p build
+            # 创建最小 index.html 与 favicon 以满足 go:embed
+            [ -f index.html ] && cp index.html build/index.html || echo "<html><head><meta charset=\"utf-8\"></head><body><div id=\"root\"></div></body></html>" > build/index.html
+            [ -f public/favicon.ico ] && cp public/favicon.ico build/favicon.ico || true
+        fi
+        popd >/dev/null
+    fi
+
     # 构建并启动后端
     log_info "构建后端服务..."
     go build -o tmp/one-hub-dev main.go
