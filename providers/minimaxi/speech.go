@@ -7,6 +7,7 @@ import (
     "errors"
     "fmt"
     "io"
+    "math"
     "net/http"
     "net/url"
     "one-api/common"
@@ -16,6 +17,7 @@ import (
     "one-api/types"
     "strconv"
     "strings"
+    "unicode"
 )
 
 const (
@@ -178,6 +180,85 @@ func (p *MiniMaxProvider) logAudioError(message string) {
 	logger.SysError(message)
 }
 
+// estimateTextCharacters 估算文本字符数（用于 PPInfra 上游缺少 usage 的补偿）
+func estimateTextCharacters(text string) int {
+    t := strings.TrimSpace(text)
+    if t == "" {
+        return 0
+    }
+    return len([]rune(t))
+}
+
+// getAudioUsageRatio 读取渠道自定义参数中的估算系数；若未配置，则按内容语种做简易推断
+// - 优先读取 audio.usage_ratio 或 usage_ratio（number）
+// - 含中文（Han）字符时，默认 1.6；否则默认 1.0
+func (p *MiniMaxProvider) getAudioUsageRatio(text string) float64 {
+    // 默认值：含中文提升系数（对齐官方：约 1.85）
+    defaultRatio := 1.0
+    for _, r := range text {
+        if unicode.Is(unicode.Han, r) {
+            defaultRatio = 1.85
+            break
+        }
+    }
+
+    customParams, err := p.CustomParameterHandler()
+    if err != nil || customParams == nil {
+        return defaultRatio
+    }
+    // 尝试读取 audio.usage_ratio
+    if audioRaw, ok := customParams["audio"]; ok {
+        if audioMap, ok2 := audioRaw.(map[string]interface{}); ok2 {
+            if v, ok3 := audioMap["usage_ratio"]; ok3 {
+                if f, ok4 := anyToFloat64(v); ok4 && f > 0 {
+                    return f
+                }
+            }
+        }
+    }
+    // 尝试读取根级 usage_ratio
+    if v, ok := customParams["usage_ratio"]; ok {
+        if f, ok2 := anyToFloat64(v); ok2 && f > 0 {
+            return f
+        }
+    }
+    return defaultRatio
+}
+
+func anyToFloat64(v interface{}) (float64, bool) {
+    switch val := v.(type) {
+    case float64:
+        return val, true
+    case float32:
+        return float64(val), true
+    case int:
+        return float64(val), true
+    case int64:
+        return float64(val), true
+    case json.Number:
+        if f, err := val.Float64(); err == nil {
+            return f, true
+        }
+        return 0, false
+    case string:
+        if strings.TrimSpace(val) == "" { return 0, false }
+        if f, err := strconv.ParseFloat(strings.TrimSpace(val), 64); err == nil {
+            return f, true
+        }
+        return 0, false
+    default:
+        return 0, false
+    }
+}
+
+// estimateUsage 结合比例系数对字符数进行放大，向上取整
+func estimateUsage(text string, ratio float64) int {
+    base := estimateTextCharacters(text)
+    if base == 0 { return 0 }
+    if ratio <= 0 { ratio = 1.0 }
+    return int(math.Ceil(float64(base) * ratio))
+}
+
 func (p *MiniMaxProvider) getRequestBody(request *types.SpeechAudioRequest) *SpeechRequest {
 
 	var voice, emotion string
@@ -260,11 +341,32 @@ func (p *MiniMaxProvider) CreateSpeech(request *types.SpeechAudioRequest) (*http
     }
     defer req.Body.Close()
 
-    // PPInfra 上游：直接透传（JSON 或 SSE），避免按官方结构解码失败
+    // PPInfra 上游：透传为主，但补写 usage，并可包装为官方结构体响应
     if p.isPPInfraSpeechUpstream() {
         resp, errWith := p.Requester.SendRequestRaw(req)
         if errWith != nil {
             return nil, errWith
+        }
+        // 补写 usage（按文本字符数×估算系数）
+        if request != nil {
+            ratio := p.getAudioUsageRatio(request.Input)
+            usage := estimateUsage(request.Input, ratio)
+            p.Usage.PromptTokens = usage
+            p.Usage.TotalTokens = usage
+        }
+        // 尝试包装为官方结构
+        // 从请求推断音频参数
+        var fmtStr string
+        var ch, sr, br *int64
+        if requestBody != nil && requestBody.AudioSetting != nil {
+            fmtStr = requestBody.AudioSetting.Format
+            if requestBody.AudioSetting.Channel != 0 { v := requestBody.AudioSetting.Channel; ch = &v }
+            if requestBody.AudioSetting.SampleRate != 0 { v := requestBody.AudioSetting.SampleRate; sr = &v }
+            if requestBody.AudioSetting.Bitrate != 0 { v := requestBody.AudioSetting.Bitrate; br = &v }
+        }
+        wrapped := p.wrapPPInfraOfficial(resp, fmtStr, ch, sr, br, p.Usage.TotalTokens)
+        if wrapped != nil {
+            return wrapped, nil
         }
         return resp, nil
     }
@@ -317,12 +419,17 @@ func (p *MiniMaxProvider) CreateSpeech(request *types.SpeechAudioRequest) (*http
 		response.Header.Set("X-Minimax-Audio-Channel", strconv.FormatInt(*speechResponse.ExtraInfo.AudioChannel, 10))
 	}
 
-	usage := 0
-	if speechResponse.ExtraInfo.UsageCharacters != nil {
-		usage = *speechResponse.ExtraInfo.UsageCharacters
-	}
-	p.Usage.PromptTokens = usage
-	p.Usage.TotalTokens = usage
+    usage := 0
+    if speechResponse.ExtraInfo.UsageCharacters != nil {
+        usage = *speechResponse.ExtraInfo.UsageCharacters
+    }
+    // 回退：官方结构缺少 usage 时，用请求文本长度估算
+    if usage == 0 && request != nil && strings.TrimSpace(request.Input) != "" {
+        ratio := p.getAudioUsageRatio(request.Input)
+        usage = estimateUsage(request.Input, ratio)
+    }
+    p.Usage.PromptTokens = usage
+    p.Usage.TotalTokens = usage
 
 	return response, nil
 }
@@ -463,31 +570,85 @@ func (p *MiniMaxProvider) CreateSpeechOfficial(req *types.MiniMaxSpeechRequest, 
         return resp, nil
     }
 
-    // 非流式 + PPInfra 上游：直接透传 JSON（可能为 url 或 hex），不按官方结构解码
+    // 非流式 + PPInfra 上游：透传为主，但补写 usage，并可包装为官方结构
     if p.isPPInfraSpeechUpstream() {
         resp, errWithCode := p.Requester.SendRequestRaw(httpReq)
         if errWithCode != nil {
             return nil, errWithCode
         }
+        // 补写 usage（优先使用 req.Text，其次从 payload 解析 text），并应用估算系数
+        usage := 0
+        if req != nil && strings.TrimSpace(req.Text) != "" {
+            ratio := p.getAudioUsageRatio(req.Text)
+            usage = estimateUsage(req.Text, ratio)
+        } else if len(payload) > 0 {
+            var m map[string]any
+            if json.Unmarshal(payload, &m) == nil {
+                if v, ok := m["text"].(string); ok {
+                    ratio := p.getAudioUsageRatio(v)
+                    usage = estimateUsage(v, ratio)
+                }
+            }
+        }
+        p.Usage.PromptTokens = usage
+        p.Usage.TotalTokens = usage
+        // 尝试包装为官方结构
+        var fmtStr string
+        var ch, sr, br *int64
+        if req != nil && req.AudioSetting != nil {
+            fmtStr = strings.TrimSpace(req.AudioSetting.Format)
+            if req.AudioSetting.Channel != nil { ch = req.AudioSetting.Channel }
+            if req.AudioSetting.SampleRate != nil { sr = req.AudioSetting.SampleRate }
+            if req.AudioSetting.Bitrate != nil { br = req.AudioSetting.Bitrate }
+        } else if len(payload) > 0 {
+            var m map[string]any
+            if json.Unmarshal(payload, &m) == nil {
+                if as, ok := m["audio_setting"].(map[string]any); ok {
+                    if v, ok2 := as["format"].(string); ok2 { fmtStr = strings.TrimSpace(v) }
+                    if v, ok2 := as["channel"].(float64); ok2 { vv := int64(v); ch = &vv }
+                    if v, ok2 := as["sample_rate"].(float64); ok2 { vv := int64(v); sr = &vv }
+                    if v, ok2 := as["bitrate"].(float64); ok2 { vv := int64(v); br = &vv }
+                }
+            }
+        }
+        wrapped := p.wrapPPInfraOfficial(resp, fmtStr, ch, sr, br, p.Usage.TotalTokens)
+        if wrapped != nil {
+            return wrapped, nil
+        }
         return resp, nil
     }
 
-	speechResponse := &SpeechResponse{}
-	resp, errWithCode := p.Requester.SendRequest(httpReq, speechResponse, true)
-	if errWithCode != nil {
-		return nil, errWithCode
-	}
+    speechResponse := &SpeechResponse{}
+    resp, errWithCode := p.Requester.SendRequest(httpReq, speechResponse, true)
+    if errWithCode != nil {
+        return nil, errWithCode
+    }
 
 	if speechResponse.BaseResp.StatusCode != 0 {
 		return nil, common.ErrorWrapper(errors.New(speechResponse.BaseResp.StatusMsg), "speech_error", http.StatusBadGateway)
 	}
 
-	usage := 0
-	if speechResponse.ExtraInfo.UsageCharacters != nil {
-		usage = *speechResponse.ExtraInfo.UsageCharacters
-	}
-	p.Usage.PromptTokens = usage
-	p.Usage.TotalTokens = usage
+    usage := 0
+    if speechResponse.ExtraInfo.UsageCharacters != nil {
+        usage = *speechResponse.ExtraInfo.UsageCharacters
+    }
+    // 回退：官方结构缺少 usage 时，用请求文本长度×估算系数估算
+    if usage == 0 {
+        if req != nil && strings.TrimSpace(req.Text) != "" {
+            ratio := p.getAudioUsageRatio(req.Text)
+            usage = estimateUsage(req.Text, ratio)
+        } else if len(payload) > 0 {
+            var m map[string]any
+            if json.Unmarshal(payload, &m) == nil {
+                if v, ok := m["text"].(string); ok {
+                    ratio := p.getAudioUsageRatio(v)
+                    usage = estimateUsage(v, ratio)
+                }
+            }
+        }
+    }
+    p.Usage.PromptTokens = usage
+    p.Usage.TotalTokens = usage
 
     if p.getAudioMode() != audioModeHex {
         return resp, nil
@@ -544,6 +705,63 @@ func (p *MiniMaxProvider) CreateSpeechOfficial(req *types.MiniMaxSpeechRequest, 
 	}
 
 	return result, nil
+}
+
+// wrapPPInfraOfficial 尝试将 PPInfra 的简单响应包装为 MiniMax 官方结构
+// 返回新的 *http.Response（application/json），若无法解析则返回 nil
+func (p *MiniMaxProvider) wrapPPInfraOfficial(resp *http.Response, format string, channel, sampleRate, bitrate *int64, usage int) *http.Response {
+    if resp == nil || resp.Body == nil {
+        return nil
+    }
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return nil
+    }
+    _ = resp.Body.Close()
+    // 若已是官方结构，直接还原原响应
+    var probe map[string]any
+    if json.Unmarshal(body, &probe) == nil {
+        if _, ok := probe["base_resp"]; ok {
+            // 重新构造 response（因为我们已读尽 resp.Body）
+            newResp := &http.Response{ Status: "200 OK", StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(body)), Header: make(http.Header) }
+            newResp.Header.Set("Content-Type", "application/json")
+            return newResp
+        }
+        // 简单 JSON：尝试提取 audio/hex 或 url
+        var audioHex string
+        if v, ok := probe["audio"].(string); ok { audioHex = strings.TrimSpace(v) }
+        // 构造官方结构
+        extra := map[string]any{}
+        if strings.TrimSpace(format) != "" { extra["audio_format"] = format }
+        if channel != nil { extra["audio_channel"] = *channel }
+        if sampleRate != nil { extra["audio_sample_rate"] = *sampleRate }
+        if bitrate != nil { extra["bitrate"] = *bitrate }
+        if usage > 0 { extra["usage_characters"] = usage }
+        // 估算 audio_size（若为 hex）
+        if audioHex != "" {
+            if b, err2 := hex.DecodeString(audioHex); err2 == nil {
+                extra["audio_size"] = int64(len(b))
+            }
+        }
+        official := map[string]any{
+            "data": map[string]any{
+                "audio": audioHex,
+                "status": 2,
+            },
+            "extra_info": extra,
+            "trace_id": "",
+            "base_resp": map[string]any{"status_code": 0, "status_msg": "success"},
+        }
+        buf, err3 := json.Marshal(official)
+        if err3 != nil { return nil }
+        newResp := &http.Response{ Status: "200 OK", StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(buf)), Header: make(http.Header) }
+        newResp.Header.Set("Content-Type", "application/json")
+        return newResp
+    }
+    // 非 JSON（可能是音频流）不包装
+    // 重新放回 body 以便后续透传
+    resp.Body = io.NopCloser(bytes.NewReader(body))
+    return nil
 }
 
 func (p *MiniMaxProvider) QuerySpeechAsync(taskID string) (*http.Response, *types.OpenAIErrorWithStatusCode) {
