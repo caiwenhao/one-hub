@@ -203,16 +203,17 @@ func inferOwnedBy(modelName string, price *model.Price) *string {
         }
         return &name
     }
-	// minimaxi 视频基础模型归属推断
-	if strings.Contains(lower, "minimax-hailuo-02") ||
-		lower == "t2v-01" || lower == "t2v-01-director" ||
-		lower == "i2v-01" || lower == "i2v-01-live" ||
-		lower == "s2v-01" {
-		name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeMiniMax)
-		if name == model.UnknownOwnedBy || name == "" {
-			fallback := "minimaxi"
-			return &fallback
-		}
+    // minimaxi 视频基础模型归属推断
+    if strings.Contains(lower, "minimax-hailuo-02") ||
+        strings.Contains(lower, "minimax-hailuo-2.3") || strings.Contains(lower, "minimax-hailuo-2_3") ||
+        lower == "t2v-01" || lower == "t2v-01-director" ||
+        lower == "i2v-01" || lower == "i2v-01-director" || lower == "i2v-01-live" ||
+        lower == "s2v-01" {
+        name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeMiniMax)
+        if name == model.UnknownOwnedBy || name == "" {
+            fallback := "minimaxi"
+            return &fallback
+        }
 		return &name
 	}
 	return getModelOwnedBy(channelType)
@@ -372,8 +373,11 @@ func shouldAttachVariants(base string) (bool, string) {
         "sora-2",
         // minimaxi 基础视频模型
         "minimax-hailuo-02",
+        "minimax-hailuo-2.3",
+        "minimax-hailuo-2.3-fast",
         "t2v-01-director",
         "t2v-01",
+        "i2v-01-director",
         "i2v-01-live",
         "i2v-01",
         "s2v-01",

@@ -997,7 +997,7 @@ func GetDefaultPrice() []*Price {
 	// MiniMax-Hailuo-02：
 	//  - 512P 6s：0.6；512P 10s：1.0；768P 6s：2.0；768P 10s：4.0；1080P 6s / 10s：3.5
 	// T2V-01 / I2V-01 / S2V-01：720P 6s：T2V-01=3；I2V-01/I2V-01-live=3；S2V-01=4.5
-	var defaultMiniMaxVideoPrice = map[string]float64{
+var defaultMiniMaxVideoPrice = map[string]float64{
 		// MiniMax-Hailuo-02 - 文/图生视频
 		"minimax-text2video-minimax-hailuo-02-512p-6s":   0.6,
 		"minimax-text2video-minimax-hailuo-02-512p-10s":  1.0,
@@ -1013,6 +1013,19 @@ func GetDefaultPrice() []*Price {
 		"minimax-image2video-minimax-hailuo-02-1080p-6s":  3.5,
 		"minimax-image2video-minimax-hailuo-02-1080p-10s": 3.5,
 
+		// MiniMax-Hailuo-2.3（文/图生视频）：768P 6s/10s、1080P 6s
+		"minimax-text2video-minimax-hailuo-2.3-768p-6s":  2.0,
+		"minimax-text2video-minimax-hailuo-2.3-768p-10s": 4.0,
+		"minimax-text2video-minimax-hailuo-2.3-1080p-6s": 3.5,
+		"minimax-image2video-minimax-hailuo-2.3-768p-6s":  2.0,
+		"minimax-image2video-minimax-hailuo-2.3-768p-10s": 4.0,
+		"minimax-image2video-minimax-hailuo-2.3-1080p-6s": 3.5,
+
+		// MiniMax-Hailuo-2.3-Fast（图生视频）：768P 6s/10s、1080P 6s
+		"minimax-image2video-minimax-hailuo-2.3-fast-768p-6s":  1.35,
+		"minimax-image2video-minimax-hailuo-2.3-fast-768p-10s": 2.25,
+		"minimax-image2video-minimax-hailuo-2.3-fast-1080p-6s": 2.31,
+
 		// 首尾帧（按需求与 Hailuo-02 同档位；若使用 S2V-01 则见下新增）
 		"minimax-start-end2video-minimax-hailuo-02-512p-6s":   0.6,
 		"minimax-start-end2video-minimax-hailuo-02-512p-10s":  1.0,
@@ -1025,6 +1038,7 @@ func GetDefaultPrice() []*Price {
 		"minimax-text2video-t2v-01-720p-6s":          3.0,
 		"minimax-text2video-t2v-01-director-720p-6s": 3.0,
 		"minimax-image2video-i2v-01-720p-6s":         3.0,
+		"minimax-image2video-i2v-01-director-720p-6s": 3.0,
 		"minimax-image2video-i2v-01-live-720p-6s":    3.0,
 		"minimax-subject2video-s2v-01-720p-6s":       4.5,
 	}

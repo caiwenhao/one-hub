@@ -336,8 +336,8 @@ const typeConfig = {
         'speech-02-turbo',
         'speech-01-turbo',
         // 视频（匹配所有 minimaxi 视频计费键）
-        'MiniMax-Hailuo-02',
-        'T2V-01', 'T2V-01-Director', 'I2V-01', 'I2V-01-live', 'S2V-01',
+        'MiniMax-Hailuo-02', 'MiniMax-Hailuo-2.3', 'MiniMax-Hailuo-2.3-Fast',
+        'T2V-01', 'T2V-01-Director', 'I2V-01', 'I2V-01-Director', 'I2V-01-live', 'S2V-01',
         'minimax-*',
         // 音乐/图像
         'music-1.5',

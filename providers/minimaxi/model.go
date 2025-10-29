@@ -26,9 +26,12 @@ func (p *MiniMaxProvider) GetModelList() ([]string, error) {
         "speech-01-turbo",
         // 视频（官方/PPInfra 常用）
         "MiniMax-Hailuo-02",
+        "MiniMax-Hailuo-2.3",
+        "MiniMax-Hailuo-2.3-Fast",
         "T2V-01",
         "T2V-01-Director",
         "I2V-01",
+        "I2V-01-Director",
         "I2V-01-live",
         "S2V-01",
         // 音乐与图像

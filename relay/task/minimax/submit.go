@@ -49,35 +49,50 @@ type taskProperties struct {
 }
 
 var miniMaxAllowedMatrix = map[string]map[string]map[string][]int{
-	miniMaxActionText2Video: {
-		"minimax-hailuo-02": {
-			"512p":  {6, 10},
-			"768p":  {6, 10},
-			"1080p": {6, 10},
-		},
-		"t2v-01": {
-			"720p": {6},
-		},
-		"t2v-01-director": {
-			"720p": {6},
-		},
-	},
-	miniMaxActionImage2Video: {
-		"minimax-hailuo-02": {
-			"512p":  {6, 10},
-			"768p":  {6, 10},
-			"1080p": {6, 10},
-		},
-		"i2v-01": {
-			"720p": {6},
-		},
-		"i2v-01-director": {
-			"720p": {6},
-		},
-		"i2v-01-live": {
-			"720p": {6},
-		},
-	},
+    miniMaxActionText2Video: {
+        "minimax-hailuo-02": {
+            "512p":  {6, 10},
+            "768p":  {6, 10},
+            "1080p": {6, 10},
+        },
+        // MiniMax-Hailuo-2.3：768P(6/10s)、1080P(6s)
+        "minimax-hailuo-2.3": {
+            "768p":  {6, 10},
+            "1080p": {6},
+        },
+        "t2v-01": {
+            "720p": {6},
+        },
+        "t2v-01-director": {
+            "720p": {6},
+        },
+    },
+    miniMaxActionImage2Video: {
+        "minimax-hailuo-02": {
+            "512p":  {6, 10},
+            "768p":  {6, 10},
+            "1080p": {6, 10},
+        },
+        // MiniMax-Hailuo-2.3：768P(6/10s)、1080P(6s)
+        "minimax-hailuo-2.3": {
+            "768p":  {6, 10},
+            "1080p": {6},
+        },
+        // MiniMax-Hailuo-2.3-Fast（图生）：768P(6/10s)、1080P(6s)
+        "minimax-hailuo-2.3-fast": {
+            "768p":  {6, 10},
+            "1080p": {6},
+        },
+        "i2v-01": {
+            "720p": {6},
+        },
+        "i2v-01-director": {
+            "720p": {6},
+        },
+        "i2v-01-live": {
+            "720p": {6},
+        },
+    },
 	miniMaxActionStartEnd2Video: {
 		"minimax-hailuo-02": {
 			"512p":  {6, 10},
@@ -587,20 +602,21 @@ func containsInt(list []int, target int) bool {
 }
 
 func defaultMiniMaxDuration(model string) int {
-	if strings.Contains(strings.ToLower(model), "02") {
-		return 6
-	}
-	return 6
+    lower := strings.ToLower(model)
+    if strings.Contains(lower, "hailuo-02") || strings.Contains(lower, "hailuo-2.3") {
+        return 6
+    }
+    return 6
 }
 
 func defaultMiniMaxResolution(model string, duration int) string {
-	modelLower := strings.ToLower(model)
-	if strings.Contains(modelLower, "hailuo-02") {
-		// 对齐官方文档：
-		// - MiniMax-Hailuo-02 在 6s 与 10s 的默认分辨率均为 768P
-		// - 6s 也支持 1080P，但默认值为 768P
-		return "768P"
-	}
+    modelLower := strings.ToLower(model)
+    if strings.Contains(modelLower, "hailuo-02") || strings.Contains(modelLower, "hailuo-2.3") {
+        // 对齐官方文档：
+        // - MiniMax-Hailuo-02 在 6s 与 10s 的默认分辨率均为 768P
+        // - 6s 也支持 1080P，但默认值为 768P
+        return "768P"
+    }
 	return "720P"
 }
 
