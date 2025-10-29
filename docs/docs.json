@@ -106,13 +106,8 @@
       "name": "Authorization",
       "inputPrefix": "Bearer "
     },
-    "playground": { "mode": "show" }
+    "playground": { "display": "none" }
   },
-  "openapi": [
-    "/apifox/openai-openapi.yaml",
-    "/apifox/minimaxi-openapi.yaml",
-    "/apifox/gemini-openapi.yaml"
-  ],
   "navbar": {
     "links": [
       {
@@ -128,15 +123,10 @@
   },
   "contextual": {
     "options": [
-     "copy",
-     "view"
    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
     }
   }
 }

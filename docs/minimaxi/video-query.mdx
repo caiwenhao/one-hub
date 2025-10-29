@@ -1,18 +1,39 @@
 ---
 title: "任务查询"
-description: "GET /minimaxi/v1/query/video_generation（含官方别名）"
+description: "接口与 MiniMax 官网一致；返回状态与字段以官网为准"
 openapi: 'GET /minimaxi/v1/query/video_generation'
 ---
+- 路径 `/minimaxi/v1/query/video_generation`
+- 网关别名：在 kapon 中也可使用 `/v1/query/video_generation`（参数相同）。
+- 与官网一致：请求参数与返回字段与 MiniMax 官网保持一致。
 
- 
+请求示例（官方）
 
 ```bash
-curl "$BASE_URL/minimaxi/v1/query/video_generation?task_id=$TASK_ID" \
-  -H "Authorization: Bearer $TOKEN"
+curl --request GET \
+  --url https://models.kapon.cloud/v1/query/video_generation \
+  --header 'Authorization: Bearer <token>'
 ```
 
-<Callout type="info">
-也支持官方别名：`GET /v1/query/video_generation?task_id=...`。
-</Callout>
+示例响应（官方）
 
- 
+```json
+{
+  "task_id": "176843862716480",
+  "status": "Success",
+  "file_id": "176844028768320",
+  "video_width": 1920,
+  "video_height": 1080,
+  "base_resp": {
+    "status_code": 0,
+    "status_msg": "success"
+  }
+}
+```
+
+字段要点
+
+- `status`：任务状态；常见为 `Queueing`/`Processing`/`Success`/`Failed`（以官网为准）。
+- `file_id`：在 `Success` 时返回；用于后续 `files/retrieve` 获取下载地址，或 `files/retrieve_content` 直下。
+- `video_width`/`video_height`：成品视频宽高（部分模型或分辨率返回）。
+- `base_resp.status_code`：0 表示成功；非 0 为错误，`status_msg` 提示原因。

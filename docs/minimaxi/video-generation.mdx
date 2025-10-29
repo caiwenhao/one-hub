@@ -1,40 +1,92 @@
 ---
 title: "视频生成"
-description: "POST /minimaxi/v1/video_generation（含官方别名）"
+description: "接口与 MiniMax 官网一致；含常见场景示例"
 openapi: 'POST /minimaxi/v1/video_generation'
 ---
 
- 
+- 路径 `/minimaxi/v1/video_generation`
+- 网关别名：在 kapon 中也可使用 `/v1/video_generation`（参数相同）。
+- 与官网一致：本页所有请求体、字段命名与返回结构与 MiniMax 官网保持一致。
+- 字段详解：请参考 [官网权威文档](https://platform.minimaxi.com/docs/api-reference/video-generation-intro)。
+
+
+### 场景一：文生视频
+
 ```bash
-curl -X POST "$BASE_URL/minimaxi/v1/video_generation" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"MiniMax-Hailuo-02","prompt":"sunset beach, UHD","duration":6}'
+curl --request POST \
+  --url https://models.kapon.cloud/minimaxi/v1/video_generation \
+  --header 'Authorization: Bearer <token>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "model": "MiniMax-Hailuo-2.3",
+  "prompt": "A man picks up a book [Pedestal up], then reads [Static shot].",
+  "duration": 6,
+  "resolution": "1080P"
+}'
 ```
 
-<Callout type="info">
-也支持官方别名：`POST /v1/video_generation`（同参）。
-</Callout>
+示例响应（创建任务）
 
-## 可选参数
+```json
+{
+  "task_id": "106916112212032",
+  "base_resp": {
+    "status_code": 0,
+    "status_msg": "success"
+  }
+}
+```
 
-- `images`：参考图数组（URLs），用于风格或构图提示。
-- `input_reference`：主体参考（URL），用于人物/物体一致性。
-- `size`/`orientation`：分辨率与方向，如 `1280x720`、`portrait`。
-- `seed`：随机种子，便于复现。
-- `callback_url`：异步回调地址（若渠道已配置，优先使用渠道默认回调）。
-
-示例（带参考图与回调）
+### 场景二：首帧图像驱动
 
 ```bash
-curl -X POST "$BASE_URL/minimaxi/v1/video_generation" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model":"MiniMax-Hailuo-02",
-    "prompt":"a cat walking on the piano",
-    "seconds":6,
-    "images":["https://example.com/ref1.jpg"],
-    "callback_url":"https://your.service/callback"
-  }'
+curl --request POST \
+  --url https://models.kapon.cloud/minimaxi/v1/video_generation \
+  --header 'Authorization: Bearer <token>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "prompt": "A mouse runs toward the camera, smiling and blinking.",
+  "first_frame_image": "https://cdn.hailuoai.com/prod/2024-09-18-16/user/multi_chat_file/9c0b5c14-ee88-4a5b-b503-4f626f018639.jpeg",
+  "model": "MiniMax-Hailuo-2.3",
+  "duration": 6,
+  "resolution": "1080P"
+}'
+```
+
+### 场景三：首帧+末帧
+
+```bash
+curl --request POST \
+  --url https://models.kapon.cloud/minimaxi/v1/video_generation \
+  --header 'Authorization: Bearer <token>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "prompt": "A little girl grow up.",
+  "first_frame_image": "https://filecdn.minimax.chat/public/fe9d04da-f60e-444d-a2e0-18ae743add33.jpeg",
+  "last_frame_image": "https://filecdn.minimax.chat/public/97b7cd08-764e-4b8b-a7bf-87a0bd898575.jpeg",
+  "model": "MiniMax-Hailuo-02",
+  "duration": 6,
+  "resolution": "1080P"
+}'
+```
+
+### 场景四：主体参考
+
+```bash
+curl --request POST \
+  --url https://models.kapon.cloud/minimaxi/v1/video_generation \
+  --header 'Authorization: Bearer <token>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "prompt": "A girl runs toward the camera and winks with a smile.",
+  "subject_reference": [
+    {
+      "type": "character",
+      "image": [
+        "https://cdn.hailuoai.com/prod/2025-08-12-17/video_cover/1754990600020238321-411603868533342214-cover.jpg"
+      ]
+    }
+  ],
+  "model": "S2V-01"
+}'
 ```

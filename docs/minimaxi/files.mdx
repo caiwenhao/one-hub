@@ -8,6 +8,12 @@ openapi: 'GET /minimaxi/v1/files/retrieve'
 > - `GET /minimaxi/v1/files/retrieve?file_id=...`
 > - `GET /minimaxi/v1/files/retrieve_content?file_id=...`
 
+说明
+
+- `retrieve` 返回文件对象（含 `download_url`/`bytes` 等）；
+- `retrieve_content` 直接返回二进制流，建议加 `-L` 跟随重定向并输出到文件；
+- 可选参数：`task_id`、`channel_id`（用于定位来源渠道）。
+
 <Tabs>
 <Tab title="下载内容">
 

@@ -9,6 +9,7 @@ openapi: 'POST /minimaxi/v1/chat/completions'
 - 路径：`POST /minimaxi/v1/chat/completions`
 - 兼容：与 OpenAI Chat Completions 请求体一致（messages/tools/response_format/stream 等）。
 - 工具调用：kapon 会自动将 `tools[x].function.parameters` 序列化为 JSON 字符串，以适配 MiniMax 上游要求。
+- 模型：如 `abab6.5-chat`（以控制台为准）
 
 请求示例（cURL）
 
@@ -39,4 +40,4 @@ curl -N -X POST "$BASE_URL/minimaxi/v1/chat/completions" \
 - `stream: true` 支持 SSE 增量输出；若关闭则一次性返回。
 - `tools[].function.parameters` 可使用 JSON Schema；kapon 会自动序列化为字符串后转发给 MiniMax 上游。
 - 其余字段（temperature/top_p/response_format 等）按 OpenAI 兼容规范处理。
-
+ - 若使用 OpenAI SDK，也可直接走统一 `/v1/chat/completions`，并选择 minimaxi 渠道与对应模型。
