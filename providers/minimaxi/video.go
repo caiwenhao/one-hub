@@ -284,14 +284,40 @@ func formatMiniMaxModelSegment(model string) string {
 }
 
 func (c *MiniMaxVideoClient) buildSubmitPath(model string) string {
-	if c.config.SubmitPathTemplate != "" && strings.Contains(c.config.SubmitPathTemplate, "%s") {
-		segment := formatMiniMaxModelSegment(model)
-		return fmt.Sprintf(c.config.SubmitPathTemplate, segment)
-	}
-	if c.config.SubmitPath != "" {
-		return c.config.SubmitPath
-	}
-	return "/v1/video_generation"
+    if c.config.SubmitPathTemplate != "" && strings.Contains(c.config.SubmitPathTemplate, "%s") {
+        segment := formatMiniMaxModelSegment(model)
+        return fmt.Sprintf(c.config.SubmitPathTemplate, segment)
+    }
+    if c.config.SubmitPath != "" {
+        return c.config.SubmitPath
+    }
+    return "/v1/video_generation"
+}
+
+// buildSubmitPathForReq 针对 PPInfra 补齐 2.3/2.3-fast 的 action 路径后缀（-t2v / -i2v）
+func (c *MiniMaxVideoClient) buildSubmitPathForReq(req *MiniMaxVideoCreateRequest) string {
+    // 官方上游或未使用模板：沿用默认逻辑
+    if c.config.Upstream != MiniMaxVideoUpstreamPPInfra {
+        return c.buildSubmitPath(req.Model)
+    }
+    // PPInfra: /v3/async/{segment}
+    if c.config.SubmitPathTemplate == "" || !strings.Contains(c.config.SubmitPathTemplate, "%s") {
+        return c.buildSubmitPath(req.Model)
+    }
+    base := formatMiniMaxModelSegment(req.Model)
+    // 仅对 2.3/2.3-fast 追加动作后缀，其他保持原样
+    if strings.Contains(base, "hailuo-2.3-fast") {
+        // 2.3-fast 目前仅图生（i2v）
+        base = base + "-i2v"
+    } else if strings.Contains(base, "hailuo-2.3") {
+        // 简易动作判断：存在首帧/参考图 → i2v，否则 t2v
+        if strings.TrimSpace(req.FirstFrameImage) != "" || strings.TrimSpace(req.ReferenceImage) != "" {
+            base = base + "-i2v"
+        } else {
+            base = base + "-t2v"
+        }
+    }
+    return fmt.Sprintf(c.config.SubmitPathTemplate, base)
 }
 
 func (c *MiniMaxVideoClient) buildQueryPath(model, taskID string) string {
@@ -325,9 +351,9 @@ func (c *MiniMaxVideoClient) SubmitVideoTask(req *MiniMaxVideoCreateRequest) (*M
 			Code:    "invalid_config",
 		}
 	}
-	payload := c.prepareSubmitPayload(req)
-	submitPath := c.buildSubmitPath(req.Model)
-	fullURL := c.GetFullRequestURL(submitPath, "")
+    payload := c.prepareSubmitPayload(req)
+    submitPath := c.buildSubmitPathForReq(req)
+    fullURL := c.GetFullRequestURL(submitPath, "")
 
 	headers := c.buildHeaders()
 
