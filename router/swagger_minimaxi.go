@@ -23,7 +23,7 @@ var (
 // docMiniMaxSyncSpeech 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 同步文本转语音
 // @Description  与 minimaxi `/v1/t2a_v2` 保持一致，默认返回 JSON；当渠道配置 `audio_mode=hex` 时返回裸音频流。
-// @Tags         MiniMax Speech
+// @Tags         MiniMax/MiniMax Speech
 // @Accept       json
 // @Produce      json
 // @Produce      audio/mpeg
@@ -36,7 +36,7 @@ func docMiniMaxSyncSpeech(*gin.Context) {}
 // docMiniMaxAsyncSpeechCreate 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 创建异步文本转语音任务
 // @Description  透传 minimaxi `/v1/t2a_async_v2`，支持 text 或 text_file_id 方式提交长文本。
-// @Tags         MiniMax Speech
+// @Tags         MiniMax/MiniMax Speech
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
@@ -48,7 +48,7 @@ func docMiniMaxAsyncSpeechCreate(*gin.Context) {}
 // docMiniMaxAsyncSpeechQuery 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 查询异步文本转语音任务
 // @Description  默认按 Token 分组遍历可用渠道，无需传递 channel_id。
-// @Tags         MiniMax Speech
+// @Tags         MiniMax/MiniMax Speech
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
@@ -84,11 +84,11 @@ func docMiniMaxAsyncSpeechQuery(*gin.Context) {}
 // docMiniMaxVideoCreate 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 创建视频任务
 // @Description  与 minimaxi `/v1/video_generation` 一致，根据请求内容自动识别文生、图生、主体参考等模式。
-// @Tags         MiniMax Video
+// @Tags         MiniMax/MiniMax Video
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        request body miniapi.MiniMaxVideoCreateRequest true "视频任务请求体"
+// @Param        request body miniapi.MiniMaxVideoCreateRequest true "视频任务请求体" example({"model":"MiniMax-Hailuo-2.3","prompt":"A man picks up a book [Pedestal up], then reads [Static shot].","duration":6,"resolution":"1080P"})
 // @Success      200 {object} miniapi.MiniMaxVideoCreateResponse
 // @Router       /minimaxi/v1/video_generation [post]
 func docMiniMaxVideoCreate(*gin.Context) {}
@@ -96,7 +96,7 @@ func docMiniMaxVideoCreate(*gin.Context) {}
 // docMiniMaxVideoQuery 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 查询视频任务
 // @Description  查询任务状态，支持 queueing/processing/success/failed。
-// @Tags         MiniMax Video
+// @Tags         MiniMax/MiniMax Video
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
@@ -108,7 +108,7 @@ func docMiniMaxVideoQuery(*gin.Context) {}
 // docMiniMaxFileRetrieve 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 获取文件下载信息
 // @Description  根据 file_id 获取下载链接，可选指定 channel_id/task_id。
-// @Tags         MiniMax File
+// @Tags         MiniMax/MiniMax File
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
@@ -122,7 +122,7 @@ func docMiniMaxFileRetrieve(*gin.Context) {}
 // docMiniMaxFileRetrieveContent 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 下载文件内容
 // @Description  根据 file_id 下载生成的音视频资源内容。
-// @Tags         MiniMax File
+// @Tags         MiniMax/MiniMax File
 // @Security     BearerAuth
 // @Produce      application/octet-stream
 // @Param        file_id    query string true  "文件 ID"
@@ -134,7 +134,7 @@ func docMiniMaxFileRetrieveContent(*gin.Context) {}
 
 // docMiniMaxVideoCreateAlias 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 创建视频任务（别名）
-// @Tags         MiniMax Video
+// @Tags         MiniMax/MiniMax Video
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
@@ -145,7 +145,7 @@ func docMiniMaxVideoCreateAlias(*gin.Context) {}
 
 // docMiniMaxVideoQueryAlias 仅用于 Swagger 文档描述。
 // @Summary      minimaxi 官方接口 - 查询视频任务（别名）
-// @Tags         MiniMax Video
+// @Tags         MiniMax/MiniMax Video
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth

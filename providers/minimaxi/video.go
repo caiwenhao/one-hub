@@ -550,48 +550,72 @@ func miniMaxVideoErrorHandle(resp *http.Response) *types.OpenAIError {
 
 // MiniMaxVideoCreateRequest 统一描述提交任务所需参数
 type MiniMaxVideoCreateRequest struct {
-	Model            string                    `json:"model,omitempty"`
-	Prompt           string                    `json:"prompt,omitempty"`
-	FirstFrameImage  string                    `json:"first_frame_image,omitempty"`
-	LastFrameImage   string                    `json:"last_frame_image,omitempty"`
-	ReferenceImage   string                    `json:"reference_image,omitempty"`
-	SubjectReference []MiniMaxSubjectReference `json:"subject_reference,omitempty"`
-	Duration         int                       `json:"duration,omitempty"`
-	Resolution       string                    `json:"resolution,omitempty"`
-	CallbackURL      string                    `json:"callback_url,omitempty"`
+    // 模型名称，例如：MiniMax-Hailuo-2.3
+    Model            string                    `json:"model,omitempty" example:"MiniMax-Hailuo-2.3"`
+    // 提示词
+    Prompt           string                    `json:"prompt,omitempty" example:"A man picks up a book [Pedestal up], then reads [Static shot]."`
+    // 首帧参考图 URL
+    FirstFrameImage  string                    `json:"first_frame_image,omitempty"`
+    // 末帧参考图 URL
+    LastFrameImage   string                    `json:"last_frame_image,omitempty"`
+    // 参考图 URL（单张）
+    ReferenceImage   string                    `json:"reference_image,omitempty"`
+    // 主体参考
+    SubjectReference []MiniMaxSubjectReference `json:"subject_reference,omitempty"`
+    // 时长（秒）
+    Duration         int                       `json:"duration,omitempty"`
+    // 分辨率
+    Resolution       string                    `json:"resolution,omitempty" enums:"720p,1080p,1080P,2k,4k" example:"1080P"`
+    // 回调地址
+    CallbackURL      string                    `json:"callback_url,omitempty"`
 	// 兼容历史/上游差异：
 	// - 官方文档字段：prompt_optimizer（是否自动优化提示词）
 	// - 历史/PPInfra：enable_prompt_expansion（提示词扩写开关）
-	EnablePromptExpansion *bool `json:"enable_prompt_expansion,omitempty"`
-	PromptOptimizer       *bool `json:"prompt_optimizer,omitempty"`
+    EnablePromptExpansion *bool `json:"enable_prompt_expansion,omitempty"`
+    PromptOptimizer       *bool `json:"prompt_optimizer,omitempty"`
 	// 仅 MiniMax-Hailuo-02 生效：缩短 prompt_optimizer 优化耗时
-	FastPretreatment *bool `json:"fast_pretreatment,omitempty"`
+    FastPretreatment *bool `json:"fast_pretreatment,omitempty"`
 	// 是否在生成视频中添加 AIGC 水印
-	AIGCWatermark  *bool  `json:"aigc_watermark,omitempty"`
-	ExternalTaskID string `json:"external_task_id,omitempty"`
+    AIGCWatermark  *bool  `json:"aigc_watermark,omitempty"`
+    ExternalTaskID string `json:"external_task_id,omitempty"`
 }
 
 // MiniMaxVideoCreateResponse 表示创建任务返回的数据
 type MiniMaxVideoCreateResponse struct {
-	TaskID   string   `json:"task_id"`
-	BaseResp BaseResp `json:"base_resp"`
+    // 任务 ID
+    TaskID   string   `json:"task_id" example:"106916112212032"`
+    // 基本返回体
+    BaseResp BaseResp `json:"base_resp"`
 }
 
 // MiniMaxVideoQueryResponse 表示查询任务返回的数据
 type MiniMaxVideoQueryResponse struct {
-	TaskID          string   `json:"task_id,omitempty"`
-	Status          string   `json:"status,omitempty"`
-	FileID          string   `json:"file_id,omitempty"`
-	VideoURL        string   `json:"video_url,omitempty"`
-	CoverImage      string   `json:"cover_image,omitempty"`
-	WatermarkedURL  string   `json:"watermarked_url,omitempty"`
-	VideoWidth      int      `json:"video_width,omitempty"`
-	VideoHeight     int      `json:"video_height,omitempty"`
-	ErrorCode       string   `json:"error_code,omitempty"`
-	ErrorMessage    string   `json:"error_message,omitempty"`
-	ProgressPercent float64  `json:"progress_percent,omitempty"`
-	ETA             int      `json:"eta,omitempty"`
-	BaseResp        BaseResp `json:"base_resp"`
+    // 任务 ID
+    TaskID          string   `json:"task_id,omitempty"`
+    // 任务状态
+    Status          string   `json:"status,omitempty" enums:"queueing,processing,success,failed"`
+    // 文件 ID
+    FileID          string   `json:"file_id,omitempty"`
+    // 视频直链
+    VideoURL        string   `json:"video_url,omitempty"`
+    // 封面图
+    CoverImage      string   `json:"cover_image,omitempty"`
+    // 水印视频直链
+    WatermarkedURL  string   `json:"watermarked_url,omitempty"`
+    // 宽度
+    VideoWidth      int      `json:"video_width,omitempty"`
+    // 高度
+    VideoHeight     int      `json:"video_height,omitempty"`
+    // 错误码
+    ErrorCode       string   `json:"error_code,omitempty"`
+    // 错误信息
+    ErrorMessage    string   `json:"error_message,omitempty"`
+    // 进度百分比
+    ProgressPercent float64  `json:"progress_percent,omitempty"`
+    // 预计剩余时间（秒）
+    ETA             int      `json:"eta,omitempty"`
+    // 基本返回体
+    BaseResp        BaseResp `json:"base_resp"`
 
 	Extra      *MiniMaxPPInfraExtra  `json:"extra,omitempty"`
 	TaskDetail *MiniMaxPPInfraTask   `json:"task,omitempty"`
