@@ -323,12 +323,15 @@ func Filter[T any](arr []T, f func(T) bool) []T {
 }
 
 func GetModelsWithMatch(modelList *[]string, modelName string) string {
-	for _, model := range *modelList {
-		if strings.HasPrefix(modelName, strings.TrimRight(model, "*")) {
-			return model
-		}
-	}
-	return ""
+    // 大小写不敏感匹配：统一转小写做前缀判断
+    nameLower := strings.ToLower(modelName)
+    for _, pattern := range *modelList {
+        prefix := strings.ToLower(strings.TrimRight(pattern, "*"))
+        if strings.HasPrefix(nameLower, prefix) {
+            return pattern
+        }
+    }
+    return ""
 }
 
 func EscapeMarkdownText(text string) string {

@@ -285,6 +285,13 @@ export const CHANNEL_OPTIONS = {
     color: 'primary',
     url: 'https://www.volcengine.com/product/ark'
   },
+  59: {
+    key: 59,
+    text: 'Huawei MaaS',
+    value: 59,
+    color: 'default',
+    url: 'https://console.huaweicloud.com/modelarts'
+  },
   8: {
     key: 8,
     text: '自定义渠道',

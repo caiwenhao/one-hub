@@ -479,6 +479,17 @@ func GetDefaultPrice() []*Price {
 		"qwen-max-longcontext": {[]float64{8.5714, 8.5714}, config.ChannelTypeAli},
 		// 0.008元/1,000tokens
 		"qwen-vl-plus": {[]float64{0.5715, 0.5715}, config.ChannelTypeAli},
+
+		// Qwen3 系列（人民币/千tokens → Rate 基准）
+		// 说明：base = RMB_per_1k / RMBRate(0.014)，输出存在区间时取上限，避免低估成本
+		// Qwen3-30B-A3B：输入 ¥0.00075 / 1k，输出 ¥0.0075 / 1k
+		"qwen3-30b-a3b": {[]float64{0.053571429, 0.535714286}, config.ChannelTypeAli},
+		// Qwen3-235B-A22B-32K：输入 ¥0.002 / 1k，输出 ¥0.02 / 1k（上限）
+		"qwen3-235b-a22b-32k": {[]float64{0.142857143, 1.428571429}, config.ChannelTypeAli},
+		// Qwen3-32B-32K：输入 ¥0.002 / 1k，输出 ¥0.02 / 1k（上限）
+		"qwen3-32b-32k": {[]float64{0.142857143, 1.428571429}, config.ChannelTypeAli},
+		// Qwen3-Coder-480B-A35B-Instruct：输入 ¥0.009 / 1k（上限），输出 ¥0.036 / 1k（上限）
+		"qwen3-coder-480b-a35b-instruct": {[]float64{0.642857143, 2.571428571}, config.ChannelTypeAli},
 		// ￥0.0007 / 1k tokens
 		"text-embedding-v1": {[]float64{0.05, 0.05}, config.ChannelTypeAli},
 
@@ -530,6 +541,11 @@ func GetDefaultPrice() []*Price {
 
 		"deepseek-coder": {[]float64{0.75, 0.75}, config.ChannelTypeDeepseek}, // 暂定 $0.0015 / 1K tokens
 		"deepseek-chat":  {[]float64{0.75, 0.75}, config.ChannelTypeDeepseek}, // 暂定 $0.0015 / 1K tokens
+
+		// DeepSeek-V3.2-Exp（人民币定价，单位：每百万 tokens）
+		// 输入（缓存未命中）：2 元 / 1M → 0.002 / 1k → base = 0.002 / RMBRate = 0.142857143
+		// 输出：3 元 / 1M → 0.003 / 1k → base = 0.003 / RMBRate = 0.214285714
+		"deepseek-v3.2-exp": {[]float64{0.142857143, 0.214285714}, config.ChannelTypeDeepseek},
 
 		// 火山方舟默认模型（按 Ark 官方 RMB/百万 token 折算）
 		"deepseek-v3.1":                       {[]float64{0.285714286, 0.857142857}, config.ChannelTypeVolcArk},
@@ -624,6 +640,11 @@ func GetDefaultPrice() []*Price {
 	}
 
 	arkExtraRatios := map[string]map[string]float64{
+		// DeepSeek-V3.2-Exp 扩展倍率
+		// 缓存命中：0.2 元 / 1M，对比未命中 2 元 / 1M → 0.1 倍
+		"deepseek-v3.2-exp": {
+			config.UsageExtraCache: 0.1,
+		},
 		"deepseek-v3.1": {
 			config.UsageExtraCache:       0.001214286,
 			config.UsageExtraCachedWrite: 0.057142857,
@@ -696,9 +717,9 @@ func GetDefaultPrice() []*Price {
 			config.UsageExtraCache:       0.2,
 			config.UsageExtraCachedWrite: 0.056666667,
 		},
+		// Kimi-K2：缓存命中价 1 元/1M，相对未命中 4 元/1M → 0.25 倍
 		"kimi-k2": {
-			config.UsageExtraCache:       0.2,
-			config.UsageExtraCachedWrite: 0.00425,
+			config.UsageExtraCache: 0.25,
 		},
 		"kimi-k2-250905": {
 			config.UsageExtraCache:       0.2,
@@ -713,6 +734,8 @@ func GetDefaultPrice() []*Price {
 		"deepseek-v3.1":          config.ChannelTypeDeepseek,
 		"deepseek-v3-1-terminus": config.ChannelTypeDeepseek,
 		"deepseek-v3-1-250821":   config.ChannelTypeDeepseek,
+		// Kimi-K2 品牌归属：Moonshot
+		"kimi-k2":                config.ChannelTypeMoonshot,
 	}
 
 	var prices []*Price

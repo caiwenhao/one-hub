@@ -118,10 +118,18 @@ func (p *Pricing) GetPrice(modelName string) *Price {
     p.RLock()
     defer p.RUnlock()
 
-	if price, ok := p.Prices[modelName]; ok {
-		price.Normalize()
-		return price
-	}
+    // 1) 精确匹配（大小写敏感）
+    if price, ok := p.Prices[modelName]; ok {
+        price.Normalize()
+        return price
+    }
+    // 2) 精确匹配（大小写不敏感）
+    for key, price := range p.Prices {
+        if strings.EqualFold(key, modelName) {
+            price.Normalize()
+            return price
+        }
+    }
 
 	// 兼容旧版 Vidu 命名（vidu-<action>-<model>-<duration>s-<resolution>）
 	if normalized, changed := normalizeLegacyViduModelName(modelName); changed {
@@ -131,7 +139,8 @@ func (p *Pricing) GetPrice(modelName string) *Price {
 		modelName = normalized
 	}
 
-	matchModel := utils.GetModelsWithMatch(&p.Match, modelName)
+    // 3) 通配符匹配（大小写不敏感，内部已统一小写前缀判断）
+    matchModel := utils.GetModelsWithMatch(&p.Match, modelName)
 	if price, ok := p.Prices[matchModel]; ok {
 		price.Normalize()
 		return price

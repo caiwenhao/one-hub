@@ -179,19 +179,17 @@ func (p *GeminiProvider) detectVeoVendor() string {
     if p.Channel != nil && p.Channel.Plugin != nil {
         if plugin := p.Channel.Plugin.Data(); plugin != nil {
             if gm, ok := plugin["gemini_video"]; ok {
-                if m, ok2 := gm.(map[string]any); ok2 {
-                    if v, ok3 := m["vendor"].(string); ok3 && strings.EqualFold(v, "sutui") {
-                        return "sutui"
-                    }
+                // plugin 的类型为 PluginType(map[string]map[string]interface{}),
+                // 这里取出的 gm 已经是 map[string]interface{}，无需再次断言
+                if v, ok3 := gm["vendor"].(string); ok3 && strings.EqualFold(v, "sutui") {
+                    return "sutui"
                 }
             }
             // 兼容形式：plugin.gemini.video.vendor
             if gm, ok := plugin["gemini"]; ok {
-                if m, ok2 := gm.(map[string]any); ok2 {
-                    if vm, ok3 := m["video"].(map[string]any); ok3 {
-                        if v, ok4 := vm["vendor"].(string); ok4 && strings.EqualFold(v, "sutui") {
-                            return "sutui"
-                        }
+                if vm, ok3 := gm["video"].(map[string]any); ok3 {
+                    if v, ok4 := vm["vendor"].(string); ok4 && strings.EqualFold(v, "sutui") {
+                        return "sutui"
                     }
                 }
             }

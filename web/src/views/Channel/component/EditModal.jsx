@@ -146,7 +146,8 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
       53: ['kling'],
       56: ['xai', 'grok'],
       57: ['vidu'],
-      58: ['volc', 'ark', '火山', '方舟', 'doubao']
+      58: ['volc', 'ark', '火山', '方舟', 'doubao'],
+      59: ['huawei', 'maas', 'modelarts', '华为']
     }),
     []
   );
