@@ -75,7 +75,7 @@ func NewQuota(c *gin.Context, modelName string, promptTokens int) *Quota {
 
 func (q *Quota) PreQuotaConsumption() *types.OpenAIErrorWithStatusCode {
     if q.price.Type == model.TimesPriceType {
-        q.preConsumedQuota = int(1000 * q.inputRatio)
+        q.preConsumedQuota = int(1000 * q.outputRatio)
     } else if q.price.Input != 0 || q.price.Output != 0 {
         // Sora 按秒计费：预扣时同样按 seconds×1000 计算
         pt := q.promptTokens
@@ -320,7 +320,7 @@ func (q *Quota) getRequestTime() int {
 // 通过 token 数获取消费配额
 func (q *Quota) GetTotalQuota(promptTokens, completionTokens int, extraBilling map[string]types.ExtraBilling) (quota int) {
     if q.price.Type == model.TimesPriceType {
-        quota = int(1000 * q.inputRatio)
+        quota = int(1000 * q.outputRatio)
     } else {
         // Sora（OpenAI /v1/videos）按秒计费：内部换算为 seconds × 1000（对齐 tokens 基线 1k）
         lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))

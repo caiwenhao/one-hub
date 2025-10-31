@@ -535,11 +535,16 @@ func mapResolutionSizeLabel(resolution string) string {
 }
 
 func buildSoraBillingModel(modelName, resolution string) string {
-	modelName = strings.TrimSpace(modelName)
-	if resolution == "" {
-		return modelName
-	}
-	return fmt.Sprintf("%s-%s", modelName, resolution)
+    modelName = strings.TrimSpace(modelName)
+    if resolution == "" {
+        return modelName
+    }
+    // Sutui 上游模型（sora_video2-*）已经在模型名中体现了方向/清晰度/时长等，无需追加分辨率，保持与定价键一致
+    lower := strings.ToLower(modelName)
+    if strings.HasPrefix(lower, "sora_video2") {
+        return modelName
+    }
+    return fmt.Sprintf("%s-%s", modelName, resolution)
 }
 
 func submitTimeFromJob(job *types.VideoJob) int64 {

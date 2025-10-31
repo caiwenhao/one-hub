@@ -194,8 +194,8 @@ func inferOwnedBy(modelName string, price *model.Price) *string {
 		}
 		return &name
 	}
-    // OpenAI Sora 基础模型归属推断（sora-* 显示为 OpenAI）
-    if strings.HasPrefix(lower, "sora-") {
+    // OpenAI Sora 基础模型归属推断（sora-* 与 sutui 的 sora_video2-* 显示为 OpenAI）
+    if strings.HasPrefix(lower, "sora-") || strings.HasPrefix(lower, "sora_video2") {
         name := model.ModelOwnedBysInstance.GetName(config.ChannelTypeOpenAI)
         if name == model.UnknownOwnedBy || name == "" {
             fallback := "OpenAI"
@@ -357,7 +357,7 @@ func buildPriceDisplayForModel(modelName string, p *model.Price) *PriceDisplay {
         return d
     }
     lower := strings.ToLower(strings.TrimSpace(modelName))
-    if strings.HasPrefix(lower, "sora-2") { // 包含 sora-2 与 sora-2-pro
+    if strings.HasPrefix(lower, "sora-2") { // 官方 Sora 按秒计费（USD/sec）
         // Sora 采用“按秒=按 token”结算，为避免误解，单位改为 USD/sec
         d.Unit = "USD/sec"
     }

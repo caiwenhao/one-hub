@@ -348,12 +348,115 @@ func migrationAfter(db *gorm.DB) error {
 		logger.SysLog("从库不执行迁移后操作")
 		return nil
 	}
-	m := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{
-		addStatistics(),
-		changeChannelApiVersion(),
-		initUserGroup(),
-		addOldTokenMaxId(),
-		addExtraRatios(),
-	})
-	return m.Migrate()
+    m := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{
+        addStatistics(),
+        changeChannelApiVersion(),
+        initUserGroup(),
+        addOldTokenMaxId(),
+        addExtraRatios(),
+        fixSutuiSoraTimesPricing(),
+        fixAllTimesPricingIO(),
+        fixSutuiVeo3TimesPricing(),
+        fixVeo3OwnedByToGemini(),
+    })
+    return m.Migrate()
+}
+
+// 将 Sutui 上游的 Sora2 变体（sora_video2*）修正为按次计费（times），并将 output 与 input 对齐
+func fixSutuiSoraTimesPricing() *gormigrate.Migration {
+    return &gormigrate.Migration{
+        ID: "20251031_fix_sutui_sora_times",
+        Migrate: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Price{}) {
+                return nil
+            }
+            // 需要修正的模型列表
+            models := []string{
+                "sora_video2",
+                "sora_video2-portrait",
+                "sora_video2-landscape",
+                "sora_video2-portrait-15s",
+                "sora_video2-landscape-15s",
+                "sora_video2-portrait-hd",
+                "sora_video2-landscape-hd",
+                "sora_video2-portrait-hd-15s",
+                "sora_video2-landscape-hd-15s",
+                "sora_video2-portrait-hd-25s",
+                "sora_video2-landscape-hd-25s",
+            }
+
+            // 仅对已存在且类型不为 times 的记录进行修正
+            if err := tx.Model(&Price{}).
+                Where("model IN (?)", models).
+                Updates(map[string]any{"type": TimesPriceType, "output": gorm.Expr("CASE WHEN output=0 THEN input ELSE output END"), "input": 0} ).Error; err != nil {
+                logger.SysLog("修正 Sutui Sora2 按次计费失败: " + err.Error())
+                return err
+            }
+            return nil
+        },
+        Rollback: func(tx *gorm.DB) error { return nil },
+    }
+}
+
+// 将所有 times 类型的价格统一为“输入免费（0）、输出收费（沿用原有输出；若输出为0则取原输入）”
+func fixAllTimesPricingIO() *gormigrate.Migration {
+    return &gormigrate.Migration{
+        ID: "20251031_fix_times_pricing_io",
+        Migrate: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Price{}) {
+                return nil
+            }
+            if err := tx.Model(&Price{}).
+                Where("type = ?", TimesPriceType).
+                Updates(map[string]any{"output": gorm.Expr("CASE WHEN output=0 THEN input ELSE output END"), "input": 0}).Error; err != nil {
+                logger.SysLog("修正 Times 类型输入/输出字段失败: " + err.Error())
+                return err
+            }
+            return nil
+        },
+        Rollback: func(tx *gorm.DB) error { return nil },
+    }
+}
+
+// 将 Sutui Veo3 系列（veo3、veo3.1、veo3-pro、veo3.1-pro、veo3.1-components）统一设置为 times 类型；
+// 并按“输入0、输出收费（若输出为0则取输入）”修正历史数据。
+func fixSutuiVeo3TimesPricing() *gormigrate.Migration {
+    return &gormigrate.Migration{
+        ID: "20251031_fix_sutui_veo3_times",
+        Migrate: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Price{}) {
+                return nil
+            }
+            models := []string{"veo3", "veo3.1", "veo3-pro", "veo3.1-pro", "veo3.1-components"}
+            if err := tx.Model(&Price{}).
+                Where("model IN (?)", models).
+                Updates(map[string]any{"type": TimesPriceType, "output": gorm.Expr("CASE WHEN output=0 THEN input ELSE output END"), "input": 0}).Error; err != nil {
+                logger.SysLog("修正 Sutui Veo3 按次计费失败: " + err.Error())
+                return err
+            }
+            return nil
+        },
+        Rollback: func(tx *gorm.DB) error { return nil },
+    }
+}
+
+// 将 Veo3 系列的品牌归属统一修正为 Google Gemini（owned_by_type = ChannelTypeGemini）
+func fixVeo3OwnedByToGemini() *gormigrate.Migration {
+    return &gormigrate.Migration{
+        ID: "20251031_fix_veo3_ownedby_gemini",
+        Migrate: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Price{}) {
+                return nil
+            }
+            models := []string{"veo3", "veo3.1", "veo3-pro", "veo3.1-pro", "veo3.1-components"}
+            if err := tx.Model(&Price{}).
+                Where("model IN (?)", models).
+                Update("owned_by_type", config.ChannelTypeGemini).Error; err != nil {
+                logger.SysLog("修正 Veo3 品牌归属为 Gemini 失败: " + err.Error())
+                return err
+            }
+            return nil
+        },
+        Rollback: func(tx *gorm.DB) error { return nil },
+    }
 }

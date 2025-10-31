@@ -5,9 +5,12 @@ import (
 	"strings"
 
 	"github.com/shopspring/decimal"
-	"gorm.io/datatypes"
-	"gorm.io/gorm"
+    "gorm.io/datatypes"
+    "gorm.io/gorm"
 )
+
+// 用于在常量构建中简洁地创建 *float64
+func ptrF(v float64) *float64 { return &v }
 
 const (
 	TokensPriceType    = "tokens"
@@ -145,11 +148,10 @@ func (price *Price) GetInput() float64 {
 }
 
 func (price *Price) GetOutput() float64 {
-	if price.Output <= 0 || price.Type == TimesPriceType {
-		return 0
-	}
-
-	return price.Output
+    if price.Output <= 0 {
+        return 0
+    }
+    return price.Output
 }
 
 func (price *Price) GetExtraRatio(key string) float64 {
@@ -237,6 +239,8 @@ var ownedByKeywordRules = []struct {
 	{config.ChannelTypeAnthropic, []string{"claude", "anthropic/"}},
     {config.ChannelTypeOpenAI, []string{"gpt-", "gpt", "davinci", "curie", "babbage", "ada", "whisper", "dall-e", "text-embedding", "o1-", "o3-", "sora-"}},
     {config.ChannelTypeGemini, []string{"gemini", "palm-", "imagen", "veo-"}},
+	// Sutui Veo 系列（veo3/veo3.1/...）关键字不带连字符，单独映射到 Gemini 归属
+	{config.ChannelTypeGemini, []string{"veo3"}},
 	{config.ChannelTypeAli, []string{"qwen", "tongyi"}},
 	{config.ChannelTypeLLAMA, []string{"llama", "meta-llama"}},
 	{config.ChannelTypeMistral, []string{"mistral", "mixtral"}},
@@ -812,14 +816,14 @@ func GetDefaultPrice() []*Price {
 		"mj_relax_upload":         0,
 	}
 
-	for model, mjPrice := range DefaultMJPrice {
-		price := &Price{
-			Model:       model,
-			Type:        TimesPriceType,
-			ChannelType: config.ChannelTypeMidjourney,
-			Input:       mjPrice,
-			Output:      mjPrice,
-		}
+    for model, mjPrice := range DefaultMJPrice {
+        price := &Price{
+            Model:       model,
+            Type:        TimesPriceType,
+            ChannelType: config.ChannelTypeMidjourney,
+            Input:       0,
+            Output:      mjPrice,
+        }
 		price.Normalize()
 		prices = append(prices, price)
 	}
@@ -829,14 +833,14 @@ func GetDefaultPrice() []*Price {
 		"chirp-v3-0":  50,
 		"chirp-v3-5":  50,
 	}
-	for model, sunoPrice := range DefaultSunoPrice {
-		price := &Price{
-			Model:       model,
-			Type:        TimesPriceType,
-			ChannelType: config.ChannelTypeSuno,
-			Input:       sunoPrice,
-			Output:      sunoPrice,
-		}
+    for model, sunoPrice := range DefaultSunoPrice {
+        price := &Price{
+            Model:       model,
+            Type:        TimesPriceType,
+            ChannelType: config.ChannelTypeSuno,
+            Input:       0,
+            Output:      sunoPrice,
+        }
 		price.Normalize()
 		prices = append(prices, price)
 	}
@@ -981,16 +985,16 @@ func GetDefaultPrice() []*Price {
 		"vidu-text2video-vidu1.5-1080p-4s-anime": 20,
 		"vidu-text2video-vidu1.5-720p-8s-anime":  20,
 	}
-	for model, credits := range defaultViduCredits {
-		// 将“积分”转为系统基准值，保证前端展示的 $ 与 ￥计算正确
-		base := credits * (viduCreditToYuan / RMBRate)
-		price := &Price{
-			Model:       model,
-			Type:        TimesPriceType,
-			ChannelType: config.ChannelTypeVidu,
-			Input:       base,
-			Output:      base,
-		}
+    for model, credits := range defaultViduCredits {
+        // 将“积分”转为系统基准值，保证前端展示的 $ 与 ￥计算正确
+        base := credits * (viduCreditToYuan / RMBRate)
+        price := &Price{
+            Model:       model,
+            Type:        TimesPriceType,
+            ChannelType: config.ChannelTypeVidu,
+            Input:       0,
+            Output:      base,
+        }
 		price.Normalize()
 		prices = append(prices, price)
 	}
@@ -1003,15 +1007,15 @@ func GetDefaultPrice() []*Price {
 		"doubao-seededit-3-0-i2i-250628": 0.3,
 	}
 
-	for model, pricePerImage := range defaultVolcArkImagePrice {
-		base := pricePerImage / RMBRate
-		price := &Price{
-			Model:       model,
-			Type:        TimesPriceType,
-			ChannelType: config.ChannelTypeVolcArk,
-			Input:       base,
-			Output:      base,
-		}
+    for model, pricePerImage := range defaultVolcArkImagePrice {
+        base := pricePerImage / RMBRate
+        price := &Price{
+            Model:       model,
+            Type:        TimesPriceType,
+            ChannelType: config.ChannelTypeVolcArk,
+            Input:       0,
+            Output:      base,
+        }
 		price.Normalize()
 		prices = append(prices, price)
 	}
@@ -1066,15 +1070,15 @@ var defaultMiniMaxVideoPrice = map[string]float64{
 		"minimax-subject2video-s2v-01-720p-6s":       4.5,
 	}
 
-	for model, miniMaxPrice := range defaultMiniMaxVideoPrice {
-		base := miniMaxPrice / RMBRate
-		price := &Price{
-			Model:       model,
-			Type:        TimesPriceType,
-			ChannelType: config.ChannelTypeMiniMax,
-			Input:       base,
-			Output:      base,
-		}
+    for model, miniMaxPrice := range defaultMiniMaxVideoPrice {
+        base := miniMaxPrice / RMBRate
+        price := &Price{
+            Model:       model,
+            Type:        TimesPriceType,
+            ChannelType: config.ChannelTypeMiniMax,
+            Input:       0,
+            Output:      base,
+        }
 		price.Normalize()
 		prices = append(prices, price)
 	}
@@ -1088,15 +1092,15 @@ var defaultMiniMaxVideoPrice = map[string]float64{
 		"image-01-live": 0.025, // 元/张
 	}
 
-	for model, priceYuan := range defaultMiniMaxOthers {
-		base := priceYuan / RMBRate
-		price := &Price{
-			Model:       model,
-			Type:        TimesPriceType,
-			ChannelType: config.ChannelTypeMiniMax,
-			Input:       base,
-			Output:      base,
-		}
+    for model, priceYuan := range defaultMiniMaxOthers {
+        base := priceYuan / RMBRate
+        price := &Price{
+            Model:       model,
+            Type:        TimesPriceType,
+            ChannelType: config.ChannelTypeMiniMax,
+            Input:       0,
+            Output:      base,
+        }
 		price.Normalize()
 		prices = append(prices, price)
 	}
@@ -1127,6 +1131,63 @@ var defaultMiniMaxVideoPrice = map[string]float64{
 			prices = append(prices, price)
 		}
 	}
+
+    // Sutui（速推）Sora2 变体（按秒计价，单位 USD/sec）
+    // SD：$0.200/sec；HD：$3.000/sec
+    var sutuiSora2 = map[string]float64{
+        // 标清（SD）
+        "sora_video2":                   0.200,
+        "sora_video2-portrait":         0.200,
+        "sora_video2-landscape":        0.200,
+        "sora_video2-portrait-15s":     0.200,
+        "sora_video2-landscape-15s":    0.200,
+        // 高清（HD）
+        "sora_video2-portrait-hd":      3.000,
+        "sora_video2-landscape-hd":     3.000,
+        "sora_video2-portrait-hd-15s":  3.000,
+        "sora_video2-landscape-hd-15s": 3.000,
+        "sora_video2-portrait-hd-25s":  3.000,
+        "sora_video2-landscape-hd-25s": 3.000,
+    }
+    for modelName, usd := range sutuiSora2 {
+        base := usd / DollarRate
+        price := &Price{
+            Model:       modelName,
+            Type:        TimesPriceType, // Sutui 视频按次计费
+            ChannelType: config.ChannelTypeOpenAI,
+            Input:       0,
+            Output:      base,
+        }
+        price.Normalize()
+        prices = append(prices, price)
+    }
+
+    // Sutui（速推）Veo3 系列（按次计费，单位 USD/each）
+    // 已给定价格：veo3=$1 / each，veo3.1=$1 / each，veo3-pro=$4 / each
+    // 未给定价格：veo3.1-pro、veo3.1-components（暂留由管理员后续在面板设置），此处仅预留展示（如需可补齐）
+    var sutuiVeo3 = map[string]*float64{
+        "veo3":               ptrF(1.0),
+        "veo3.1":             ptrF(1.0),
+        "veo3-pro":           ptrF(4.0),
+        "veo3.1-pro":         ptrF(4.0),
+        "veo3.1-components":  ptrF(1.0),
+    }
+    for modelName, usdPtr := range sutuiVeo3 {
+        // 仅对有价格的条目生成默认价格；无价的保留为“无默认价”，避免误导
+        if usdPtr == nil {
+            continue
+        }
+        base := *usdPtr / DollarRate
+        price := &Price{
+            Model:       modelName,
+            Type:        TimesPriceType,
+            ChannelType: config.ChannelTypeOpenAI,
+            Input:       0,
+            Output:      base,
+        }
+        price.Normalize()
+        prices = append(prices, price)
+    }
 
 	// 可灵AI 默认价格配置 (按次计费)
 	var DefaultKlingPrice = map[string]float64{
@@ -1222,16 +1283,16 @@ var defaultMiniMaxVideoPrice = map[string]float64{
 		"kling-preview-selection": 3, // 预览已选区视频，单价 3 元
 	}
 
-	for model, klingPrice := range DefaultKlingPrice {
-		// 将人民币价格折算为系统基准值，保证前端 $ / ￥ 展示正确
-		base := klingPrice / RMBRate
-		price := &Price{
-			Model:       model,
-			Type:        TimesPriceType,
-			ChannelType: config.ChannelTypeKling,
-			Input:       base,
-			Output:      base,
-		}
+    for model, klingPrice := range DefaultKlingPrice {
+        // 将人民币价格折算为系统基准值，保证前端 $ / ￥ 展示正确
+        base := klingPrice / RMBRate
+        price := &Price{
+            Model:       model,
+            Type:        TimesPriceType,
+            ChannelType: config.ChannelTypeKling,
+            Input:       0,
+            Output:      base,
+        }
 		price.Normalize()
 		prices = append(prices, price)
 	}

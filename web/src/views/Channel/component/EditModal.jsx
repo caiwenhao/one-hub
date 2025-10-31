@@ -657,6 +657,35 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                         // Sora 视频上游：当选择 Sutui 时，显式写入插件字段以便后端识别；其他选项则清空
                         if (next === 'sutui') {
                           setFieldValue('plugin.sora.vendor', 'sutui');
+                          // 当选择 Sutui 作为 OpenAI 视频上游时，自动填充推荐的视频模型（sora_video2 家族）
+                          try {
+                            const sutuiVideoModels = [
+                              'sora_video2',
+                              'sora_video2-portrait',
+                              'sora_video2-landscape',
+                              'sora_video2-portrait-15s',
+                              'sora_video2-landscape-15s',
+                              'sora_video2-portrait-hd',
+                              'sora_video2-landscape-hd',
+                              'sora_video2-portrait-hd-15s',
+                              'sora_video2-landscape-hd-15s',
+                              'sora_video2-portrait-hd-25s',
+                              'sora_video2-landscape-hd-25s'
+                            ];
+                            const sutuiVeoModels = [
+                              'veo3',
+                              'veo3.1',
+                              'veo3-pro',
+                              'veo3.1-pro',
+                              'veo3.1-components'
+                            ];
+                            const current = Array.isArray(values.models) ? values.models : [];
+                            if (current.length === 0) {
+                              const prefill = [...sutuiVideoModels, ...sutuiVeoModels].map((id) => ({ id, group: 'OpenAI Video (Sutui)' }));
+                              setFieldValue('models', prefill);
+                              if (!values.test_model) setFieldValue('test_model', 'sora_video2');
+                            }
+                          } catch (_) {}
                         } else {
                           // 清理避免误判
                           setFieldValue('plugin.sora.vendor', '');
