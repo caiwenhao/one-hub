@@ -186,6 +186,18 @@
     }
   },
   "25": {
+    "gemini_video": {
+      "name": "Gemini 视频上游",
+      "description": "Veo 视频上游供应商选择（google/sutui）。用于 /gemini/{version}/models/veo-*",
+      "params": {
+        "vendor": {
+          "name": "视频上游供应商",
+          "description": "可填 google/sutui；选择 sutui 时，后端按 sutui 适配器（OpenAI /v1/videos）转发。",
+          "type": "string",
+          "required": false
+        }
+      }
+    },
     "code_execution": {
       "name": "代码执行",
       "description": "使用代码执行功能，开启后，计算tokens不准确，建议个人使用开启",

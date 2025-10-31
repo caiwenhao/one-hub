@@ -174,9 +174,113 @@ func (p *GeminiProvider) GetRequestHeaders() (headers map[string]string) {
     return headers
 }
 
+// detectVeoVendor: 返回 Gemini Veo 上游供应商标识，google(默认)/sutui
+func (p *GeminiProvider) detectVeoVendor() string {
+    if p.Channel != nil && p.Channel.Plugin != nil {
+        if plugin := p.Channel.Plugin.Data(); plugin != nil {
+            if gm, ok := plugin["gemini_video"]; ok {
+                if m, ok2 := gm.(map[string]any); ok2 {
+                    if v, ok3 := m["vendor"].(string); ok3 && strings.EqualFold(v, "sutui") {
+                        return "sutui"
+                    }
+                }
+            }
+            // 兼容形式：plugin.gemini.video.vendor
+            if gm, ok := plugin["gemini"]; ok {
+                if m, ok2 := gm.(map[string]any); ok2 {
+                    if vm, ok3 := m["video"].(map[string]any); ok3 {
+                        if v, ok4 := vm["vendor"].(string); ok4 && strings.EqualFold(v, "sutui") {
+                            return "sutui"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
+    if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai")) {
+        return "sutui"
+    }
+    return "google"
+}
+
+// 将 Veo :predictLongRunning 初始化映射到 sutui 的 /v1/videos
+func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any, *types.OpenAIErrorWithStatusCode) {
+    base := strings.TrimSuffix(p.GetBaseURL(), "/")
+    fullURL := base + "/v1/videos"
+
+    headers := p.GetRequestHeaders()
+    contentType := ""
+    if p.Context != nil && p.Context.Request != nil {
+        contentType = p.Context.Request.Header.Get("Content-Type")
+    }
+    if contentType != "" { headers["Content-Type"] = contentType }
+
+    var httpReq *http.Request
+    // multipart 直透
+    if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
+        raw, ok := p.GetRawBody()
+        if !ok {
+            return nil, common.StringErrorWrapperLocal("request body not found", "request_body_not_found", http.StatusInternalServerError)
+        }
+        r, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
+        if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
+        httpReq = r
+    } else {
+        // JSON 映射：input.prompt → prompt；config.durationSeconds → seconds；config.aspectRatio → size
+        raw, ok := p.GetRawBody()
+        if !ok {
+            return nil, common.StringErrorWrapperLocal("request body not found", "request_body_not_found", http.StatusInternalServerError)
+        }
+        var m map[string]any
+        _ = json.Unmarshal(raw, &m)
+        var prompt string
+        var seconds int
+        var size string
+        if in, ok := m["input"].(map[string]any); ok {
+            if s, ok2 := in["prompt"].(string); ok2 { prompt = s }
+        }
+        if cfg, ok := m["config"].(map[string]any); ok {
+            if f, ok2 := cfg["durationSeconds"].(float64); ok2 { seconds = int(f) }
+            if s, ok2 := cfg["aspectRatio"].(string); ok2 {
+                s = strings.TrimSpace(s)
+                switch s {
+                case "16:9": size = "1600x900"
+                case "9:16": size = "900x1600"
+                case "1:1": size = "720x720"
+                default:
+                    if strings.Contains(s, "x") { size = s }
+                }
+            }
+        }
+        body := map[string]any{}
+        if modelName != "" { body["model"] = modelName }
+        if prompt != "" { body["prompt"] = prompt }
+        if seconds > 0 { body["seconds"] = seconds }
+        if size != "" { body["size"] = size }
+        r, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+        if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
+        httpReq = r
+    }
+    if httpReq.Body != nil { defer httpReq.Body.Close() }
+
+    var resp struct{ ID string `json:"id"` }
+    if _, e := p.Requester.SendRequest(httpReq, &resp, false); e != nil {
+        return nil, e
+    }
+    if strings.TrimSpace(resp.ID) == "" {
+        return nil, common.StringErrorWrapperLocal("missing id from sutui response", "upstream_error", http.StatusBadGateway)
+    }
+    return map[string]any{ "name": fmt.Sprintf("operations/%s", resp.ID), "done": false }, nil
+}
+
 // RelayModelAction 透传任意 models/<model>:<action> 原生请求（非流式）。
 // 适配 Imagen 的 :predict 与 Veo 的 :predictLongRunning 初始化调用。
 func (p *GeminiProvider) RelayModelAction(modelName, action string) (any, *types.OpenAIErrorWithStatusCode) {
+    // 若为 Veo 初始化且配置为 sutui 上游，则改走 sutui /v1/videos
+    if strings.HasPrefix(strings.ToLower(strings.TrimSpace(modelName)), "veo-") && strings.EqualFold(action, "predictLongRunning") && p.detectVeoVendor() == "sutui" {
+        return p.relayPredictLongRunningViaSutui(modelName)
+    }
     baseURL := strings.TrimSuffix(p.GetBaseURL(), "/")
     version := "v1beta"
     if p.Channel.Other != "" { version = p.Channel.Other }
@@ -204,3 +308,6 @@ func (p *GeminiProvider) RelayModelAction(modelName, action string) (any, *types
     }
     return resp, nil
 }
+
+// DetectVeoVendorForOps 暴露给 relay 用于 operations 分支判断
+func (p *GeminiProvider) DetectVeoVendorForOps() string { return p.detectVeoVendor() }

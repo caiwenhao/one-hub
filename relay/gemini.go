@@ -309,8 +309,88 @@ func GeminiOperations(c *gin.Context) {
         return
     }
 
-    // 构造原生 URL 与请求头
+    // 构造原生 URL 与请求头；若上游为 sutui，则改为查询 sutui /v1/videos 并转换为 operations
     if gp, ok := provider.(*gemini.GeminiProvider); ok {
+        // sutui 分支
+        if gp != nil && strings.EqualFold(gp.DetectVeoVendorForOps(), "sutui") {
+            // 从 name 中取出 id（允许传入 operations/<id> 或直接 <id>）
+            id := name
+            if strings.HasPrefix(id, "operations/") { id = strings.TrimPrefix(id, "operations/") }
+
+            base := strings.TrimSuffix(gp.GetBaseURL(), "/")
+            fullURL := fmt.Sprintf("%s/v1/videos/%s", base, id)
+            headers := gp.GetRequestHeaders()
+
+            req, err := gp.Requester.NewRequest(http.MethodGet, fullURL, gp.Requester.WithHeader(headers))
+            if err != nil {
+                common.AbortWithMessage(c, http.StatusInternalServerError, "new_request_failed")
+                return
+            }
+            if req.Body != nil { defer req.Body.Close() }
+
+            var s struct {
+                ID        string `json:"id"`
+                Status    string `json:"status"`
+                Seconds   int    `json:"seconds"`
+                Size      string `json:"size"`
+                VideoURL  string `json:"video_url"`
+                Result    *struct{ VideoURL string `json:"video_url"` } `json:"result"`
+            }
+            if _, e := gp.Requester.SendRequest(req, &s, false); e != nil {
+                gemErr := gemini.OpenaiErrToGeminiErr(e)
+                status := e.StatusCode
+                if status == 0 { status = http.StatusBadRequest }
+                c.JSON(status, gemErr.GeminiErrorResponse)
+                return
+            }
+            // done 判定
+            st := strings.ToLower(strings.TrimSpace(s.Status))
+            done := (st == "completed" || st == "failed")
+            // 取 videoURL
+            video := s.VideoURL
+            if video == "" && s.Result != nil { video = s.Result.VideoURL }
+
+            // 组装 operations 响应
+            sample := map[string]any{}
+            if video != "" { sample["uri"] = video }
+            meta := map[string]any{}
+            if s.Seconds > 0 { meta["durationSeconds"] = s.Seconds }
+            if strings.TrimSpace(s.Size) != "" { meta["size"] = s.Size }
+            if len(meta) > 0 { sample["metadata"] = meta }
+
+            var samples []any
+            if len(sample) > 0 { samples = append(samples, sample) }
+
+            resp := map[string]any{
+                "name": name,
+                "done": done,
+            }
+            if done {
+                resp["response"] = map[string]any{
+                    "generateVideoResponse": map[string]any{
+                        "generatedSamples": samples,
+                    },
+                }
+            }
+
+            // 计费：尽量按秒写入
+            seconds := s.Seconds
+            if seconds == 0 {
+                if v := strings.TrimSpace(c.Query("duration")); v != "" {
+                    if n, err := strconv.Atoi(v); err == nil { seconds = n }
+                }
+            }
+            if seconds > 0 {
+                usage := &types.Usage{PromptTokens: seconds}
+                q := relay_util.NewQuota(c, modelName, seconds)
+                q.Consume(c, usage, false)
+            }
+
+            _ = responseJsonClient(c, resp)
+            return
+        }
+
+        // Google 原生分支
         base := strings.TrimSuffix(gp.GetBaseURL(), "/")
         fullURL := fmt.Sprintf("%s/%s/%s", base, version, name)
         headers := gp.GetRequestHeaders()
