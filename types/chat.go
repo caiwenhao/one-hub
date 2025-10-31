@@ -176,24 +176,30 @@ type FormatJsonSchema struct {
 }
 
 type ChatCompletionRequest struct {
-	Model               string                        `json:"model" binding:"required"`
-	Messages            []ChatCompletionMessage       `json:"messages" binding:"required"`
-	MaxTokens           int                           `json:"max_tokens,omitempty"`
-	MaxCompletionTokens int                           `json:"max_completion_tokens,omitempty"`
-	Temperature         *float64                      `json:"temperature,omitempty"`
-	TopP                *float64                      `json:"top_p,omitempty"`
-	TopK                *float64                      `json:"top_k,omitempty"`
-	N                   *int                          `json:"n,omitempty"`
-	Stream              bool                          `json:"stream,omitempty"`
-	StreamOptions       *StreamOptions                `json:"stream_options,omitempty"`
-	Stop                any                           `json:"stop,omitempty"`
-	PresencePenalty     *float64                      `json:"presence_penalty,omitempty"`
-	ResponseFormat      *ChatCompletionResponseFormat `json:"response_format,omitempty"`
-	Seed                *int                          `json:"seed,omitempty"`
-	FrequencyPenalty    *float64                      `json:"frequency_penalty,omitempty"`
-	LogitBias           any                           `json:"logit_bias,omitempty"`
-	LogProbs            *bool                         `json:"logprobs,omitempty"`
-	TopLogProbs         int                           `json:"top_logprobs,omitempty"`
+    Model               string                        `json:"model" binding:"required"`
+    Messages            []ChatCompletionMessage       `json:"messages" binding:"required"`
+    MaxTokens           int                           `json:"max_tokens,omitempty"`
+    MaxCompletionTokens int                           `json:"max_completion_tokens,omitempty"`
+    Temperature         *float64                      `json:"temperature,omitempty"`
+    TopP                *float64                      `json:"top_p,omitempty"`
+    TopK                *float64                      `json:"top_k,omitempty"`
+    N                   *int                          `json:"n,omitempty"`
+    Stream              bool                          `json:"stream,omitempty"`
+    StreamOptions       *StreamOptions                `json:"stream_options,omitempty"`
+    Stop                any                           `json:"stop,omitempty"`
+    PresencePenalty     *float64                      `json:"presence_penalty,omitempty"`
+    ResponseFormat      *ChatCompletionResponseFormat `json:"response_format,omitempty"`
+    Seed                *int                          `json:"seed,omitempty"`
+    FrequencyPenalty    *float64                      `json:"frequency_penalty,omitempty"`
+    LogitBias           any                           `json:"logit_bias,omitempty"`
+    LogProbs            *bool                         `json:"logprobs,omitempty"`
+    TopLogProbs         int                           `json:"top_logprobs,omitempty"`
+    // 华为 MaaS 扩展/兼容参数
+    ChatTemplateKwargs map[string]any `json:"chat_template_kwargs,omitempty"`
+    UseBeamSearch      *bool          `json:"use_beam_search,omitempty"`
+    LengthPenalty      *float64       `json:"length_penalty,omitempty"`
+    BestOf             *int           `json:"best_of,omitempty"`
+    PromptLogprobs     *float64       `json:"prompt_logprobs,omitempty"`
 	User                string                        `json:"user,omitempty"`
 	Functions           []*ChatCompletionFunction     `json:"functions,omitempty"`
 	FunctionCall        any                           `json:"function_call,omitempty"`
@@ -207,7 +213,7 @@ type ChatCompletionRequest struct {
 	WebSearchOptions    *WebSearchOptions             `json:"web_search_options,omitempty"`
 	Verbosity           string                        `json:"verbosity,omitempty"` // 用于控制输出的详细程度
 
-	Reasoning *ChatReasoning `json:"reasoning,omitempty"`
+    Reasoning *ChatReasoning `json:"reasoning,omitempty"`
 
 	// 考虑到后续一些模型逐步采用openai api格式扩展参数的方式进行服务提供，所以考虑把一些模型的特有参数放入可选参数
 	EnableThinking *bool `json:"enable_thinking,omitempty"` // qwen3 思考开关

@@ -306,6 +306,7 @@ const (
 	ChannelTypeXAI             = 56
 	ChannelTypeVidu            = 57
 	ChannelTypeVolcArk         = 58
+	ChannelTypeHuawei          = 59
 )
 
 const (

@@ -41,7 +41,7 @@ func (f OpenAIProviderFactory) Create(channel *model.Channel) base.ProviderInter
 // 创建 OpenAIProvider
 // https://platform.openai.com/docs/api-reference/introduction
 func CreateOpenAIProvider(channel *model.Channel, baseURL string) *OpenAIProvider {
-	openaiConfig := getOpenAIConfig(baseURL, channel)
+    openaiConfig := getOpenAIConfig(baseURL, channel)
 
 	OpenAIProvider := &OpenAIProvider{
 		BaseProvider: base.BaseProvider{
@@ -54,9 +54,13 @@ func CreateOpenAIProvider(channel *model.Channel, baseURL string) *OpenAIProvide
 		BalanceAction: true,
 	}
 
-	if channel.Type == config.ChannelTypeOpenAI {
-		OpenAIProvider.SupportStreamOptions = true
-	}
+    // 支持 stream_options 透传：
+    // - OpenAI 官方
+    // - Huawei MaaS（默认 chunk 含 usage，允许客户端显式控制 include_usage）
+    if channel.Type == config.ChannelTypeOpenAI || channel.Type == config.ChannelTypeHuawei ||
+        strings.Contains(strings.ToLower(openaiConfig.BaseURL), "modelarts-maas.com") {
+        OpenAIProvider.SupportStreamOptions = true
+    }
 
 	return OpenAIProvider
 }

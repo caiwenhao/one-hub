@@ -627,6 +627,27 @@ const typeConfig = {
     },
     modelGroup: 'Vidu'
   },
+  59: {
+    inputLabel: {
+      provider_models_list: '从华为 MaaS 获取模型列表'
+    },
+    input: {
+      base_url: 'https://api.modelarts-maas.com/v1',
+      models: [
+        'deepseek-v3',
+        'deepseek-v3.1',
+        'deepseek-r1',
+        'qwen3-32b',
+        'qwen2.5-vl-7b'
+      ],
+      test_model: 'deepseek-v3'
+    },
+    prompt: {
+      key: '请输入华为 MaaS 平台的 API Key（Bearer）',
+      base_url: '官方默认地址为 https://api.modelarts-maas.com/v1，可按需替换为自建中转地址'
+    },
+    modelGroup: 'Huawei MaaS'
+  },
   54: {
     inputLabel: {
       base_url: 'Azure Databricks Endpoint',

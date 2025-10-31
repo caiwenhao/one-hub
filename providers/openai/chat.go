@@ -84,16 +84,18 @@ func (p *OpenAIProvider) CreateChatCompletionStream(request *types.ChatCompletio
 		}
 	}
 	otherProcessing(request, p.GetOtherArg())
-	streamOptions := request.StreamOptions
-	// 如果支持流式返回Usage 则需要更改配置：
-	if p.SupportStreamOptions {
-		request.StreamOptions = &types.StreamOptions{
-			IncludeUsage: true,
-		}
-	} else {
-		// 避免误传导致报错
-		request.StreamOptions = nil
-	}
+    // 处理 stream_options 透传策略
+    streamOptions := request.StreamOptions
+    if p.SupportStreamOptions {
+        // 若客户端未显式传入，则默认开启 include_usage，兼容华为默认行为
+        if request.StreamOptions == nil {
+            request.StreamOptions = &types.StreamOptions{IncludeUsage: true}
+        }
+        // 若客户端已传入，则按客户端意图透传（不覆盖）
+    } else {
+        // 不支持时避免误传导致上游报错
+        request.StreamOptions = nil
+    }
 	req, errWithCode := p.GetRequestTextBody(config.RelayModeChatCompletions, request.Model, request)
 	if errWithCode != nil {
 		return nil, errWithCode
