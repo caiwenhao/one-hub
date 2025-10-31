@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	soraVendorOfficial = "official"
-	soraVendorMountSea = "mountsea"
+    soraVendorOfficial = "official"
+    soraVendorMountSea = "mountsea"
+    soraVendorSutui   = "sutui"
 )
 
 type openAIVideoResponse struct {
@@ -82,6 +83,8 @@ func (p *OpenAIProvider) CreateVideo(request *types.VideoCreateRequest) (*types.
     switch p.detectSoraVendor() {
     case soraVendorMountSea:
         return p.createMountSeaVideo(request)
+    case soraVendorSutui:
+        return p.createSutuiVideo(request)
     default:
         // 统一遵循 OpenAI 标准视频路由：/v1/videos
         return p.createOfficialVideo(request)
@@ -92,6 +95,8 @@ func (p *OpenAIProvider) RetrieveVideo(videoID string) (*types.VideoJob, *types.
     switch p.detectSoraVendor() {
     case soraVendorMountSea:
         return p.retrieveMountSeaVideo(videoID)
+    case soraVendorSutui:
+        return p.retrieveSutuiVideo(videoID)
     default:
         // 统一遵循 OpenAI 标准视频路由：/v1/videos
         return p.retrieveOfficialVideo(videoID)
@@ -102,6 +107,8 @@ func (p *OpenAIProvider) DownloadVideo(videoID string, variant string) (*http.Re
     switch p.detectSoraVendor() {
     case soraVendorMountSea:
         return p.downloadMountSeaVideo(videoID, variant)
+    case soraVendorSutui:
+        return p.downloadSutuiVideo(videoID, variant)
     default:
         // 统一遵循 OpenAI 标准视频路由：/v1/videos
         return p.downloadOfficialVideo(videoID, variant)
@@ -109,22 +116,25 @@ func (p *OpenAIProvider) DownloadVideo(videoID string, variant string) (*http.Re
 }
 
 func (p *OpenAIProvider) detectSoraVendor() string {
-	if p.Channel != nil && p.Channel.Plugin != nil {
-		if plugin := p.Channel.Plugin.Data(); plugin != nil {
-			if soraConfig, ok := plugin["sora"]; ok {
-				if vendor, ok := soraConfig["vendor"].(string); ok && vendor != "" {
-					return strings.ToLower(vendor)
-				}
-			}
-		}
-	}
+    if p.Channel != nil && p.Channel.Plugin != nil {
+        if plugin := p.Channel.Plugin.Data(); plugin != nil {
+            if soraConfig, ok := plugin["sora"]; ok {
+                if vendor, ok := soraConfig["vendor"].(string); ok && vendor != "" {
+                    return strings.ToLower(vendor)
+                }
+            }
+        }
+    }
 
-	base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
-	if base != "" && strings.Contains(base, "mountsea") {
-		return soraVendorMountSea
-	}
+    base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
+    if base != "" && strings.Contains(base, "mountsea") {
+        return soraVendorMountSea
+    }
+    if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai")) {
+        return soraVendorSutui
+    }
 
-	return soraVendorOfficial
+    return soraVendorOfficial
 }
 
 func (p *OpenAIProvider) createOfficialVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
@@ -285,6 +295,10 @@ func (p *OpenAIProvider) RemixVideo(videoID string, prompt string) (*types.Video
         // 通过 create + RemixVideoID 实现
         req := &types.VideoCreateRequest{RemixVideoID: videoID, Prompt: prompt, Model: p.GetOriginalModel()}
         return p.createMountSeaVideo(req)
+    case soraVendorSutui:
+        // 通过 create + RemixVideoID 实现
+        req := &types.VideoCreateRequest{RemixVideoID: videoID, Prompt: prompt, Model: p.GetOriginalModel()}
+        return p.createSutuiVideo(req)
     default:
         // 官方路径
         basePath := strings.TrimSuffix(p.Config.Videos, "/")
@@ -570,6 +584,194 @@ func (p *OpenAIProvider) downloadMountSeaVideo(videoID string, variant string) (
 	}
 
 	return resp, nil
+}
+
+// --- Sutui (速推) upstream adapter ---
+
+type sutuiCreateResponse struct {
+    ID        string      `json:"id"`
+    Object    string      `json:"object"`
+    Model     string      `json:"model"`
+    Status    string      `json:"status"`
+    Progress  any         `json:"progress"`
+    CreatedAt int64       `json:"created_at"`
+    Seconds   int         `json:"seconds"`
+    Size      string      `json:"size"`
+}
+
+type sutuiRetrieveResponse struct {
+    CompletedAt         int64  `json:"completed_at"`
+    CreatedAt           int64  `json:"created_at"`
+    ID                  string `json:"id"`
+    Model               string `json:"model"`
+    Object              string `json:"object"`
+    Progress            any    `json:"progress"`
+    Seconds             int    `json:"seconds"`
+    Size                string `json:"size"`
+    Status              string `json:"status"`
+    VideoURL            string `json:"video_url"`
+    RemixedFromVideoID  any    `json:"remixed_from_video_id"`
+}
+
+func anyToFloat(v any) float64 {
+    switch t := v.(type) {
+    case nil:
+        return 0
+    case float64:
+        return t
+    case float32:
+        return float64(t)
+    case int:
+        return float64(t)
+    case int32:
+        return float64(t)
+    case int64:
+        return float64(t)
+    case uint:
+        return float64(t)
+    case uint32:
+        return float64(t)
+    case uint64:
+        return float64(t)
+    case string:
+        if f, err := strconv.ParseFloat(t, 64); err == nil {
+            return f
+        }
+        return 0
+    default:
+        return 0
+    }
+}
+
+func (p *OpenAIProvider) createSutuiVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
+    // 构造 URL
+    urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
+    if errWithCode != nil {
+        return nil, errWithCode
+    }
+    fullURL := p.GetFullRequestURL(urlPath, request.Model)
+
+    // 透传原始 Content-Type，尤其是 multipart 边界
+    headers := p.GetRequestHeaders()
+    contentType := ""
+    if p.Context != nil && p.Context.Request != nil {
+        contentType = p.Context.Request.Header.Get("Content-Type")
+    }
+    if contentType != "" {
+        headers["Content-Type"] = contentType
+    }
+
+    // 临时关闭 OpenAI 错误前缀
+    originalOpenAIFlag := p.Requester.IsOpenAI
+    p.Requester.IsOpenAI = false
+    defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+
+    var httpReq *http.Request
+    if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
+        raw, ok := p.GetRawBody()
+        if !ok {
+            return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
+        }
+        req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
+        if err != nil {
+            return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+        }
+        httpReq = req
+    } else {
+        // JSON 方式尽量沿用统一的构造（支持自定义参数合并）
+        reqCopy := *request
+        req, errWith := p.GetRequestTextBody(config.RelayModeOpenAIVideo, reqCopy.Model, &reqCopy)
+        if errWith != nil {
+            return nil, errWith
+        }
+        httpReq = req
+    }
+    if httpReq.Body != nil { defer httpReq.Body.Close() }
+
+    respObj := &sutuiCreateResponse{}
+    _, errWith := p.Requester.SendRequest(httpReq, respObj, false)
+    if errWith != nil {
+        return nil, errWith
+    }
+
+    job := &types.VideoJob{
+        ID:        respObj.ID,
+        Object:    respObj.Object,
+        CreatedAt: respObj.CreatedAt,
+        Status:    respObj.Status,
+        Model:     request.Model,
+        Progress:  anyToFloat(respObj.Progress),
+        Seconds:   respObj.Seconds,
+        Size:      respObj.Size,
+        Quality:   "standard",
+    }
+    if job.Object == "" { job.Object = "video" }
+    if job.CreatedAt == 0 { job.CreatedAt = time.Now().Unix() }
+    return job, nil
+}
+
+func (p *OpenAIProvider) retrieveSutuiVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
+    fullURL := p.buildOfficialVideoURL(videoID, "")
+    headers := p.GetRequestHeaders()
+
+    originalOpenAIFlag := p.Requester.IsOpenAI
+    p.Requester.IsOpenAI = false
+    defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+
+    req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(headers))
+    if err != nil {
+        return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+    }
+    if req.Body != nil { defer req.Body.Close() }
+
+    respObj := &sutuiRetrieveResponse{}
+    _, errWith := p.Requester.SendRequest(req, respObj, false)
+    if errWith != nil {
+        return nil, errWith
+    }
+
+    job := &types.VideoJob{
+        ID:        respObj.ID,
+        Object:    respObj.Object,
+        CreatedAt: respObj.CreatedAt,
+        CompletedAt: respObj.CompletedAt,
+        Status:    respObj.Status,
+        Model:     respObj.Model,
+        Progress:  anyToFloat(respObj.Progress),
+        Seconds:   respObj.Seconds,
+        Size:      respObj.Size,
+        Quality:   "standard",
+    }
+    if job.Object == "" { job.Object = "video" }
+    if job.Result == nil && strings.TrimSpace(respObj.VideoURL) != "" {
+        job.Result = &types.VideoJobResult{ VideoURL: respObj.VideoURL }
+    }
+    return job, nil
+}
+
+func (p *OpenAIProvider) downloadSutuiVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode) {
+    if strings.TrimSpace(variant) != "" && strings.ToLower(variant) != "video" {
+        return nil, common.StringErrorWrapperLocal("variant not supported for Sutui channel", "unsupported_variant", http.StatusNotImplemented)
+    }
+
+    job, errWith := p.retrieveSutuiVideo(videoID)
+    if errWith != nil { return nil, errWith }
+    if job == nil || job.Result == nil || strings.TrimSpace(job.Result.VideoURL) == "" {
+        return nil, common.StringErrorWrapperLocal("video url not ready", "video_not_ready", http.StatusBadRequest)
+    }
+
+    // 直接下载外链
+    originalOpenAIFlag := p.Requester.IsOpenAI
+    p.Requester.IsOpenAI = false
+    defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+
+    req, err := p.Requester.NewRequest(http.MethodGet, job.Result.VideoURL, p.Requester.WithHeader(map[string]string{}))
+    if err != nil {
+        return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+    }
+    resp, errWithCode := p.Requester.SendRequest(req, nil, true)
+    if errWithCode != nil { return nil, errWithCode }
+    return resp, nil
 }
 
 func normalizeSoraSize(size string) soraSizeInfo {

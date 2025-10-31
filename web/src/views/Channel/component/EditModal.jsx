@@ -63,7 +63,7 @@ const getValidationSchema = (t) =>
     models: Yup.array().min(1, t('channel_edit.requiredModels')),
     groups: Yup.array().min(1, t('channel_edit.requiredGroup')),
     base_url: Yup.string().when(['type', 'openai_upstream'], {
-      is: (type, upstream) => [3, 8].includes(type) || (type === 1 && upstream === 'mountsea'),
+      is: (type, upstream) => [3, 8].includes(type) || (type === 1 && (upstream === 'mountsea' || upstream === 'sutui')),
       then: Yup.string().required(t('channel_edit.requiredBaseUrl')), // base_url 必填：Azure/自定义/或 OpenAI+MountSea 上游
       otherwise: Yup.string()
     }),
@@ -85,7 +85,8 @@ const OPENAI_UPSTREAM_OPTIONS = [
   { value: '', label: '默认（官方）' },
   { value: 'official', label: '官方（OpenAI）' },
   { value: 'openrouter', label: 'OpenRouter（聚合）' },
-  { value: 'mountsea', label: 'MountSea' }
+  { value: 'mountsea', label: 'MountSea' },
+  { value: 'sutui', label: '速推 Sutui' }
 ];
 
 // Gemini 上游供应商选项（官方原生 / 官方 OpenAI 兼容 / 第三方 OpenAI 兼容）
@@ -633,6 +634,9 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                         } else if (next === 'mountsea') {
                           // MountSea 需使用其 API 域名，默认给出可识别占位，建议按实际端点覆盖
                           setFieldValue('base_url', 'https://api.mountsea.ai');
+                        } else if (next === 'sutui') {
+                          // Sutui 速推：请替换为你的实际端点
+                          setFieldValue('base_url', 'https://api.sutui.ai');
                         } else if (next === 'official' || next === '') {
                           setFieldValue('base_url', 'https://api.openai.com');
                         }
@@ -647,6 +651,14 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                           setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
                         } catch (_) {
                           // 不打断提交流程，交由用户自行修正 JSON
+                        }
+
+                        // Sora 视频上游：当选择 Sutui 时，显式写入插件字段以便后端识别；其他选项则清空
+                        if (next === 'sutui') {
+                          setFieldValue('plugin.sora.vendor', 'sutui');
+                        } else {
+                          // 清理避免误判
+                          setFieldValue('plugin.sora.vendor', '');
                         }
                       }}
                     >

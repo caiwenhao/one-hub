@@ -1,4 +1,18 @@
 {
+  "1": {
+    "sora": {
+      "name": "OpenAI 视频上游",
+      "description": "Sora 视频上游供应商选择（official/mountsea/sutui）。优先用于视频能力 /v1/videos。",
+      "params": {
+        "vendor": {
+          "name": "视频上游供应商",
+          "description": "可填 official/mountsea/sutui；当选择 sutui 时，后端按 Sutui 适配器转发。",
+          "type": "string",
+          "required": false
+        }
+      }
+    }
+  },
   "16": {
     "retrieval": {
       "name": "知识库",
