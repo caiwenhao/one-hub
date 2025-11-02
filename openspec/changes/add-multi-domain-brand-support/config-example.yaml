@@ -1,0 +1,66 @@
+# 多品牌配置示例
+
+# 品牌配置
+brands:
+  # Kapon AI 品牌
+  - name: kapon
+    # 关联的域名列表
+    domains:
+      - models.kapon.cloud
+      - localhost:3000
+    # 品牌显示信息
+    system_name: "Kapon AI"
+    description: "Kapon AI 为中小企业提供高性价比的 AI API 服务"
+    keywords: "AI API,大模型API,Kapon AI"
+    author: "Kapon AI"
+    # 品牌资源路径
+    logo: "/brands/kapon/logo.png"
+    favicon: "/brands/kapon/favicon.ico"
+    # 前端配置
+    frontend_type: embedded  # embedded: 统一部署, external: 独立部署
+    frontend_path: "/brands/kapon/"  # 前端资源路径（embedded 模式）
+    # frontend_url: "https://models.kapon.cloud"  # 前端 URL（external 模式，可选）
+
+  # Grouplay AI 品牌
+  - name: grouplay
+    domains:
+      - model.grouplay.cn
+      - localhost:3001
+    system_name: "Grouplay AI"
+    description: "Grouplay AI 提供企业级 AI 解决方案"
+    keywords: "AI,企业AI,Grouplay"
+    author: "Grouplay AI"
+    logo: "/brands/grouplay/logo.png"
+    favicon: "/brands/grouplay/favicon.ico"
+    frontend_type: embedded
+    frontend_path: "/brands/grouplay/"
+
+# 管理后台配置
+admin:
+  # 管理后台路径（所有品牌共享）
+  path: "/panel"
+  # 管理后台前端资源路径
+  frontend_path: "/admin/"
+
+# CORS 配置（如果使用 external 前端部署）
+cors:
+  enabled: true
+  allowed_origins:
+    - "https://models.kapon.cloud"
+    - "https://model.grouplay.cn"
+    - "http://localhost:3000"
+    - "http://localhost:3001"
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+  allowed_headers:
+    - "*"
+  allow_credentials: true
+
+# 向后兼容：如果不配置 brands，系统将使用以下全局配置
+# SystemName: "One API"
+# Logo: "/logo.png"
+# Favicon: "/favicon.ico"

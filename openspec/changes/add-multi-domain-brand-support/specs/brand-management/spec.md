@@ -2,58 +2,84 @@
 
 ## ADDED Requirements
 
-### Requirement 1: 品牌配置管理
+### Requirement 1: 品牌数据库存储
 
-系统 SHALL 支持配置多个品牌及其关联的域名和品牌标识信息。
+系统 SHALL 使用数据库存储品牌配置信息，支持动态管理。
 
-#### Scenario: 配置多个品牌
-- **GIVEN** 管理员在配置文件中定义了多个品牌
-- **AND** 每个品牌包含唯一的名称、关联域名列表、系统名称、Logo 路径等信息
+#### Scenario: 从数据库加载品牌配置
+- **GIVEN** 数据库中存储了多个品牌配置
 - **WHEN** 系统启动时
-- **THEN** 系统 SHALL 成功加载所有品牌配置到内存
+- **THEN** 系统 SHALL 从数据库读取所有启用的品牌
+- **AND** 系统 SHALL 加载品牌配置到内存缓存
 - **AND** 系统 SHALL 构建域名到品牌的映射关系
 - **AND** 系统 SHALL 记录品牌配置加载成功的日志
 
-#### Scenario: 处理配置错误
-- **GIVEN** 配置文件中的品牌配置格式不正确
+#### Scenario: 数据库中无品牌配置
+- **GIVEN** 数据库中没有任何品牌配置
 - **WHEN** 系统启动时
-- **THEN** 系统 SHALL 记录错误日志
-- **AND** 系统 SHALL 回退到单品牌模式（使用全局配置）
-- **AND** 系统 SHALL 继续正常运行
+- **THEN** 系统 SHALL 使用单品牌模式
+- **AND** 系统 SHALL 使用全局配置（SystemName, Logo）
+- **AND** 系统 SHALL 正常运行
 
-#### Scenario: 处理域名冲突
-- **GIVEN** 两个品牌配置了相同的域名
-- **WHEN** 系统启动时
-- **THEN** 系统 SHALL 记录警告日志
-- **AND** 系统 SHALL 使用第一个匹配的品牌
-- **AND** 系统 SHALL 继续正常运行
+#### Scenario: 刷新品牌配置缓存
+- **GIVEN** 管理员在管理后台更新了品牌配置
+- **WHEN** 调用刷新缓存 API
+- **THEN** 系统 SHALL 重新从数据库加载品牌配置
+- **AND** 系统 SHALL 更新内存缓存
+- **AND** 系统 SHALL 重新构建域名映射
+- **AND** 新的配置 SHALL 立即生效
 
-### Requirement 1.1: 品牌数据模型
+### Requirement 1.1: 品牌数据库表结构
 
-系统 SHALL 定义品牌数据模型，包含品牌的所有必要信息。
+系统 SHALL 定义品牌数据库表，存储品牌的所有配置信息。
 
-#### Scenario: 品牌模型包含完整信息
-- **GIVEN** 品牌数据模型已定义
-- **WHEN** 创建品牌实例时
-- **THEN** 品牌实例 SHALL 包含以下字段：
-  - name（品牌唯一标识）
-  - domains（关联域名列表）
+#### Scenario: 品牌表包含完整字段
+- **GIVEN** 品牌数据库表已创建
+- **WHEN** 查询表结构
+- **THEN** 表 SHALL 包含以下字段：
+  - id（主键，自增）
+  - name（品牌唯一标识，唯一索引）
+  - domains（关联域名列表，JSON 格式）
   - system_name（系统显示名称）
   - logo（Logo 文件路径）
   - favicon（Favicon 文件路径）
   - description（品牌描述）
   - keywords（SEO 关键词）
   - author（作者信息）
+  - frontend_type（前端类型：embedded 或 external）
+  - frontend_path（前端资源路径）
+  - frontend_url（前端 URL）
+  - is_default（是否为默认品牌）
+  - enabled（是否启用）
+  - created_at（创建时间）
+  - updated_at（更新时间）
 
-### Requirement 1.2: 品牌管理器
+#### Scenario: 品牌名称唯一性约束
+- **GIVEN** 数据库中已存在名为 "kapon" 的品牌
+- **WHEN** 尝试创建另一个名为 "kapon" 的品牌
+- **THEN** 系统 SHALL 返回错误
+- **AND** 错误信息 SHALL 提示品牌名称已存在
 
-系统 SHALL 提供品牌管理器，负责品牌配置的加载、存储和查询。
+### Requirement 1.2: 品牌数据模型
+
+系统 SHALL 定义品牌数据模型，用于内存缓存和业务逻辑。
+
+#### Scenario: 品牌模型包含完整信息
+- **GIVEN** 品牌数据模型已定义
+- **WHEN** 从数据库加载品牌时
+- **THEN** 品牌实例 SHALL 包含所有数据库字段
+- **AND** domains 字段 SHALL 从 JSON 解析为字符串数组
+- **AND** 品牌实例 SHALL 提供便捷的访问方法
+
+### Requirement 1.3: 品牌管理器
+
+系统 SHALL 提供品牌管理器，负责品牌配置的缓存、查询和刷新。
 
 #### Scenario: 根据域名查询品牌
-- **GIVEN** 品牌管理器已加载多个品牌配置
+- **GIVEN** 品牌管理器已从数据库加载多个品牌配置
 - **AND** 域名 "models.kapon.cloud" 关联到 "kapon" 品牌
 - **WHEN** 调用 GetBrandByDomain("models.kapon.cloud")
-- **THEN** 系统 SHALL 返回 "kapon" 品牌对象
+- **THEN** 系统 SHALL 从内存缓存返回 "kapon" 品牌对象
 - **AND** 品牌对象 SHALL 包含完整的品牌信息
 
 #### Scenario: 查询未知域名
@@ -61,7 +87,7 @@
 - **AND** 域名 "unknown.example.com" 未关联到任何品牌
 - **WHEN** 调用 GetBrandByDomain("unknown.example.com")
 - **THEN** 系统 SHALL 返回默认品牌对象
-- **AND** 默认品牌 SHALL 是配置的第一个品牌或全局配置
+- **AND** 默认品牌 SHALL 是标记为 is_default 的品牌或全局配置
 
 #### Scenario: 支持带端口的域名匹配
 - **GIVEN** 品牌管理器已加载品牌配置
@@ -69,26 +95,12 @@
 - **WHEN** 调用 GetBrandByDomain("localhost:3000")
 - **THEN** 系统 SHALL 返回 "kapon" 品牌对象
 
-### Requirement 1.3: 配置文件支持
-
-系统 SHALL 支持通过 YAML 配置文件定义品牌配置。
-
-#### Scenario: 从配置文件加载品牌
-- **GIVEN** config.yaml 文件包含 brands 配置段
-- **AND** brands 配置段定义了两个品牌（kapon 和 grouplay）
-- **WHEN** 系统启动并加载配置
-- **THEN** 系统 SHALL 成功解析 brands 配置
-- **AND** 系统 SHALL 创建两个品牌实例
-- **AND** 系统 SHALL 将品牌实例加载到品牌管理器
-
-#### Scenario: 配置文件不包含品牌配置
-- **GIVEN** config.yaml 文件不包含 brands 配置段
-- **WHEN** 系统启动并加载配置
-- **THEN** 系统 SHALL 使用单品牌模式
-- **AND** 系统 SHALL 使用全局配置（SystemName, Logo 等）
-- **AND** 系统 SHALL 正常运行
-
-## ADDED Requirements
+#### Scenario: 刷新品牌缓存
+- **GIVEN** 品牌管理器已加载品牌配置到内存
+- **WHEN** 调用 RefreshBrands() 方法
+- **THEN** 系统 SHALL 重新从数据库加载所有启用的品牌
+- **AND** 系统 SHALL 更新内存缓存
+- **AND** 系统 SHALL 重新构建域名映射关系
 
 ### Requirement 2: 品牌识别与注入
 
@@ -160,8 +172,6 @@
 - **THEN** 处理器 SHALL 使用全局配置
 - **AND** 响应 SHALL 包含 system_name 和 logo 字段
 - **AND** 响应 SHALL 不包含 brand_name 等新字段
-
-## ADDED Requirements
 
 ### Requirement 3: 前端品牌资源管理
 
@@ -236,8 +246,6 @@
 - **THEN** 前端 SHALL 更新 meta description 标签
 - **AND** 前端 SHALL 更新 meta keywords 标签
 
-## ADDED Requirements
-
 ### Requirement 4: 向后兼容性
 
 系统 SHALL 保持向后兼容，未配置多品牌时使用原有单品牌逻辑。
@@ -288,3 +296,419 @@
 - **AND** 系统 SHALL 回退到单品牌模式
 - **AND** 系统 SHALL 继续正常运行
 - **AND** 管理员 SHALL 能够通过日志发现配置错误
+
+### Requirement 5: 多前端支持
+
+系统 SHALL 支持为不同品牌配置独立的前端项目，允许完全不同的 UI 设计和用户体验。
+
+#### Scenario: 配置独立前端项目
+- **GIVEN** 管理员在配置文件中为 kapon 品牌配置了独立前端
+- **AND** 配置指定 frontend_type 为 "embedded"
+- **AND** 配置指定 frontend_path 为 "/brands/kapon/"
+- **WHEN** 系统启动并加载配置
+- **THEN** 系统 SHALL 成功解析前端配置
+- **AND** 系统 SHALL 将前端路径关联到品牌
+
+#### Scenario: 支持外部部署的前端
+- **GIVEN** 管理员在配置文件中为 grouplay 品牌配置了外部前端
+- **AND** 配置指定 frontend_type 为 "external"
+- **AND** 配置指定 frontend_url 为 "https://model.grouplay.cn"
+- **WHEN** 系统启动并加载配置
+- **THEN** 系统 SHALL 成功解析前端配置
+- **AND** 系统 SHALL 记录外部前端 URL
+
+### Requirement 5.1: 基于域名的前端资源路由
+
+系统 SHALL 根据请求域名自动路由到对应品牌的前端资源。
+
+#### Scenario: 路由到品牌前端资源
+- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问根路径 "/"
+- **AND** kapon 品牌配置了 frontend_path 为 "/brands/kapon/"
+- **WHEN** 请求到达服务器
+- **THEN** 系统 SHALL 识别品牌为 kapon
+- **AND** 系统 SHALL 返回 /brands/kapon/index.html 文件
+- **AND** 响应 SHALL 包含正确的 Content-Type 头
+
+#### Scenario: 路由到品牌静态资源
+- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问 "/assets/main.js"
+- **AND** kapon 品牌配置了 frontend_path 为 "/brands/kapon/"
+- **WHEN** 请求到达服务器
+- **THEN** 系统 SHALL 识别品牌为 kapon
+- **AND** 系统 SHALL 返回 /brands/kapon/assets/main.js 文件
+- **AND** 响应 SHALL 包含正确的 Content-Type 头
+
+#### Scenario: 处理前端资源不存在
+- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问 "/nonexistent.js"
+- **AND** 文件 /brands/kapon/nonexistent.js 不存在
+- **WHEN** 请求到达服务器
+- **THEN** 系统 SHALL 返回 404 错误
+- **AND** 响应 SHALL 包含友好的错误信息
+
+#### Scenario: SPA 路由支持
+- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问 "/dashboard/settings"
+- **AND** kapon 品牌使用 SPA 架构
+- **AND** 路径不对应实际文件
+- **WHEN** 请求到达服务器
+- **THEN** 系统 SHALL 返回 /brands/kapon/index.html 文件
+- **AND** 前端路由 SHALL 处理 /dashboard/settings 路径
+
+### Requirement 5.2: 管理后台路由
+
+系统 SHALL 支持通过各品牌域名的 /panel 路径访问统一的管理后台。
+
+#### Scenario: 通过品牌域名访问管理后台
+- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问 "/panel"
+- **WHEN** 请求到达服务器
+- **THEN** 系统 SHALL 识别品牌为 kapon
+- **AND** 系统 SHALL 返回管理后台的 index.html 文件
+- **AND** 管理后台 SHALL 显示 kapon 品牌的 logo 和标识
+
+#### Scenario: 管理后台显示品牌标识
+- **GIVEN** 管理员通过 "models.kapon.cloud/panel" 登录管理后台
+- **AND** 请求上下文包含 kapon 品牌信息
+- **WHEN** 管理后台加载
+- **THEN** 管理后台 SHALL 从 /api/status 获取品牌信息
+- **AND** 管理后台 SHALL 显示 kapon 品牌的 logo
+- **AND** 管理后台 SHALL 显示 kapon 品牌的系统名称
+- **AND** 管理后台的其他 UI 元素 SHALL 保持一致
+
+#### Scenario: 不同品牌管理员看到相同数据
+- **GIVEN** 管理员 A 通过 "models.kapon.cloud/panel" 登录
+- **AND** 管理员 B 通过 "model.grouplay.cn/panel" 登录
+- **WHEN** 两个管理员查看用户列表
+- **THEN** 两个管理员 SHALL 看到相同的用户数据
+- **AND** 数据 SHALL 不按品牌隔离
+
+### Requirement 5.3: API 路径保持一致
+
+系统 SHALL 确保所有品牌的前端调用相同的 API 路径，不需要在请求中额外标识品牌。
+
+#### Scenario: 前端调用 API 不需要品牌标识
+- **GIVEN** kapon 前端通过域名 "models.kapon.cloud" 运行
+- **WHEN** 前端调用 "/api/user/info"
+- **THEN** 请求 SHALL 自动包含 Host 头 "models.kapon.cloud"
+- **AND** 后端品牌识别中间件 SHALL 自动识别品牌为 kapon
+- **AND** 前端代码 SHALL 不需要在请求中添加品牌参数
+
+#### Scenario: 不同品牌前端调用相同 API
+- **GIVEN** kapon 前端调用 "/api/models/list"
+- **AND** grouplay 前端调用 "/api/models/list"
+- **WHEN** 两个请求到达服务器
+- **THEN** 两个请求 SHALL 返回相同的模型列表数据
+- **AND** API 逻辑 SHALL 不区分品牌
+- **AND** 数据 SHALL 在所有品牌间共享
+
+### Requirement 5.4: 前端项目独立性
+
+系统 SHALL 支持每个品牌使用完全独立的前端项目，包括不同的技术栈、UI 框架和设计。
+
+#### Scenario: 不同品牌使用不同技术栈
+- **GIVEN** kapon 品牌使用 React + Material-UI
+- **AND** grouplay 品牌使用 Vue + Element Plus
+- **WHEN** 两个前端项目独立构建
+- **THEN** 两个项目 SHALL 能够独立开发和部署
+- **AND** 两个项目 SHALL 不共享任何前端代码
+- **AND** 两个项目 SHALL 都能正常调用后端 API
+
+#### Scenario: 前端项目目录结构
+- **GIVEN** 系统需要组织多个独立前端项目
+- **WHEN** 创建项目目录结构
+- **THEN** 目录结构 SHALL 如下：
+  ```
+  web/
+  ├── kapon-portal/          # Kapon 独立前端项目
+  │   ├── package.json
+  │   ├── src/
+  │   └── dist/ -> ../public/brands/kapon/
+  ├── grouplay-portal/       # Grouplay 独立前端项目
+  │   ├── package.json
+  │   ├── src/
+  │   └── dist/ -> ../public/brands/grouplay/
+  ├── admin/                 # 管理后台（共享）
+  │   ├── package.json
+  │   └── src/
+  └── public/
+      └── brands/
+          ├── kapon/         # Kapon 前端构建产物
+          └── grouplay/      # Grouplay 前端构建产物
+  ```
+
+#### Scenario: 前端独立构建和部署
+- **GIVEN** kapon 前端项目位于 web/kapon-portal/
+- **WHEN** 执行构建命令 "npm run build"
+- **THEN** 构建产物 SHALL 输出到 web/public/brands/kapon/
+- **AND** 构建产物 SHALL 包含 index.html、assets/ 等文件
+- **AND** 构建过程 SHALL 不影响其他品牌的前端项目
+
+### Requirement 5.5: 外部前端部署支持（可选）
+
+系统 SHALL 支持品牌前端独立部署到外部服务器，后端仅提供 API 服务。
+
+#### Scenario: 配置外部前端 URL
+- **GIVEN** grouplay 品牌的前端独立部署到 "https://model.grouplay.cn"
+- **AND** 配置文件中指定 frontend_type 为 "external"
+- **WHEN** 用户访问后端域名
+- **THEN** 系统 SHALL 不提供前端资源
+- **AND** 系统 SHALL 仅提供 API 服务
+- **AND** 前端 SHALL 通过 CORS 调用后端 API
+
+#### Scenario: CORS 配置支持外部前端
+- **GIVEN** grouplay 前端部署在 "https://model.grouplay.cn"
+- **AND** 后端配置了 CORS 允许该域名
+- **WHEN** 前端调用后端 API
+- **THEN** 后端 SHALL 返回正确的 CORS 头
+- **AND** 浏览器 SHALL 允许跨域请求
+- **AND** API 调用 SHALL 正常工作
+
+### Requirement 5.6: 前端构建工具集成
+
+系统 SHALL 提供构建脚本，简化多前端项目的构建和部署流程。
+
+#### Scenario: 一键构建所有前端
+- **GIVEN** 系统有多个前端项目（kapon-portal、grouplay-portal、admin）
+- **WHEN** 执行 "npm run build:all" 命令
+- **THEN** 系统 SHALL 依次构建所有前端项目
+- **AND** 每个项目的构建产物 SHALL 输出到对应目录
+- **AND** 构建完成后 SHALL 显示成功信息
+
+#### Scenario: 单独构建特定品牌前端
+- **GIVEN** 开发者只修改了 kapon 前端代码
+- **WHEN** 执行 "npm run build:kapon" 命令
+- **THEN** 系统 SHALL 只构建 kapon-portal 项目
+- **AND** 其他前端项目 SHALL 不受影响
+- **AND** 构建速度 SHALL 更快
+
+### Requirement 6: 品牌管理 API
+
+系统 SHALL 提供 RESTful API 用于品牌的增删改查操作。
+
+#### Scenario: 获取品牌列表
+- **GIVEN** 数据库中存储了多个品牌
+- **WHEN** 管理员调用 GET /api/brands
+- **THEN** 系统 SHALL 返回所有品牌列表
+- **AND** 每个品牌 SHALL 包含完整信息
+- **AND** 响应 SHALL 按创建时间倒序排列
+
+#### Scenario: 获取单个品牌详情
+- **GIVEN** 数据库中存在 ID 为 1 的品牌
+- **WHEN** 管理员调用 GET /api/brands/1
+- **THEN** 系统 SHALL 返回该品牌的完整信息
+- **AND** 响应 SHALL 包含所有字段
+
+#### Scenario: 创建新品牌
+- **GIVEN** 管理员提供了完整的品牌信息
+- **AND** 品牌名称 "newbrand" 不存在
+- **WHEN** 管理员调用 POST /api/brands
+- **THEN** 系统 SHALL 验证必填字段（name, domains, system_name）
+- **AND** 系统 SHALL 验证品牌名称唯一性
+- **AND** 系统 SHALL 验证域名格式
+- **AND** 系统 SHALL 将品牌信息保存到数据库
+- **AND** 系统 SHALL 自动刷新品牌缓存
+- **AND** 系统 SHALL 返回创建成功的品牌信息
+
+#### Scenario: 创建品牌时名称冲突
+- **GIVEN** 数据库中已存在名为 "kapon" 的品牌
+- **WHEN** 管理员尝试创建另一个名为 "kapon" 的品牌
+- **THEN** 系统 SHALL 返回 400 错误
+- **AND** 错误信息 SHALL 提示品牌名称已存在
+
+#### Scenario: 更新品牌信息
+- **GIVEN** 数据库中存在 ID 为 1 的品牌
+- **WHEN** 管理员调用 PUT /api/brands/1 更新信息
+- **THEN** 系统 SHALL 验证更新的字段
+- **AND** 系统 SHALL 更新数据库记录
+- **AND** 系统 SHALL 自动刷新品牌缓存
+- **AND** 系统 SHALL 返回更新后的品牌信息
+
+#### Scenario: 删除品牌
+- **GIVEN** 数据库中存在 ID 为 1 的品牌
+- **AND** 该品牌不是默认品牌
+- **WHEN** 管理员调用 DELETE /api/brands/1
+- **THEN** 系统 SHALL 从数据库删除该品牌
+- **AND** 系统 SHALL 自动刷新品牌缓存
+- **AND** 系统 SHALL 返回删除成功信息
+
+#### Scenario: 禁止删除默认品牌
+- **GIVEN** 数据库中存在 ID 为 1 的品牌
+- **AND** 该品牌是默认品牌（is_default = true）
+- **WHEN** 管理员尝试调用 DELETE /api/brands/1
+- **THEN** 系统 SHALL 返回 400 错误
+- **AND** 错误信息 SHALL 提示不能删除默认品牌
+
+#### Scenario: 启用/禁用品牌
+- **GIVEN** 数据库中存在 ID 为 1 的品牌
+- **WHEN** 管理员调用 PATCH /api/brands/1/toggle
+- **THEN** 系统 SHALL 切换品牌的 enabled 状态
+- **AND** 系统 SHALL 自动刷新品牌缓存
+- **AND** 系统 SHALL 返回更新后的状态
+
+#### Scenario: 设置默认品牌
+- **GIVEN** 数据库中存在 ID 为 2 的品牌
+- **WHEN** 管理员调用 PATCH /api/brands/2/set-default
+- **THEN** 系统 SHALL 将所有品牌的 is_default 设置为 false
+- **AND** 系统 SHALL 将 ID 为 2 的品牌的 is_default 设置为 true
+- **AND** 系统 SHALL 自动刷新品牌缓存
+- **AND** 系统 SHALL 返回成功信息
+
+#### Scenario: 刷新品牌缓存 API
+- **GIVEN** 管理员更新了品牌配置
+- **WHEN** 管理员调用 POST /api/brands/refresh
+- **THEN** 系统 SHALL 重新从数据库加载所有品牌
+- **AND** 系统 SHALL 更新内存缓存
+- **AND** 系统 SHALL 返回刷新成功信息
+
+### Requirement 7: 品牌管理界面
+
+系统 SHALL 在管理后台提供品牌管理界面，支持可视化操作。
+
+#### Scenario: 品牌列表页面
+- **GIVEN** 管理员登录管理后台
+- **WHEN** 管理员访问品牌管理页面
+- **THEN** 页面 SHALL 显示所有品牌列表
+- **AND** 每个品牌 SHALL 显示：名称、系统名称、域名数量、状态、操作按钮
+- **AND** 页面 SHALL 提供"添加品牌"按钮
+- **AND** 页面 SHALL 提供搜索和筛选功能
+
+#### Scenario: 添加品牌表单
+- **GIVEN** 管理员点击"添加品牌"按钮
+- **WHEN** 表单页面加载
+- **THEN** 表单 SHALL 包含以下字段：
+  - 品牌标识（name，必填，唯一）
+  - 系统名称（system_name，必填）
+  - 关联域名（domains，必填，支持多个）
+  - Logo 路径（logo，必填）
+  - Favicon 路径（favicon，必填）
+  - 描述（description）
+  - 关键词（keywords）
+  - 作者（author）
+  - 前端类型（frontend_type，下拉选择：embedded/external）
+  - 前端资源路径（frontend_path，embedded 时必填）
+  - 前端 URL（frontend_url，external 时必填）
+  - 是否默认品牌（is_default，复选框）
+  - 是否启用（enabled，复选框，默认选中）
+- **AND** 表单 SHALL 提供实时验证
+- **AND** 表单 SHALL 提供"保存"和"取消"按钮
+
+#### Scenario: 域名输入支持多个值
+- **GIVEN** 管理员在添加品牌表单中
+- **WHEN** 管理员输入域名字段
+- **THEN** 字段 SHALL 支持输入多个域名
+- **AND** 每个域名 SHALL 可以单独删除
+- **AND** 字段 SHALL 提供"添加域名"按钮
+- **AND** 字段 SHALL 验证域名格式
+
+#### Scenario: 前端类型切换
+- **GIVEN** 管理员在添加品牌表单中
+- **WHEN** 管理员选择前端类型为 "embedded"
+- **THEN** 表单 SHALL 显示"前端资源路径"字段
+- **AND** 表单 SHALL 隐藏"前端 URL"字段
+- **WHEN** 管理员选择前端类型为 "external"
+- **THEN** 表单 SHALL 显示"前端 URL"字段
+- **AND** 表单 SHALL 隐藏"前端资源路径"字段
+
+#### Scenario: 提交品牌表单
+- **GIVEN** 管理员填写完整的品牌信息
+- **WHEN** 管理员点击"保存"按钮
+- **THEN** 系统 SHALL 验证所有必填字段
+- **AND** 系统 SHALL 调用 POST /api/brands API
+- **AND** 成功后 SHALL 显示成功提示
+- **AND** 成功后 SHALL 跳转到品牌列表页面
+- **AND** 失败时 SHALL 显示错误信息
+
+#### Scenario: 编辑品牌
+- **GIVEN** 管理员在品牌列表页面
+- **WHEN** 管理员点击某个品牌的"编辑"按钮
+- **THEN** 系统 SHALL 打开编辑表单
+- **AND** 表单 SHALL 预填充该品牌的现有信息
+- **AND** 管理员 SHALL 能够修改任何字段
+- **AND** 保存时 SHALL 调用 PUT /api/brands/{id} API
+
+#### Scenario: 删除品牌确认
+- **GIVEN** 管理员在品牌列表页面
+- **WHEN** 管理员点击某个品牌的"删除"按钮
+- **THEN** 系统 SHALL 显示确认对话框
+- **AND** 对话框 SHALL 提示删除操作不可恢复
+- **WHEN** 管理员确认删除
+- **THEN** 系统 SHALL 调用 DELETE /api/brands/{id} API
+- **AND** 成功后 SHALL 刷新品牌列表
+- **AND** 成功后 SHALL 显示删除成功提示
+
+#### Scenario: 快速启用/禁用品牌
+- **GIVEN** 管理员在品牌列表页面
+- **WHEN** 管理员点击某个品牌的启用/禁用开关
+- **THEN** 系统 SHALL 调用 PATCH /api/brands/{id}/toggle API
+- **AND** 成功后 SHALL 更新列表中的状态显示
+- **AND** 成功后 SHALL 显示操作成功提示
+
+#### Scenario: 设置默认品牌
+- **GIVEN** 管理员在品牌列表页面
+- **WHEN** 管理员点击某个品牌的"设为默认"按钮
+- **THEN** 系统 SHALL 调用 PATCH /api/brands/{id}/set-default API
+- **AND** 成功后 SHALL 更新列表中的默认品牌标识
+- **AND** 成功后 SHALL 显示操作成功提示
+
+#### Scenario: 品牌资源路径提示
+- **GIVEN** 管理员在添加/编辑品牌表单中
+- **WHEN** 管理员查看 Logo 路径字段
+- **THEN** 字段 SHALL 显示提示信息："请将 logo.png 文件放置到 /brands/{brand_name}/ 目录"
+- **AND** 字段 SHALL 显示示例："/brands/kapon/logo.png"
+- **WHEN** 管理员查看 Favicon 路径字段
+- **THEN** 字段 SHALL 显示提示信息："请将 favicon.ico 文件放置到 /brands/{brand_name}/ 目录"
+
+#### Scenario: 前端资源路径提示
+- **GIVEN** 管理员在添加/编辑品牌表单中
+- **AND** 前端类型选择为 "embedded"
+- **WHEN** 管理员查看前端资源路径字段
+- **THEN** 字段 SHALL 显示提示信息："请将前端构建产物放置到此路径"
+- **AND** 字段 SHALL 显示示例："/brands/kapon/"
+- **AND** 字段 SHALL 显示说明："前端项目构建后，将 dist 目录内容复制到 public/brands/kapon/"
+
+### Requirement 8: 品牌配置验证
+
+系统 SHALL 在保存品牌配置时进行完整性验证。
+
+#### Scenario: 验证必填字段
+- **GIVEN** 管理员提交品牌表单
+- **WHEN** 系统验证表单数据
+- **THEN** 系统 SHALL 验证 name 字段不为空
+- **AND** 系统 SHALL 验证 domains 字段至少包含一个域名
+- **AND** 系统 SHALL 验证 system_name 字段不为空
+- **AND** 失败时 SHALL 返回具体的错误信息
+
+#### Scenario: 验证品牌名称格式
+- **GIVEN** 管理员输入品牌名称
+- **WHEN** 系统验证品牌名称
+- **THEN** 系统 SHALL 验证名称只包含小写字母、数字和连字符
+- **AND** 系统 SHALL 验证名称长度在 2-50 个字符之间
+- **AND** 系统 SHALL 验证名称不以连字符开头或结尾
+- **AND** 失败时 SHALL 返回格式错误提示
+
+#### Scenario: 验证域名格式
+- **GIVEN** 管理员输入域名列表
+- **WHEN** 系统验证域名
+- **THEN** 系统 SHALL 验证每个域名的格式正确
+- **AND** 系统 SHALL 支持带端口的域名（如 localhost:3000）
+- **AND** 系统 SHALL 验证域名不重复
+- **AND** 失败时 SHALL 返回具体的域名错误信息
+
+#### Scenario: 验证域名唯一性（跨品牌）
+- **GIVEN** 数据库中品牌 A 已使用域名 "models.kapon.cloud"
+- **WHEN** 管理员尝试为品牌 B 添加相同域名
+- **THEN** 系统 SHALL 返回错误
+- **AND** 错误信息 SHALL 提示该域名已被品牌 A 使用
+
+#### Scenario: 验证前端配置完整性
+- **GIVEN** 管理员选择前端类型为 "embedded"
+- **WHEN** 系统验证表单数据
+- **THEN** 系统 SHALL 验证 frontend_path 字段不为空
+- **GIVEN** 管理员选择前端类型为 "external"
+- **WHEN** 系统验证表单数据
+- **THEN** 系统 SHALL 验证 frontend_url 字段不为空
+- **AND** 系统 SHALL 验证 frontend_url 格式为有效 URL
+
+#### Scenario: 验证默认品牌唯一性
+- **GIVEN** 数据库中已存在一个默认品牌
+- **WHEN** 管理员尝试将另一个品牌设置为默认
+- **THEN** 系统 SHALL 自动将原默认品牌的 is_default 设置为 false
+- **AND** 系统 SHALL 将新品牌的 is_default 设置为 true
+- **AND** 系统 SHALL 确保始终只有一个默认品牌

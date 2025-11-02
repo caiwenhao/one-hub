@@ -6,13 +6,17 @@
 
 1. **多品牌运营需求**：需要在同一套系统上运营多个品牌（如 Kapon AI 和 Grouplay AI）
 2. **域名隔离需求**：不同品牌使用不同域名访问（models.kapon.cloud 和 model.grouplay.cn）
-3. **品牌差异化需求**：不同域名访问时需要显示对应品牌的 Logo、系统名称、描述等信息
+3. **品牌差异化需求**：
+   - **前端门户**：不同品牌需要完全不同的 UI 设计、布局、文案和用户体验
+   - **管理后台**：只需品牌 logo 和标识差异化，其他 UI 保持一致
 4. **SEO 优化需求**：每个域名需要独立的 meta 信息（title、description、keywords）
+5. **独立前端需求**：支持每个品牌使用独立的前端项目，甚至不同的技术栈
 
 当前实现的局限性：
 - 系统名称、Logo 等配置是全局单一的，存储在 `options` 表中
-- 前端 Logo 组件硬编码使用 `/logo.png`
-- HTML meta 信息是静态的，无法根据域名动态调整
+- 前端是单一项目，无法支持完全不同的 UI 设计
+- 缺少基于域名的前端资源路由机制
+- 管理后台无法根据品牌动态显示标识
 - 缺少域名到品牌的映射机制
 
 ## What Changes
@@ -20,40 +24,65 @@
 ### 核心变更
 
 1. **后端品牌配置系统**
-   - 新增品牌配置数据模型（支持多品牌配置）
+   - 新增品牌数据库表（存储品牌配置）
+   - 新增品牌数据模型和管理器（内存缓存 + 数据库持久化）
    - 新增域名识别中间件（根据 Host 识别品牌）
    - 修改 `/api/status` 接口返回品牌相关配置
-   - 支持通过配置文件或数据库管理品牌
+   - 提供品牌管理 RESTful API（增删改查）
+   - 支持配置前端类型（embedded 或 external）
+   - 支持动态刷新品牌缓存
 
-2. **前端品牌资源管理**
-   - 重组静态资源目录结构（按品牌组织）
-   - 修改 Logo 组件支持动态加载品牌 Logo
-   - 修改 HTML 模板支持动态 meta 信息
-   - 前端根据后端返回的品牌配置渲染对应资源
+2. **多前端架构支持**
+   - 支持每个品牌使用独立的前端项目（完全不同的 UI）
+   - 基于域名的前端资源路由（自动识别并返回对应品牌的前端）
+   - 支持前端统一部署或独立部署两种模式
+   - 管理后台通过 `/panel` 路径访问，只需品牌标识差异化
 
-3. **配置文件扩展**
-   - 在 `config.yaml` 中新增 `brands` 配置段
-   - 支持配置多个品牌及其域名映射关系
-   - 每个品牌可配置独立的系统名称、Logo、Favicon、描述等
+3. **前端项目组织**
+   - 每个品牌一个独立的前端项目目录
+   - 独立的 package.json、构建配置和依赖
+   - 构建产物输出到品牌专属目录
+   - 支持不同品牌使用不同技术栈
+
+4. **品牌管理界面**
+   - 在管理后台新增品牌管理页面
+   - 支持可视化添加、编辑、删除品牌
+   - 支持配置域名、前端路径、品牌标识等
+   - 提供表单验证和实时反馈
+   - 支持启用/禁用品牌、设置默认品牌
+   - 无需修改配置文件，动态生效
 
 ### 具体变更内容
 
-#### 后端变更
-- `model/brand.go`：新增品牌数据模型
-- `middleware/brand.go`：新增品牌识别中间件
-- `controller/misc.go`：修改 `GetStatus` 方法返回品牌配置
-- `common/config/brand.go`：新增品牌配置管理
-- `config.example.yaml`：新增品牌配置示例
+#### 后端变更（新增）
+- `model/brand.go`：品牌数据模型和数据库操作
+- `middleware/brand.go`：品牌识别中间件
+- `controller/brand.go`：品牌管理 API 控制器
+- `router/frontend.go`：前端资源路由处理器
+- 数据库迁移文件：创建 brands 表
 
-#### 前端变更
-- `web/public/brands/`：新增品牌资源目录
-- `web/src/ui-component/Logo.jsx`：修改支持动态品牌 Logo
-- `web/index.html`：修改支持动态 meta 信息（可选）
-- `web/src/config.js`：新增品牌相关配置字段
+#### 后端变更（修改）
+- `controller/misc.go`：修改 GetStatus 返回品牌信息
+- `router/main.go`：注册品牌中间件、品牌 API 和前端路由
 
-#### 配置变更
-- 新增 `brands` 配置段，支持配置多个品牌
-- 每个品牌包含：name、domains、system_name、logo、favicon、description 等字段
+#### 前端变更（新增）
+- `web/kapon-portal/`：Kapon 品牌独立前端项目
+- `web/grouplay-portal/`：Grouplay 品牌独立前端项目
+- `web/public/brands/kapon/`：Kapon 前端构建产物目录
+- `web/public/brands/grouplay/`：Grouplay 前端构建产物目录
+- `web/admin/`：管理后台项目（共享，支持品牌标识动态显示）
+
+#### 前端变更（修改）
+- `web/admin/src/components/Logo.jsx`：管理后台 Logo 组件支持动态品牌 Logo
+- 构建脚本：新增多前端项目构建支持
+
+#### 前端变更（管理后台）
+- `web/admin/src/pages/BrandManagement/`：新增品牌管理页面
+  - `BrandList.jsx`：品牌列表页面
+  - `BrandForm.jsx`：添加/编辑品牌表单
+  - `BrandAPI.js`：品牌 API 调用封装
+- `web/admin/src/components/Logo.jsx`：修改支持动态品牌 logo
+- 路由配置：新增品牌管理路由
 
 ### 向后兼容性
 
@@ -66,52 +95,70 @@
 ### 影响的模块
 
 - **后端模块**：
-  - `model/`：新增品牌模型
-  - `middleware/`：新增品牌识别中间件
+  - `model/brand.go`：新增品牌模型和数据库操作
+  - `middleware/brand.go`：新增品牌识别中间件
+  - `controller/brand.go`：新增品牌管理 API
   - `controller/misc.go`：修改状态接口
-  - `common/config/`：新增品牌配置管理
-  - `router/main.go`：注册品牌中间件
+  - `router/frontend.go`：新增前端资源路由
+  - `router/main.go`：注册中间件和路由
+  - 数据库迁移：新增 brands 表
 
 - **前端模块**：
-  - `web/public/`：重组静态资源
-  - `web/src/ui-component/Logo.jsx`：修改 Logo 组件
-  - `web/src/store/siteInfoReducer.js`：可能需要新增品牌字段
-  - `web/index.html`：可能需要支持动态 meta
+  - `web/kapon-portal/`：新增 Kapon 独立前端项目
+  - `web/grouplay-portal/`：新增 Grouplay 独立前端项目
+  - `web/admin/src/pages/BrandManagement/`：新增品牌管理页面
+  - `web/admin/src/components/Logo.jsx`：修改支持动态品牌
+  - `web/public/brands/`：品牌前端构建产物目录
 
-- **配置文件**：
-  - `config.example.yaml`：新增品牌配置示例
-  - 用户需要更新自己的配置文件
+- **数据库**：
+  - 新增 `brands` 表
+  - 用户需要执行数据库迁移
 
 ### 影响的代码文件
 
 **后端（新增）**：
-- `model/brand.go`
-- `middleware/brand.go`
-- `common/config/brand.go`
+- `model/brand.go`：品牌数据模型和数据库操作
+- `middleware/brand.go`：品牌识别中间件
+- `controller/brand.go`：品牌管理 API 控制器
+- `router/frontend.go`：前端资源路由处理器
+- `migrations/xxx_create_brands_table.sql`：数据库迁移文件
 
 **后端（修改）**：
-- `controller/misc.go`
-- `router/main.go`
-- `config.example.yaml`
+- `controller/misc.go`：修改 GetStatus 返回品牌信息
+- `router/main.go`：注册品牌中间件、品牌 API 和前端路由
 
-**前端（新增）**：
-- `web/public/brands/kapon/logo.png`
-- `web/public/brands/kapon/favicon.ico`
-- `web/public/brands/grouplay/logo.png`
-- `web/public/brands/grouplay/favicon.ico`
+**前端项目（新增）**：
+- `web/kapon-portal/`：Kapon 品牌独立前端项目（完整项目结构）
+- `web/grouplay-portal/`：Grouplay 品牌独立前端项目（完整项目结构）
+- `web/admin/`：管理后台项目（如果之前不存在）
+
+**前端构建产物（新增）**：
+- `web/public/brands/kapon/`：Kapon 前端构建产物
+- `web/public/brands/grouplay/`：Grouplay 前端构建产物
+
+**前端（管理后台新增）**：
+- `web/admin/src/pages/BrandManagement/BrandList.jsx`：品牌列表页面
+- `web/admin/src/pages/BrandManagement/BrandForm.jsx`：品牌表单页面
+- `web/admin/src/api/brandAPI.js`：品牌 API 封装
 
 **前端（修改）**：
-- `web/src/ui-component/Logo.jsx`
-- `web/src/config.js`
-- `web/index.html`（可选）
+- `web/admin/src/components/Logo.jsx`：管理后台 Logo 组件支持动态品牌
+- `web/admin/src/routes/index.js`：新增品牌管理路由
+- `package.json`：新增多前端构建脚本
 
 ### 部署影响
 
-- **配置更新**：需要在配置文件中添加品牌配置
-- **静态资源**：需要准备各品牌的 Logo 和 Favicon
-- **DNS 配置**：需要将多个域名指向同一服务器
-- **Nginx 配置**：需要配置多域名支持（传递 Host 头）
-- **无需数据库迁移**：不涉及数据库结构变更
+- **数据库迁移**：需要执行数据库迁移创建 brands 表
+- **品牌配置**：通过管理后台界面配置品牌，无需修改配置文件
+- **前端构建**：需要分别构建各品牌的前端项目
+- **静态资源**：
+  - 需要准备各品牌的前端构建产物
+  - 需要将品牌资源（logo、favicon）放置到指定目录（/brands/{brand_name}/）
+- **DNS 配置**：需要将多个域名指向同一服务器（或独立部署前端）
+- **Nginx 配置**：
+  - 需要配置多域名支持（传递 Host 头）
+  - 如果前端统一部署，需要配置前端资源路由规则
+  - 如果前端独立部署，需要配置 CORS
 
 ### 性能影响
 
