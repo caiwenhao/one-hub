@@ -4,14 +4,24 @@
 
 ### Requirement 1: 品牌数据库存储
 
-系统 SHALL 使用数据库存储品牌配置信息，支持动态管理。
+系统 SHALL 使用数据库存储品牌配置信息，支持动态管理，并初始化 Kapon AI 作为默认品牌。
+
+#### Scenario: 初始化默认品牌
+- **GIVEN** 数据库迁移执行完成
+- **WHEN** 系统首次启动
+- **THEN** 系统 SHALL 创建 Kapon AI 默认品牌记录
+- **AND** 默认品牌 SHALL 包含 name: "kapon"
+- **AND** 默认品牌 SHALL 包含 domains: ["models.kapon.cloud"]
+- **AND** 默认品牌 SHALL 设置 is_default: true
+- **AND** 默认品牌 SHALL 设置 enabled: true
 
 #### Scenario: 从数据库加载品牌配置
-- **GIVEN** 数据库中存储了多个品牌配置
+- **GIVEN** 数据库中存储了多个品牌配置（包括默认品牌）
 - **WHEN** 系统启动时
 - **THEN** 系统 SHALL 从数据库读取所有启用的品牌
 - **AND** 系统 SHALL 加载品牌配置到内存缓存
 - **AND** 系统 SHALL 构建域名到品牌的映射关系
+- **AND** 系统 SHALL 识别 Kapon AI 为默认品牌
 - **AND** 系统 SHALL 记录品牌配置加载成功的日志
 
 #### Scenario: 数据库中无品牌配置
@@ -41,14 +51,11 @@
   - name（品牌唯一标识，唯一索引）
   - domains（关联域名列表，JSON 格式）
   - system_name（系统显示名称）
-  - logo（Logo 文件路径）
-  - favicon（Favicon 文件路径）
+  - logo（Logo URL 或路径）
+  - favicon（Favicon URL 或路径）
   - description（品牌描述）
   - keywords（SEO 关键词）
   - author（作者信息）
-  - frontend_type（前端类型：embedded 或 external）
-  - frontend_path（前端资源路径）
-  - frontend_url（前端 URL）
   - is_default（是否为默认品牌）
   - enabled（是否启用）
   - created_at（创建时间）
@@ -299,82 +306,30 @@
 
 ### Requirement 5: 多前端支持
 
-系统 SHALL 支持为不同品牌配置独立的前端项目，允许完全不同的 UI 设计和用户体验。
+系统 SHALL 支持为不同品牌配置独立的前端项目，每个品牌的前端独立构建和部署。
 
-#### Scenario: 配置独立前端项目
-- **GIVEN** 管理员在配置文件中为 kapon 品牌配置了独立前端
-- **AND** 配置指定 frontend_type 为 "embedded"
-- **AND** 配置指定 frontend_path 为 "/brands/kapon/"
-- **WHEN** 系统启动并加载配置
-- **THEN** 系统 SHALL 成功解析前端配置
-- **AND** 系统 SHALL 将前端路径关联到品牌
+#### Scenario: 独立前端部署
+- **GIVEN** 每个品牌有独立的前端项目
+- **WHEN** 前端独立构建和部署
+- **THEN** 前端 SHALL 通过 Nginx 反向代理到同一后端
+- **AND** 前端 SHALL 通过 `/api/status` 获取品牌配置
+- **AND** 前端 SHALL 根据品牌配置显示对应的 Logo 和标识
 
-#### Scenario: 支持外部部署的前端
-- **GIVEN** 管理员在配置文件中为 grouplay 品牌配置了外部前端
-- **AND** 配置指定 frontend_type 为 "external"
-- **AND** 配置指定 frontend_url 为 "https://model.grouplay.cn"
-- **WHEN** 系统启动并加载配置
-- **THEN** 系统 SHALL 成功解析前端配置
-- **AND** 系统 SHALL 记录外部前端 URL
+### Requirement 5.2: 管理后台品牌标识支持（可选）
 
-### Requirement 5.1: 基于域名的前端资源路由
-
-系统 SHALL 根据请求域名自动路由到对应品牌的前端资源。
-
-#### Scenario: 路由到品牌前端资源
-- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问根路径 "/"
-- **AND** kapon 品牌配置了 frontend_path 为 "/brands/kapon/"
-- **WHEN** 请求到达服务器
-- **THEN** 系统 SHALL 识别品牌为 kapon
-- **AND** 系统 SHALL 返回 /brands/kapon/index.html 文件
-- **AND** 响应 SHALL 包含正确的 Content-Type 头
-
-#### Scenario: 路由到品牌静态资源
-- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问 "/assets/main.js"
-- **AND** kapon 品牌配置了 frontend_path 为 "/brands/kapon/"
-- **WHEN** 请求到达服务器
-- **THEN** 系统 SHALL 识别品牌为 kapon
-- **AND** 系统 SHALL 返回 /brands/kapon/assets/main.js 文件
-- **AND** 响应 SHALL 包含正确的 Content-Type 头
-
-#### Scenario: 处理前端资源不存在
-- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问 "/nonexistent.js"
-- **AND** 文件 /brands/kapon/nonexistent.js 不存在
-- **WHEN** 请求到达服务器
-- **THEN** 系统 SHALL 返回 404 错误
-- **AND** 响应 SHALL 包含友好的错误信息
-
-#### Scenario: SPA 路由支持
-- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问 "/dashboard/settings"
-- **AND** kapon 品牌使用 SPA 架构
-- **AND** 路径不对应实际文件
-- **WHEN** 请求到达服务器
-- **THEN** 系统 SHALL 返回 /brands/kapon/index.html 文件
-- **AND** 前端路由 SHALL 处理 /dashboard/settings 路径
-
-### Requirement 5.2: 管理后台路由
-
-系统 SHALL 支持通过各品牌域名的 /panel 路径访问统一的管理后台。
-
-#### Scenario: 通过品牌域名访问管理后台
-- **GIVEN** 用户通过域名 "models.kapon.cloud" 访问 "/panel"
-- **WHEN** 请求到达服务器
-- **THEN** 系统 SHALL 识别品牌为 kapon
-- **AND** 系统 SHALL 返回管理后台的 index.html 文件
-- **AND** 管理后台 SHALL 显示 kapon 品牌的 logo 和标识
+管理后台 MAY 支持根据访问域名显示对应品牌的 Logo 和标识。
 
 #### Scenario: 管理后台显示品牌标识
-- **GIVEN** 管理员通过 "models.kapon.cloud/panel" 登录管理后台
+- **GIVEN** 管理员通过 "models.kapon.cloud" 访问管理后台
 - **AND** 请求上下文包含 kapon 品牌信息
 - **WHEN** 管理后台加载
-- **THEN** 管理后台 SHALL 从 /api/status 获取品牌信息
-- **AND** 管理后台 SHALL 显示 kapon 品牌的 logo
-- **AND** 管理后台 SHALL 显示 kapon 品牌的系统名称
+- **THEN** 管理后台 MAY 从 /api/status 获取品牌信息
+- **AND** 管理后台 MAY 显示 kapon 品牌的 logo
 - **AND** 管理后台的其他 UI 元素 SHALL 保持一致
 
 #### Scenario: 不同品牌管理员看到相同数据
-- **GIVEN** 管理员 A 通过 "models.kapon.cloud/panel" 登录
-- **AND** 管理员 B 通过 "model.grouplay.cn/panel" 登录
+- **GIVEN** 管理员 A 通过 "models.kapon.cloud" 登录
+- **AND** 管理员 B 通过 "model.grouplay.cn" 登录
 - **WHEN** 两个管理员查看用户列表
 - **THEN** 两个管理员 SHALL 看到相同的用户数据
 - **AND** 数据 SHALL 不按品牌隔离
@@ -400,83 +355,39 @@
 
 ### Requirement 5.4: 前端项目独立性
 
-系统 SHALL 支持每个品牌使用完全独立的前端项目，包括不同的技术栈、UI 框架和设计。
+系统 SHALL 支持 Kapon AI 保持原有部署，Grouplay AI 基于 Kapon AI 克隆并独立部署。
 
-#### Scenario: 不同品牌使用不同技术栈
-- **GIVEN** kapon 品牌使用 React + Material-UI
-- **AND** grouplay 品牌使用 Vue + Element Plus
-- **WHEN** 两个前端项目独立构建
-- **THEN** 两个项目 SHALL 能够独立开发和部署
-- **AND** 两个项目 SHALL 不共享任何前端代码
-- **AND** 两个项目 SHALL 都能正常调用后端 API
+#### Scenario: Kapon AI 保持原有部署
+- **GIVEN** Kapon AI 是默认品牌
+- **WHEN** 系统部署时
+- **THEN** Kapon AI 前端 SHALL 保持原有部署方式
+- **AND** Kapon AI SHALL 不需要任何代码修改
+- **AND** Kapon AI SHALL 继续提供完整功能（包括管理后台）
 
-#### Scenario: 前端项目目录结构
-- **GIVEN** 系统需要组织多个独立前端项目
-- **WHEN** 创建项目目录结构
-- **THEN** 目录结构 SHALL 如下：
-  ```
-  web/
-  ├── kapon-portal/          # Kapon 独立前端项目
-  │   ├── package.json
-  │   ├── src/
-  │   └── dist/ -> ../public/brands/kapon/
-  ├── grouplay-portal/       # Grouplay 独立前端项目
-  │   ├── package.json
-  │   ├── src/
-  │   └── dist/ -> ../public/brands/grouplay/
-  ├── admin/                 # 管理后台（共享）
-  │   ├── package.json
-  │   └── src/
-  └── public/
-      └── brands/
-          ├── kapon/         # Kapon 前端构建产物
-          └── grouplay/      # Grouplay 前端构建产物
-  ```
+#### Scenario: Grouplay AI 基于 Kapon AI 克隆
+- **GIVEN** 需要创建 Grouplay AI 前端
+- **WHEN** 克隆 Kapon AI 前端代码
+- **THEN** 系统 SHALL 复制 Kapon AI 前端代码到新目录
+- **AND** 系统 SHALL 移除 panel 相关代码和路由
+- **AND** 系统 SHALL 移除管理功能相关代码
+- **AND** 系统 SHALL 保留用户门户核心功能
+- **AND** 系统 SHALL 精简不需要的依赖和组件
 
-#### Scenario: 前端独立构建和部署
-- **GIVEN** kapon 前端项目位于 web/kapon-portal/
-- **WHEN** 执行构建命令 "npm run build"
-- **THEN** 构建产物 SHALL 输出到 web/public/brands/kapon/
-- **AND** 构建产物 SHALL 包含 index.html、assets/ 等文件
-- **AND** 构建过程 SHALL 不影响其他品牌的前端项目
+#### Scenario: Grouplay AI 独立部署
+- **GIVEN** Grouplay AI 前端已构建
+- **WHEN** 部署到服务器
+- **THEN** Nginx SHALL 提供 Grouplay AI 静态资源
+- **AND** Nginx SHALL 将 `/api/*` 反向代理到 Kapon AI 后端
+- **AND** Nginx SHALL 将 `/panel` 反向代理到 Kapon AI 管理后台
+- **AND** Nginx SHALL 传递 Host 头到后端
+- **AND** 后端 SHALL 根据 Host 头识别为 Grouplay 品牌
 
-### Requirement 5.5: 外部前端部署支持（可选）
-
-系统 SHALL 支持品牌前端独立部署到外部服务器，后端仅提供 API 服务。
-
-#### Scenario: 配置外部前端 URL
-- **GIVEN** grouplay 品牌的前端独立部署到 "https://model.grouplay.cn"
-- **AND** 配置文件中指定 frontend_type 为 "external"
-- **WHEN** 用户访问后端域名
-- **THEN** 系统 SHALL 不提供前端资源
-- **AND** 系统 SHALL 仅提供 API 服务
-- **AND** 前端 SHALL 通过 CORS 调用后端 API
-
-#### Scenario: CORS 配置支持外部前端
-- **GIVEN** grouplay 前端部署在 "https://model.grouplay.cn"
-- **AND** 后端配置了 CORS 允许该域名
-- **WHEN** 前端调用后端 API
-- **THEN** 后端 SHALL 返回正确的 CORS 头
-- **AND** 浏览器 SHALL 允许跨域请求
-- **AND** API 调用 SHALL 正常工作
-
-### Requirement 5.6: 前端构建工具集成
-
-系统 SHALL 提供构建脚本，简化多前端项目的构建和部署流程。
-
-#### Scenario: 一键构建所有前端
-- **GIVEN** 系统有多个前端项目（kapon-portal、grouplay-portal、admin）
-- **WHEN** 执行 "npm run build:all" 命令
-- **THEN** 系统 SHALL 依次构建所有前端项目
-- **AND** 每个项目的构建产物 SHALL 输出到对应目录
-- **AND** 构建完成后 SHALL 显示成功信息
-
-#### Scenario: 单独构建特定品牌前端
-- **GIVEN** 开发者只修改了 kapon 前端代码
-- **WHEN** 执行 "npm run build:kapon" 命令
-- **THEN** 系统 SHALL 只构建 kapon-portal 项目
-- **AND** 其他前端项目 SHALL 不受影响
-- **AND** 构建速度 SHALL 更快
+#### Scenario: 统一管理后台访问
+- **GIVEN** Grouplay AI 用户需要访问管理后台
+- **WHEN** 用户访问 model.grouplay.cn/panel
+- **THEN** Nginx SHALL 反向代理到 Kapon AI 管理后台
+- **AND** 管理后台 SHALL 正常显示和工作
+- **AND** 管理后台 MAY 显示 Grouplay 品牌标识（如果实现了动态品牌）
 
 ### Requirement 6: 品牌管理 API
 
@@ -576,14 +487,11 @@
   - 品牌标识（name，必填，唯一）
   - 系统名称（system_name，必填）
   - 关联域名（domains，必填，支持多个）
-  - Logo 路径（logo，必填）
-  - Favicon 路径（favicon，必填）
+  - Logo URL（logo，必填）
+  - Favicon URL（favicon，必填）
   - 描述（description）
   - 关键词（keywords）
   - 作者（author）
-  - 前端类型（frontend_type，下拉选择：embedded/external）
-  - 前端资源路径（frontend_path，embedded 时必填）
-  - 前端 URL（frontend_url，external 时必填）
   - 是否默认品牌（is_default，复选框）
   - 是否启用（enabled，复选框，默认选中）
 - **AND** 表单 SHALL 提供实时验证
@@ -597,14 +505,7 @@
 - **AND** 字段 SHALL 提供"添加域名"按钮
 - **AND** 字段 SHALL 验证域名格式
 
-#### Scenario: 前端类型切换
-- **GIVEN** 管理员在添加品牌表单中
-- **WHEN** 管理员选择前端类型为 "embedded"
-- **THEN** 表单 SHALL 显示"前端资源路径"字段
-- **AND** 表单 SHALL 隐藏"前端 URL"字段
-- **WHEN** 管理员选择前端类型为 "external"
-- **THEN** 表单 SHALL 显示"前端 URL"字段
-- **AND** 表单 SHALL 隐藏"前端资源路径"字段
+
 
 #### Scenario: 提交品牌表单
 - **GIVEN** 管理员填写完整的品牌信息
@@ -647,21 +548,14 @@
 - **AND** 成功后 SHALL 更新列表中的默认品牌标识
 - **AND** 成功后 SHALL 显示操作成功提示
 
-#### Scenario: 品牌资源路径提示
+#### Scenario: 品牌资源 URL 提示
 - **GIVEN** 管理员在添加/编辑品牌表单中
-- **WHEN** 管理员查看 Logo 路径字段
-- **THEN** 字段 SHALL 显示提示信息："请将 logo.png 文件放置到 /brands/{brand_name}/ 目录"
-- **AND** 字段 SHALL 显示示例："/brands/kapon/logo.png"
-- **WHEN** 管理员查看 Favicon 路径字段
-- **THEN** 字段 SHALL 显示提示信息："请将 favicon.ico 文件放置到 /brands/{brand_name}/ 目录"
-
-#### Scenario: 前端资源路径提示
-- **GIVEN** 管理员在添加/编辑品牌表单中
-- **AND** 前端类型选择为 "embedded"
-- **WHEN** 管理员查看前端资源路径字段
-- **THEN** 字段 SHALL 显示提示信息："请将前端构建产物放置到此路径"
-- **AND** 字段 SHALL 显示示例："/brands/kapon/"
-- **AND** 字段 SHALL 显示说明："前端项目构建后，将 dist 目录内容复制到 public/brands/kapon/"
+- **WHEN** 管理员查看 Logo URL 字段
+- **THEN** 字段 SHALL 显示提示信息："请输入 Logo 的完整 URL 或相对路径"
+- **AND** 字段 SHALL 显示示例："https://cdn.example.com/logo.png 或 /static/logo.png"
+- **WHEN** 管理员查看 Favicon URL 字段
+- **THEN** 字段 SHALL 显示提示信息："请输入 Favicon 的完整 URL 或相对路径"
+- **AND** 字段 SHALL 显示示例："https://cdn.example.com/favicon.ico 或 /static/favicon.ico"
 
 ### Requirement 8: 品牌配置验证
 
@@ -697,14 +591,7 @@
 - **THEN** 系统 SHALL 返回错误
 - **AND** 错误信息 SHALL 提示该域名已被品牌 A 使用
 
-#### Scenario: 验证前端配置完整性
-- **GIVEN** 管理员选择前端类型为 "embedded"
-- **WHEN** 系统验证表单数据
-- **THEN** 系统 SHALL 验证 frontend_path 字段不为空
-- **GIVEN** 管理员选择前端类型为 "external"
-- **WHEN** 系统验证表单数据
-- **THEN** 系统 SHALL 验证 frontend_url 字段不为空
-- **AND** 系统 SHALL 验证 frontend_url 格式为有效 URL
+
 
 #### Scenario: 验证默认品牌唯一性
 - **GIVEN** 数据库中已存在一个默认品牌

@@ -3,10 +3,11 @@
 ## 1. 数据库表和数据模型
 - [ ] 1.1 创建品牌数据库表
   - 创建数据库迁移文件（根据项目使用的迁移工具）
-  - 定义 `brands` 表结构（id, name, domains, system_name, logo, favicon, description, keywords, author, frontend_type, frontend_path, frontend_url, is_default, enabled, created_at, updated_at）
+  - 定义 `brands` 表结构（id, name, domains, system_name, logo, favicon, description, keywords, author, is_default, enabled, created_at, updated_at）
   - 设置 name 字段为唯一索引
   - 设置合适的字段类型和约束
   - 执行迁移创建表
+  - 初始化 Kapon AI 默认品牌记录（name: kapon, domains: ["models.kapon.cloud"], is_default: true）
   - _Requirements: Brand Management - Requirement 1.1_
 
 - [ ] 1.2 创建品牌数据模型
@@ -82,11 +83,10 @@
 
 - [ ] 3.2 实现品牌配置验证
   - 在 `controller/brand.go` 中实现验证逻辑
-  - 验证必填字段（name, domains, system_name）
+  - 验证必填字段（name, domains, system_name, logo, favicon）
   - 验证品牌名称格式（小写字母、数字、连字符，2-50 字符）
   - 验证域名格式（支持带端口）
   - 验证域名唯一性（跨品牌检查）
-  - 验证前端配置完整性（embedded 需要 frontend_path，external 需要 frontend_url）
   - 返回具体的验证错误信息
   - _Requirements: Brand Management - Requirement 8_
 
@@ -126,30 +126,54 @@
   - 验证向后兼容性（无品牌配置时）
   - _Requirements: Brand Management - Requirement 2.2_
 
-## 5. 前端资源路由系统
-- [ ] 5.1 创建前端资源路由处理器
-  - 创建 `router/frontend.go` 文件
-  - 实现 `FrontendRouter()` 函数，根据品牌配置路由到对应前端资源
-  - 支持 SPA 路由（非文件路径返回 index.html）
-  - 处理 `/panel` 路径路由到管理后台
-  - 处理静态资源文件（js, css, images 等）
-  - 实现文件存在性检查和 404 处理
-  - _Requirements: Brand Management - Requirement 5.1_
+## 5. Grouplay AI 前端项目创建
+- [ ] 5.1 克隆 Kapon AI 前端代码
+  - 复制 Kapon AI 前端项目到 `web/grouplay/` 目录
+  - 保留所有核心功能代码
+  - 保留所有 API 调用逻辑
+  - 保留所有 UI 文案（不做任何修改）
+  - _Requirements: Brand Management - Requirement 5.4_
 
-- [ ] 5.2 注册前端路由到主路由
-  - 修改 `router/main.go` 的 `SetRouter` 函数
-  - 在品牌识别中间件之后注册前端路由
-  - 确保 API 路由优先级高于前端路由
-  - 配置正确的路由顺序：API -> /panel -> 品牌前端
-  - _Requirements: Brand Management - Requirement 5.1_
+- [ ] 5.2 移除 panel 相关代码
+  - 识别并删除管理后台相关页面和组件（通常在 `/panel` 路径下）
+  - 删除管理后台路由配置（如 `/panel/*` 路由）
+  - 删除管理员权限检查相关代码
+  - 删除以下管理功能模块：
+    - 用户管理
+    - 渠道管理
+    - 令牌管理
+    - 兑换码管理
+    - 系统设置
+    - 数据统计
+    - 日志查看
+  - 保留以下用户功能：
+    - 用户登录和注册
+    - 个人资料设置
+    - 密码修改
+    - API Key 管理（用户自己的）
+    - 使用记录查看（用户自己的）
+  - **重要**：不修改任何 UI 文案，保持与 Kapon AI 完全一致
+  - _Requirements: Brand Management - Requirement 5.4_
 
-- [ ]* 5.3 编写前端路由单元测试
-  - 创建 `router/frontend_test.go` 文件
-  - 测试品牌前端资源路由
-  - 测试管理后台路由
-  - 测试 SPA 路由回退
-  - 测试 404 处理
-  - _Requirements: Brand Management - Requirement 5.1_
+- [ ] 5.3 清理未使用的依赖
+  - 检查 package.json 中的依赖
+  - 移除仅用于管理后台的依赖包（如果有）
+  - 保留所有用户功能相关的依赖
+  - 更新 package.json
+  - _Requirements: Brand Management - Requirement 5.4_
+
+- [ ] 5.4 调整品牌标识读取（可选）
+  - 如果需要动态显示品牌 Logo，修改 Logo 组件从 `/api/status` 读取品牌配置
+  - 如果需要动态页面标题，修改 meta 信息读取方式
+  - 如果不需要，保持原有代码不变
+  - _Requirements: Brand Management - Requirement 5.4_
+
+- [ ] 5.5 配置构建输出
+  - 配置构建输出目录（如 `dist/`）
+  - 测试构建流程：`npm run build`
+  - 验证构建产物完整性
+  - 确保构建产物可以正常运行
+  - _Requirements: Brand Management - Requirement 5.4_
 
 ## 6. 品牌管理界面
 - [ ] 6.1 创建品牌列表页面
@@ -170,18 +194,14 @@
     - 品牌标识（name，文本输入，必填）
     - 系统名称（system_name，文本输入，必填）
     - 关联域名（domains，标签输入，支持多个，必填）
-    - Logo 路径（logo，文本输入，必填，带提示）
-    - Favicon 路径（favicon，文本输入，必填，带提示）
+    - Logo URL（logo，文本输入，必填，带提示）
+    - Favicon URL（favicon，文本输入，必填，带提示）
     - 描述（description，文本域）
     - 关键词（keywords，文本输入）
     - 作者（author，文本输入）
-    - 前端类型（frontend_type，下拉选择：embedded/external）
-    - 前端资源路径（frontend_path，文本输入，embedded 时显示）
-    - 前端 URL（frontend_url，文本输入，external 时显示）
     - 是否默认品牌（is_default，复选框）
     - 是否启用（enabled，复选框，默认选中）
   - 实现表单验证（前端验证 + 后端验证）
-  - 实现前端类型切换逻辑（显示/隐藏对应字段）
   - 实现"保存"和"取消"按钮
   - _Requirements: Brand Management - Requirement 7_
 
@@ -230,100 +250,28 @@
   - 测试表单验证
   - _Requirements: Brand Management - Requirement 7_
 
-## 7. 多前端项目架构
-- [ ] 7.1 创建 Kapon 品牌前端项目
-  - 创建 `web/kapon-portal/` 目录
-  - 初始化前端项目（npm init, 选择框架如 React/Vite）
-  - 配置构建输出到 `../public/brands/kapon/`
-  - 创建基础页面结构和路由
-  - 实现 API 调用逻辑（调用 /api/status 获取品牌配置）
-  - 实现品牌特定的 UI 设计
-  - _Requirements: Brand Management - Requirement 5.4_
-
-- [ ] 7.2 创建 Grouplay 品牌前端项目
-  - 创建 `web/grouplay-portal/` 目录
-  - 初始化前端项目（可以使用不同框架如 Vue）
-  - 配置构建输出到 `../public/brands/grouplay/`
-  - 创建基础页面结构和路由
-  - 实现 API 调用逻辑
-  - 实现品牌特定的 UI 设计
-  - _Requirements: Brand Management - Requirement 5.4_
-
-- [ ] 6.3 创建或改造管理后台项目
-  - 确保管理后台位于 `web/admin/` 目录
-  - 配置构建输出到 `../public/admin/`
-  - 修改 Logo 组件支持动态品牌 logo
-  - 从 /api/status 获取品牌信息并显示对应 logo
-  - 确保其他 UI 元素保持一致（不受品牌影响）
-  - _Requirements: Brand Management - Requirement 5.2_
-
-- [ ] 6.4 配置多前端构建脚本
-  - 在根目录 `package.json` 中添加构建脚本
-  - 实现 `build:kapon` 脚本（构建 Kapon 前端）
-  - 实现 `build:grouplay` 脚本（构建 Grouplay 前端）
-  - 实现 `build:admin` 脚本（构建管理后台）
-  - 实现 `build:all` 脚本（构建所有前端）
-  - 实现开发模式脚本（dev:kapon, dev:grouplay, dev:admin）
-  - _Requirements: Brand Management - Requirement 5.6_
-
-## 8. 管理后台品牌标识支持
-- [ ] 8.1 修改管理后台 Logo 组件
-  - 修改 `web/admin/src/components/Logo.jsx`（或对应路径）
+## 7. Kapon AI 前端调整（可选）
+- [ ]* 7.1 修改 Kapon AI Logo 组件
+  - 修改 `web/default/src/components/Logo.jsx`（或对应路径）
   - 从 Redux store 或 Context 读取品牌信息
   - 动态显示品牌 logo 和系统名称
   - 保持其他 UI 元素不变
   - _Requirements: Brand Management - Requirement 5.2_
 
-- [ ] 8.2 管理后台集成品牌配置
-  - 在管理后台启动时调用 /api/status
+- [ ]* 7.2 Kapon AI 集成品牌配置
+  - 在前端启动时调用 /api/status
   - 存储品牌信息到状态管理（Redux/Context）
   - 确保品牌信息在整个应用中可访问
   - _Requirements: Brand Management - Requirement 5.2_
 
-- [ ]* 8.3 编写管理后台品牌显示测试
-  - 测试不同品牌域名访问管理后台
-  - 验证显示正确的品牌 logo
-  - 验证其他 UI 元素保持一致
-  - _Requirements: Brand Management - Requirement 5.2_
-
-## 9. CORS 配置（可选，用于外部前端部署）
-- [ ]* 9.1 实现 CORS 中间件配置
-  - 修改或创建 CORS 中间件
-  - 从配置文件读取 allowed_origins
-  - 支持动态配置允许的域名列表
-  - 配置 allowed_methods 和 allowed_headers
-  - 支持 credentials
-  - _Requirements: Brand Management - Requirement 5.5_
-
-- [ ]* 9.2 测试 CORS 配置
-  - 测试跨域 API 调用
-  - 验证 preflight 请求处理
-  - 验证不同域名的访问权限
-  - _Requirements: Brand Management - Requirement 5.5_
-
-## 10. 集成测试与验证
-- [ ] 10.1 多前端路由测试
-  - 通过 models.kapon.cloud 访问，验证返回 Kapon 前端
-  - 通过 model.grouplay.cn 访问，验证返回 Grouplay 前端
-  - 通过 models.kapon.cloud/panel 访问，验证返回管理后台
-  - 验证管理后台显示 Kapon 品牌 logo
-  - 通过 model.grouplay.cn/panel 访问，验证显示 Grouplay 品牌 logo
-  - _Requirements: Brand Management - Requirement 5.1, 5.2_
-
-- [ ] 10.2 API 调用测试
-  - 从 Kapon 前端调用 API，验证自动识别品牌
-  - 从 Grouplay 前端调用 API，验证自动识别品牌
+## 8. 集成测试与验证
+- [ ] 8.1 API 调用测试
+  - 通过不同域名调用 /api/status，验证返回对应品牌信息
+  - 验证品牌识别中间件正确识别域名
   - 验证不同品牌前端获取相同的数据
-  - 验证前端不需要在请求中添加品牌参数
-  - _Requirements: Brand Management - Requirement 5.3_
+  - _Requirements: Brand Management - Requirement 2, 5.3_
 
-- [ ] 10.3 SPA 路由测试
-  - 访问 Kapon 前端的子路径（如 /dashboard）
-  - 验证返回 index.html 并由前端路由处理
-  - 刷新页面验证路由正常工作
-  - _Requirements: Brand Management - Requirement 5.1_
-
-- [ ] 10.4 品牌管理界面测试
+- [ ] 8.2 品牌管理界面测试
   - 测试通过管理后台添加品牌
   - 测试编辑品牌配置
   - 测试删除品牌
@@ -332,65 +280,46 @@
   - 验证配置更改后立即生效（缓存刷新）
   - _Requirements: Brand Management - Requirement 6, 7_
 
-- [ ] 10.5 向后兼容性测试
+- [ ] 8.3 向后兼容性测试
   - 数据库中无品牌配置时，验证系统正常运行
   - 验证使用全局配置（SystemName, Logo）
   - 验证前端正常显示
   - _Requirements: Brand Management - Requirement 4.1_
 
-- [ ] 10.6 边界情况测试
+- [ ] 8.4 边界情况测试
   - 测试未知域名访问（使用默认品牌）
-  - 测试品牌前端资源不存在（返回 404）
   - 测试域名冲突验证（创建品牌时）
   - 测试删除默认品牌（应该被阻止）
   - _Requirements: Brand Management - Requirement 4.2, 8_
 
-## 11. 文档与部署
-- [ ] 11.1 编写数据库迁移文档
+## 9. 文档与部署
+- [ ] 9.1 编写数据库迁移文档
   - 说明如何执行数据库迁移
   - 提供迁移脚本示例
+  - 说明 Kapon AI 默认品牌初始化
   - 说明回滚方案
   - _Requirements: Brand Management - Requirement 1.1_
 
-- [ ] 11.2 编写品牌管理使用文档
+- [ ] 9.2 编写品牌管理使用文档
   - 说明如何通过管理后台添加品牌
   - 说明各字段的含义和填写规范
-  - 说明品牌资源文件的放置位置
-  - 说明前端项目的构建和部署
   - 提供配置示例和最佳实践
+  - 说明默认品牌（Kapon AI）的特殊性
   - _Requirements: Brand Management - Requirement 7_
 
-- [ ] 11.3 编写多前端部署文档
-  - 创建多品牌多前端部署指南
-  - 说明前端项目构建步骤
-  - 说明配置步骤和注意事项
-  - 提供 Nginx 配置示例（统一部署模式）
-  - 提供 Nginx 配置示例（独立部署模式 + CORS）
+- [ ] 9.3 编写 Grouplay AI 前端部署文档
+  - 说明如何克隆和精简前端代码
+  - 说明如何构建 Grouplay AI 前端
+  - 提供 Nginx 配置示例（静态资源 + API 反向代理 + /panel 反向代理）
   - 提供 DNS 配置说明
-  - 说明如何添加新品牌
-  - 提供回滚方案
-  - _Requirements: Brand Management - Requirement 5.4, 5.5_
-
-- [ ] 11.4 更新 README
-  - 在 README 中添加多品牌多前端支持说明
-  - 添加架构图和管理界面截图
-  - 说明如何通过管理后台配置品牌
-  - 说明前端项目结构
-  - 说明构建和部署流程
-  - 说明向后兼容性
-  - _Requirements: Brand Management - Requirement 5.4, 7_
-
-- [ ] 11.5 创建前端开发指南
-  - 说明如何创建新的品牌前端项目
-  - 说明前端项目的目录结构规范
-  - 说明如何调用后端 API
-  - 说明如何获取和使用品牌配置
-  - 提供前端项目模板或脚手架
+  - 说明前端如何从 `/api/status` 获取品牌配置
   - _Requirements: Brand Management - Requirement 5.4_
 
-- [ ]* 11.6 创建验证脚本（可选）
-  - 创建品牌配置验证脚本
-  - 创建品牌资源检查脚本
-  - 创建前端构建验证脚本
-  - 创建数据库迁移验证脚本
-  - _Requirements: Brand Management - Requirement 1.1, 8_
+- [ ] 9.4 更新 README
+  - 在 README 中添加多品牌支持说明
+  - 添加架构图和管理界面截图
+  - 说明 Kapon AI 作为默认品牌
+  - 说明如何通过管理后台配置新品牌
+  - 说明 Grouplay AI 部署流程
+  - 说明向后兼容性
+  - _Requirements: Brand Management - Requirement 7_

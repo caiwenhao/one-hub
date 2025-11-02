@@ -1,56 +1,52 @@
-# 多域名多品牌支持
+# 多域名多品牌支持（简化版）
 
 ## Why
 
 当前系统仅支持单一品牌配置（系统名称、Logo、Favicon 等），无法满足以下业务需求：
 
-1. **多品牌运营需求**：需要在同一套系统上运营多个品牌（如 Kapon AI 和 Grouplay AI）
-2. **域名隔离需求**：不同品牌使用不同域名访问（models.kapon.cloud 和 model.grouplay.cn）
-3. **品牌差异化需求**：
-   - **前端门户**：不同品牌需要完全不同的 UI 设计、布局、文案和用户体验
-   - **管理后台**：只需品牌 logo 和标识差异化，其他 UI 保持一致
-4. **SEO 优化需求**：每个域名需要独立的 meta 信息（title、description、keywords）
-5. **独立前端需求**：支持每个品牌使用独立的前端项目，甚至不同的技术栈
+1. **多品牌运营需求**：需要在同一套系统上运营多个品牌（Kapon AI 为默认品牌，Grouplay AI 为新增品牌）
+2. **域名隔离需求**：
+   - Kapon AI (默认品牌): models.kapon.cloud - 保持原有部署模式
+   - Grouplay AI (新品牌): model.grouplay.cn - 独立前端部署
+3. **品牌标识差异化**：不同品牌需要显示不同的 Logo、系统名称等标识信息
+4. **统一管理后台**：所有品牌通过 /panel 路径访问统一的管理后台
 
 当前实现的局限性：
 - 系统名称、Logo 等配置是全局单一的，存储在 `options` 表中
-- 前端是单一项目，无法支持完全不同的 UI 设计
-- 缺少基于域名的前端资源路由机制
-- 管理后台无法根据品牌动态显示标识
-- 缺少域名到品牌的映射机制
+- 缺少基于域名的品牌识别机制
+- 缺少品牌配置的管理功能
+- 无法支持新品牌的独立前端部署
 
 ## What Changes
 
-### 核心变更
+### 核心变更（简化版）
 
-1. **后端品牌配置系统**
+1. **后端品牌配置系统**（最小化修改）
    - 新增品牌数据库表（存储品牌配置）
    - 新增品牌数据模型和管理器（内存缓存 + 数据库持久化）
    - 新增域名识别中间件（根据 Host 识别品牌）
    - 修改 `/api/status` 接口返回品牌相关配置
    - 提供品牌管理 RESTful API（增删改查）
-   - 支持配置前端类型（embedded 或 external）
    - 支持动态刷新品牌缓存
+   - Kapon AI 作为默认品牌（models.kapon.cloud）
 
-2. **多前端架构支持**
-   - 支持每个品牌使用独立的前端项目（完全不同的 UI）
-   - 基于域名的前端资源路由（自动识别并返回对应品牌的前端）
-   - 支持前端统一部署或独立部署两种模式
-   - 管理后台通过 `/panel` 路径访问，只需品牌标识差异化
-
-3. **前端项目组织**
-   - 每个品牌一个独立的前端项目目录
-   - 独立的 package.json、构建配置和依赖
-   - 构建产物输出到品牌专属目录
-   - 支持不同品牌使用不同技术栈
-
-4. **品牌管理界面**
+2. **品牌管理界面**
    - 在管理后台新增品牌管理页面
    - 支持可视化添加、编辑、删除品牌
-   - 支持配置域名、前端路径、品牌标识等
+   - 支持配置域名和品牌标识（Logo、系统名称等）
    - 提供表单验证和实时反馈
    - 支持启用/禁用品牌、设置默认品牌
-   - 无需修改配置文件，动态生效
+
+3. **前端部署模式**
+   - **Kapon AI（默认品牌）**：保持原有部署模式，不做任何改动
+   - **Grouplay AI（新品牌）**：
+     - 基于 Kapon AI 前端代码克隆
+     - 移除 panel 相关代码（管理后台）
+     - 独立构建和部署
+     - 通过 Nginx 反向代理 /api/* 到后端
+     - 通过 Nginx 反向代理 /panel 到 Kapon AI 的管理后台
+   - 前端通过 `/api/status` 获取品牌配置
+   - 前端调整 Logo 等品牌标识的读取方式
 
 ### 具体变更内容
 
@@ -58,37 +54,69 @@
 - `model/brand.go`：品牌数据模型和数据库操作
 - `middleware/brand.go`：品牌识别中间件
 - `controller/brand.go`：品牌管理 API 控制器
-- `router/frontend.go`：前端资源路由处理器
 - 数据库迁移文件：创建 brands 表
+- 初始化数据：创建 Kapon AI 默认品牌记录
 
 #### 后端变更（修改）
 - `controller/misc.go`：修改 GetStatus 返回品牌信息
-- `router/main.go`：注册品牌中间件、品牌 API 和前端路由
+- `router/main.go`：注册品牌中间件和品牌 API
 
-#### 前端变更（新增）
-- `web/kapon-portal/`：Kapon 品牌独立前端项目
-- `web/grouplay-portal/`：Grouplay 品牌独立前端项目
-- `web/public/brands/kapon/`：Kapon 前端构建产物目录
-- `web/public/brands/grouplay/`：Grouplay 前端构建产物目录
-- `web/admin/`：管理后台项目（共享，支持品牌标识动态显示）
+#### 前端变更（Kapon AI - 默认品牌）
+- **保持原有代码不变**
+- 可选：`web/default/src/components/Logo.jsx`：修改支持从 `/api/status` 读取品牌 Logo
 
-#### 前端变更（修改）
-- `web/admin/src/components/Logo.jsx`：管理后台 Logo 组件支持动态品牌 Logo
-- 构建脚本：新增多前端项目构建支持
+#### 前端变更（Grouplay AI - 新品牌）
+- 创建 `web/grouplay/`：基于 Kapon AI 前端代码完整克隆
+- 只移除 panel 相关代码和路由（管理后台）
+- 保持其他代码和 UI 文案完全一致
+- 清理仅用于管理后台的依赖（可选）
+- 详细步骤参考：`FRONTEND-CLONE-GUIDE.md`
 
-#### 前端变更（管理后台）
+#### 前端变更（管理后台新增）
 - `web/admin/src/pages/BrandManagement/`：新增品牌管理页面
   - `BrandList.jsx`：品牌列表页面
   - `BrandForm.jsx`：添加/编辑品牌表单
   - `BrandAPI.js`：品牌 API 调用封装
-- `web/admin/src/components/Logo.jsx`：修改支持动态品牌 logo
 - 路由配置：新增品牌管理路由
+
+### 部署架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Kapon AI（默认品牌）                        │
+│                  models.kapon.cloud                          │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  前端静态资源（原有部署，保持不变）                      │   │
+│  │  - 用户门户                                            │   │
+│  │  - 管理后台 (/panel)                                   │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                         │                                    │
+│                         ▼                                    │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  后端服务（品牌识别中间件）                             │   │
+│  │  - 根据 Host 头识别品牌                                │   │
+│  │  - 返回对应品牌配置                                    │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                   Grouplay AI（新品牌）                        │
+│                  model.grouplay.cn                           │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Nginx 反向代理                                        │   │
+│  │  - 前端静态资源（基于 Kapon AI 克隆，移除 panel）       │   │
+│  │  - /api/* → 反向代理到 Kapon AI 后端                  │   │
+│  │  - /panel → 反向代理到 Kapon AI 管理后台              │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### 向后兼容性
 
-- **完全向后兼容**：未配置多品牌时，系统保持原有单品牌行为
-- 默认品牌：如果未匹配到任何品牌，使用原有的全局配置（SystemName、Logo 等）
-- 数据库兼容：不需要修改现有数据库结构（品牌配置存储在配置文件或新表中）
+- **完全向后兼容**：Kapon AI 保持原有部署和代码不变
+- **默认品牌**：Kapon AI 作为默认品牌（models.kapon.cloud）
+- **数据库兼容**：新增 brands 表，不影响现有表结构
+- **渐进式升级**：可以先部署后端品牌管理功能，后续再添加新品牌
 
 ## Impact
 
@@ -99,16 +127,12 @@
   - `middleware/brand.go`：新增品牌识别中间件
   - `controller/brand.go`：新增品牌管理 API
   - `controller/misc.go`：修改状态接口
-  - `router/frontend.go`：新增前端资源路由
   - `router/main.go`：注册中间件和路由
   - 数据库迁移：新增 brands 表
 
-- **前端模块**：
-  - `web/kapon-portal/`：新增 Kapon 独立前端项目
-  - `web/grouplay-portal/`：新增 Grouplay 独立前端项目
+- **前端模块**（管理后台）：
   - `web/admin/src/pages/BrandManagement/`：新增品牌管理页面
-  - `web/admin/src/components/Logo.jsx`：修改支持动态品牌
-  - `web/public/brands/`：品牌前端构建产物目录
+  - `web/admin/src/components/Logo.jsx`：可选修改，支持动态品牌
 
 - **数据库**：
   - 新增 `brands` 表
@@ -120,45 +144,47 @@
 - `model/brand.go`：品牌数据模型和数据库操作
 - `middleware/brand.go`：品牌识别中间件
 - `controller/brand.go`：品牌管理 API 控制器
-- `router/frontend.go`：前端资源路由处理器
 - `migrations/xxx_create_brands_table.sql`：数据库迁移文件
 
 **后端（修改）**：
 - `controller/misc.go`：修改 GetStatus 返回品牌信息
-- `router/main.go`：注册品牌中间件、品牌 API 和前端路由
-
-**前端项目（新增）**：
-- `web/kapon-portal/`：Kapon 品牌独立前端项目（完整项目结构）
-- `web/grouplay-portal/`：Grouplay 品牌独立前端项目（完整项目结构）
-- `web/admin/`：管理后台项目（如果之前不存在）
-
-**前端构建产物（新增）**：
-- `web/public/brands/kapon/`：Kapon 前端构建产物
-- `web/public/brands/grouplay/`：Grouplay 前端构建产物
+- `router/main.go`：注册品牌中间件和品牌 API
 
 **前端（管理后台新增）**：
 - `web/admin/src/pages/BrandManagement/BrandList.jsx`：品牌列表页面
 - `web/admin/src/pages/BrandManagement/BrandForm.jsx`：品牌表单页面
 - `web/admin/src/api/brandAPI.js`：品牌 API 封装
-
-**前端（修改）**：
-- `web/admin/src/components/Logo.jsx`：管理后台 Logo 组件支持动态品牌
 - `web/admin/src/routes/index.js`：新增品牌管理路由
-- `package.json`：新增多前端构建脚本
+
+**前端（可选修改）**：
+- `web/admin/src/components/Logo.jsx`：可选修改，支持动态品牌 Logo
 
 ### 部署影响
 
-- **数据库迁移**：需要执行数据库迁移创建 brands 表
+- **数据库迁移**：
+  - 执行数据库迁移创建 brands 表
+  - 初始化 Kapon AI 默认品牌记录
+  
 - **品牌配置**：通过管理后台界面配置品牌，无需修改配置文件
-- **前端构建**：需要分别构建各品牌的前端项目
-- **静态资源**：
-  - 需要准备各品牌的前端构建产物
-  - 需要将品牌资源（logo、favicon）放置到指定目录（/brands/{brand_name}/）
-- **DNS 配置**：需要将多个域名指向同一服务器（或独立部署前端）
+
+- **前端部署**：
+  - **Kapon AI（默认品牌）**：保持原有部署方式，无需改动
+  - **Grouplay AI（新品牌）**：
+    - 克隆 Kapon AI 前端代码
+    - 移除 panel 相关代码
+    - 独立构建和部署到新服务器
+    - 配置 Nginx 反向代理
+    
+- **DNS 配置**：
+  - models.kapon.cloud → Kapon AI 服务器（保持不变）
+  - model.grouplay.cn → Grouplay AI 前端服务器（新增）
+  
 - **Nginx 配置**：
-  - 需要配置多域名支持（传递 Host 头）
-  - 如果前端统一部署，需要配置前端资源路由规则
-  - 如果前端独立部署，需要配置 CORS
+  - **Kapon AI**：保持原有配置
+  - **Grouplay AI**：
+    - 配置静态资源服务
+    - 配置 /api/* 反向代理到后端（传递 Host 头）
+    - 配置 /panel 反向代理到 Kapon AI 管理后台
 
 ### 性能影响
 

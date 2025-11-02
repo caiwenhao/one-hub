@@ -35,18 +35,18 @@ One Hub 当前仅支持单一品牌配置，系统名称、Logo 等信息是全�
 
 ### 1. 品牌配置存储方式
 
-**决策**：使用配置文件（YAML）存储品牌配置，启动时加载到内存
+**决策**：使用数据库存储品牌配置，启动时加载到内存缓存
 
 **理由**：
-- 品牌配置变更频率低，不需要动态修改
-- 配置文件管理简单，便于版本控制
-- 避免增加数据库复杂度
-- 性能最优（内存读取）
+- 支持通过管理后台动态管理品牌
+- 配置变更无需重启服务（刷新缓存即可）
+- 便于扩展和维护
+- 性能优化：内存缓存 + 数据库持久化
 
 **备选方案**：
-- 方案 A：存储在数据库 `brands` 表
-  - 优点：支持运行时动态修改
-  - 缺点：增加数据库查询开销，配置管理复杂
+- 方案 A：配置文件（YAML）
+  - 优点：简单，便于版本控制
+  - 缺点：需要重启服务，不支持动态管理
 - 方案 B：环境变量
   - 优点：部署灵活
   - 缺点：配置复杂，不支持多品牌
@@ -86,35 +86,45 @@ One Hub 当前仅支持单一品牌配置，系统名称、Logo 等信息是全�
 - 可复用，所有路由自动生效
 - 不侵入业务逻辑
 
-### 4. 前端资源组织方式
+### 4. 前端部署方式
 
-**决策**：按品牌组织静态资源目录
-
-**目录结构**：
-```
-web/public/
-├── brands/
-│   ├── kapon/
-│   │   ├── logo.png
-│   │   └── favicon.ico
-│   └── grouplay/
-│       ├── logo.png
-│       └── favicon.ico
-└── logo.png  # 默认 logo（向后兼容）
-```
+**决策**：Kapon AI 保持原有部署，Grouplay AI 独立部署并反向代理
 
 **理由**：
-- 资源隔离清晰
-- 易于管理和扩展
-- 支持按需加载
+- 最大程度保持 Kapon AI 原有代码和部署不动
+- Grouplay AI 可以独立开发和部署
+- 通过反向代理实现统一后端和管理后台访问
+- 部署灵活，易于扩展
+
+**架构**：
+
+**Kapon AI（默认品牌）**：
+```
+用户访问 models.kapon.cloud
+  ↓
+Kapon AI 服务器（原有部署）
+  ├─ 前端静态资源
+  ├─ /api/* → 后端服务
+  └─ /panel → 管理后台
+```
+
+**Grouplay AI（新品牌）**：
+```
+用户访问 model.grouplay.cn
+  ↓
+Grouplay AI 前端服务器
+  ├─ 前端静态资源（基于 Kapon AI 克隆，移除 panel）
+  ├─ /api/* → 反向代理到 Kapon AI 后端（传递 Host 头）
+  └─ /panel → 反向代理到 Kapon AI 管理后台
+```
 
 **备选方案**：
-- 方案 A：所有资源平铺，通过命名区分（如 `logo-kapon.png`）
-  - 优点：目录结构简单
-  - 缺点：文件多时难以管理
-- 方案 B：使用 CDN 存储品牌资源
-  - 优点：减少服务器负载
-  - 缺点：增加部署复杂度，当前不需要
+- 方案 A：统一部署所有前端到后端服务器
+  - 优点：部署简单
+  - 缺点：需要修改后端路由逻辑，增加复杂度
+- 方案 B：使用 CDN 存储前端资源
+  - 优点：性能更好
+  - 缺点：增加部署复杂度
 
 
 ### 5. API 响应格式
@@ -594,14 +604,44 @@ curl -H "Host: model.grouplay.cn" http://localhost:3000/api/status
 ```
 
 #### 4. Nginx 配置
+
+**Kapon AI（保持原有配置）**：
 ```nginx
 server {
     listen 80;
-    server_name models.kapon.cloud model.grouplay.cn;
+    server_name models.kapon.cloud;
     
+    # 原有配置保持不变
     location / {
-        proxy_pass http://localhost:3000;
+        # 前端静态资源或反向代理配置
+    }
+}
+```
+
+**Grouplay AI（新增配置）**：
+```nginx
+server {
+    listen 80;
+    server_name model.grouplay.cn;
+    
+    # 前端静态资源
+    location / {
+        root /var/www/grouplay;
+        try_files $uri $uri/ /index.html;
+    }
+    
+    # API 反向代理到 Kapon AI 后端
+    location /api/ {
+        proxy_pass http://kapon-backend-server/api/;
         proxy_set_header Host $host;  # 重要：传递 Host 头
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+    
+    # 管理后台反向代理到 Kapon AI
+    location /panel {
+        proxy_pass http://kapon-server/panel;
+        proxy_set_header Host models.kapon.cloud;  # 使用 Kapon AI 域名
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
