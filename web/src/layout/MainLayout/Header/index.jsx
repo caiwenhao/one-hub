@@ -68,8 +68,8 @@ const Header = ({ handleLeftDrawerToggle, toggleProfileDrawer }) => {
 
       <Box sx={{ flexGrow: 1 }} />
 
-      {/* 右侧功能按钮区（统一） */}
-      <HeaderActions showProfileWhenPanel toggleProfileDrawer={toggleProfileDrawer} />
+      {/* 右侧功能按钮区（统一）：隐藏主题与语言切换 */}
+      <HeaderActions showProfileWhenPanel toggleProfileDrawer={toggleProfileDrawer} showTheme={false} showI18n={false} />
     </>
   );
 };

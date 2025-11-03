@@ -22,8 +22,9 @@ const StatusProvider = ({ children }) => {
         if (!data.chat_link) {
           delete data.chat_link;
         }
-        // 设置系统默认语言
-        const storedLanguage = localStorage.getItem('appLanguage') || data.language || 'zh_CN';
+        // 固定为简体中文，不再跟随后端或本地的语言设置
+        const storedLanguage = 'zh_CN';
+        localStorage.setItem('appLanguage', storedLanguage);
         localStorage.setItem('default_language', storedLanguage);
         i18n.changeLanguage(storedLanguage);
         localStorage.setItem('siteInfo', JSON.stringify(data));
@@ -58,9 +59,8 @@ const StatusProvider = ({ children }) => {
       showError(t('common.unableServer'));
     }
 
-    if (system_name) {
-      document.title = system_name;
-    }
+    // 固定浏览器标签标题为 Kapon AI（不再跟随后端 system_name 变动）
+    document.title = 'Kapon AI';
     // eslint-disable-next-line
   }, [dispatch]);
 

@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { API } from 'utils/api';
-import { showError } from 'utils/common';
 import { Box, Container, Typography } from '@mui/material';
 import MainCard from 'ui-component/cards/MainCard';
 import { useTranslation } from 'react-i18next';
@@ -12,23 +10,10 @@ const About = () => {
   const [aboutLoaded, setAboutLoaded] = useState(false);
 
   const displayAbout = useCallback(async () => {
-    setAbout(localStorage.getItem('about') || '');
-    try {
-      const res = await API.get('/api/about');
-      const { success, message, data } = res.data;
-      if (success) {
-        setAbout(data);
-        localStorage.setItem('about', data);
-      } else {
-        showError(message);
-        setAbout(t('about.loadingError'));
-      }
-    } catch (error) {
-      setAbout(t('about.loadingError'));
-    }
-
+    const cached = localStorage.getItem('about') || '';
+    setAbout(cached);
     setAboutLoaded(true);
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     displayAbout();
@@ -53,7 +38,7 @@ const About = () => {
           <ContentViewer
             content={about}
             loading={!aboutLoaded}
-            errorMessage={about === t('about.loadingError') ? t('about.loadingError') : ''}
+            errorMessage={''}
             containerStyle={{ minHeight: 'calc(100vh - 136px)' }}
             contentStyle={{ fontSize: 'larger' }}
           />

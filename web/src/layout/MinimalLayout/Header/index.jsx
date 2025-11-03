@@ -285,8 +285,8 @@ const Header = () => {
           </IconButton>
         ) : (
           <>
-            {/* 统一的右侧操作（主题/语言/通知） */}
-            <HeaderActions showProfileWhenPanel={false} />
+            {/* 统一的右侧操作（通知），隐藏主题与语言 */}
+            <HeaderActions showProfileWhenPanel={false} showTheme={false} showI18n={false} />
             {account.user ? (
               <Button
                 component={Link}
