@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Container, Typography, Grid, Chip } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ModelCard from './ModelCard';
-import { mockModels } from '../data/mockData.js';
+import { mockModels } from 'src/views/HotModels/data/mockData.js';
 import { colors, gradients, animationStyles, createGradientText } from '../styles/theme';
 
 const FeaturedModels = () => {
