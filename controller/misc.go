@@ -62,27 +62,11 @@ func GetStatus(c *gin.Context) {
 }
 
 func GetNotice(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    config.GlobalOption.Get("Notice"),
-	})
-}
-
-func GetAbout(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    config.GlobalOption.Get("About"),
-	})
-}
-
-func GetHomePageContent(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    config.GlobalOption.Get("HomePageContent"),
-	})
+    c.JSON(http.StatusOK, gin.H{
+        "success": true,
+        "message": "",
+        "data":    config.GlobalOption.Get("Notice"),
+    })
 }
 
 func SendEmailVerification(c *gin.Context) {

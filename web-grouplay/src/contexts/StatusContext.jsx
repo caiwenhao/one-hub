@@ -1,4 +1,5 @@
 import { useEffect, useCallback, createContext } from 'react';
+import config from 'config';
 import { API } from 'utils/api';
 import { showNotice, showError } from 'utils/common';
 import { SET_SITE_INFO, SET_MODEL_OWNEDBY } from 'store/actions';
@@ -14,7 +15,8 @@ const StatusProvider = ({ children }) => {
   const dispatch = useDispatch();
 
   const loadStatus = useCallback(async () => {
-    let system_name = '';
+    // 浏览器标题交由前端配置控制
+    const frontendTitle = config.siteInfo?.system_name || 'grouplay AI';
     try {
       const res = await API.get('/api/status');
       const { success, data } = res.data;
@@ -38,16 +40,10 @@ const StatusProvider = ({ children }) => {
         ) {
           showNotice(t('common.unableServerTip', { version: data.version }));
         }
-        if (data.system_name) {
-          system_name = data.system_name;
-        }
       } else {
         const backupSiteInfo = localStorage.getItem('siteInfo');
         if (backupSiteInfo) {
           const data = JSON.parse(backupSiteInfo);
-          if (data.system_name) {
-            system_name = data.system_name;
-          }
           dispatch({
             type: SET_SITE_INFO,
             payload: data
@@ -57,10 +53,8 @@ const StatusProvider = ({ children }) => {
     } catch (error) {
       showError(t('common.unableServer'));
     }
-
-    if (system_name) {
-      document.title = system_name;
-    }
+    // 无论后端返回什么，都由前端配置决定浏览器标题
+    document.title = frontendTitle;
     // eslint-disable-next-line
   }, [dispatch]);
 

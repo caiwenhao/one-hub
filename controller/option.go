@@ -1,28 +1,41 @@
 package controller
 
 import (
-	"encoding/json"
-	"net/http"
-	"one-api/common/config"
-	"one-api/common/utils"
-	"one-api/model"
-	"one-api/safty"
-	"strings"
+    "encoding/json"
+    "net/http"
+    "one-api/common/config"
+    "one-api/common/utils"
+    "one-api/model"
+    "one-api/safty"
+    "strings"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
+// 前端固化配置项：不对外暴露写入能力
+var frontendControlledOptionKeys = map[string]bool{
+    "SystemName":       true,
+    "Logo":             true,
+    "HomePageContent":  true,
+    "About":            true,
+    "Footer":           true,
+}
+
 func GetOptions(c *gin.Context) {
-	var options []*model.Option
-	for k, v := range config.GlobalOption.GetAll() {
-		if strings.HasSuffix(k, "Token") || strings.HasSuffix(k, "Secret") {
-			continue
-		}
-		options = append(options, &model.Option{
-			Key:   k,
-			Value: utils.Interface2String(v),
-		})
-	}
+    var options []*model.Option
+    for k, v := range config.GlobalOption.GetAll() {
+        if strings.HasSuffix(k, "Token") || strings.HasSuffix(k, "Secret") {
+            continue
+        }
+        // 从选项列表中过滤前端固化配置，避免在前端显示/误改
+        if frontendControlledOptionKeys[k] {
+            continue
+        }
+        options = append(options, &model.Option{
+            Key:   k,
+            Value: utils.Interface2String(v),
+        })
+    }
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -41,21 +54,29 @@ func GetSafeTools(c *gin.Context) {
 }
 
 func UpdateOption(c *gin.Context) {
-	var option model.Option
-	err := json.NewDecoder(c.Request.Body).Decode(&option)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "无效的参数",
-		})
-		return
-	}
-	switch option.Key {
-	case "GitHubOAuthEnabled":
-		if option.Value == "true" && config.GitHubClientId == "" {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无法启用 GitHub OAuth，请先填入 GitHub Client Id 以及 GitHub Client Secret！",
+    var option model.Option
+    err := json.NewDecoder(c.Request.Body).Decode(&option)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "success": false,
+            "message": "无效的参数",
+        })
+        return
+    }
+    // 拦截前端固化配置项写入
+    if frontendControlledOptionKeys[option.Key] {
+        c.JSON(http.StatusOK, gin.H{
+            "success": false,
+            "message": "该配置项已通过前端代码固定，禁止后端修改",
+        })
+        return
+    }
+    switch option.Key {
+    case "GitHubOAuthEnabled":
+        if option.Value == "true" && config.GitHubClientId == "" {
+            c.JSON(http.StatusOK, gin.H{
+                "success": false,
+                "message": "无法启用 GitHub OAuth，请先填入 GitHub Client Id 以及 GitHub Client Secret！",
 			})
 			return
 		}

@@ -1,20 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import SubCard from 'ui-component/cards/SubCard';
-import {
-  Stack,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-  Button,
-  Alert,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogActions,
-  DialogContent,
-  Divider,
-  Typography
-} from '@mui/material';
+import { Stack, FormControl, Button, TextField, Dialog, DialogTitle, DialogActions, DialogContent, Divider, Typography } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import { showError, showSuccess } from 'utils/common'; //,
 import { API } from 'utils/api';
@@ -25,12 +11,7 @@ import { useTranslation } from 'react-i18next';
 const OtherSetting = () => {
   const { t } = useTranslation();
   let [inputs, setInputs] = useState({
-    Footer: '',
-    Notice: '',
-    About: '',
-    SystemName: '',
-    Logo: '',
-    HomePageContent: ''
+    Notice: ''
   });
   let [loading, setLoading] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -95,25 +76,7 @@ const OtherSetting = () => {
     await updateOption('Notice', inputs.Notice);
   };
 
-  const submitFooter = async () => {
-    await updateOption('Footer', inputs.Footer);
-  };
-
-  const submitSystemName = async () => {
-    await updateOption('SystemName', inputs.SystemName);
-  };
-
-  const submitLogo = async () => {
-    await updateOption('Logo', inputs.Logo);
-  };
-
-  const submitAbout = async () => {
-    await updateOption('About', inputs.About);
-  };
-
-  const submitOption = async (key) => {
-    await updateOption(key, inputs[key]);
-  };
+  // 个性化设置相关功能已通过前端代码配置，这里不再提供保存接口
 
   const openGitHubRelease = () => {
     window.location = 'https://github.com/MartialBE/one-hub/releases/latest';
@@ -189,111 +152,6 @@ const OtherSetting = () => {
             <Grid xs={12}>
               <Button variant="contained" onClick={submitNotice}>
                 {t('setting_index.otherSettings.generalSettings.saveNotice')}
-              </Button>
-            </Grid>
-          </Grid>
-        </SubCard>
-        <SubCard title={t('setting_index.otherSettings.customSettings.title')}>
-          <Grid container spacing={{ xs: 3, sm: 2, md: 4 }}>
-            <Grid xs={12}>
-              <FormControl fullWidth>
-                <InputLabel htmlFor="SystemName">{t('setting_index.otherSettings.customSettings.systemNameLabel')}</InputLabel>
-                <OutlinedInput
-                  id="SystemName"
-                  name="SystemName"
-                  value={inputs.SystemName || ''}
-                  onChange={handleInputChange}
-                  label={t('setting_index.otherSettings.customSettings.systemNameLabel')}
-                  placeholder={t('setting_index.otherSettings.customSettings.systemNamePlaceholder')}
-                  disabled={loading}
-                />
-              </FormControl>
-            </Grid>
-            <Grid xs={12}>
-              <Button variant="contained" onClick={submitSystemName}>
-                {t('setting_index.otherSettings.customSettings.setSystemName')}
-              </Button>
-            </Grid>
-            <Grid xs={12}>
-              <FormControl fullWidth>
-                <InputLabel htmlFor="Logo">{t('setting_index.otherSettings.customSettings.logoLabel')}</InputLabel>
-                <OutlinedInput
-                  id="Logo"
-                  name="Logo"
-                  value={inputs.Logo || ''}
-                  onChange={handleInputChange}
-                  label={t('setting_index.otherSettings.customSettings.logoLabel')}
-                  placeholder={t('setting_index.otherSettings.customSettings.logoPlaceholder')}
-                  disabled={loading}
-                />
-              </FormControl>
-            </Grid>
-            <Grid xs={12}>
-              <Button variant="contained" onClick={submitLogo}>
-                {t('setting_index.otherSettings.customSettings.setLogo')}
-              </Button>
-            </Grid>
-            <Grid xs={12}>
-              <FormControl fullWidth>
-                <TextField
-                  multiline
-                  maxRows={15}
-                  id="HomePageContent"
-                  label={t('setting_index.otherSettings.customSettings.homePageContentLabel')}
-                  value={inputs.HomePageContent}
-                  name="HomePageContent"
-                  onChange={handleInputChange}
-                  minRows={10}
-                  placeholder={t('setting_index.otherSettings.customSettings.homePageContentPlaceholder')}
-                />
-              </FormControl>
-            </Grid>
-            <Grid xs={12}>
-              <Button variant="contained" onClick={() => submitOption('HomePageContent')}>
-                {t('setting_index.otherSettings.customSettings.saveHomePageContent')}
-              </Button>
-            </Grid>
-            <Grid xs={12}>
-              <FormControl fullWidth>
-                <TextField
-                  multiline
-                  maxRows={15}
-                  id="About"
-                  label={t('setting_index.otherSettings.customSettings.aboutLabel')}
-                  value={inputs.About}
-                  name="About"
-                  onChange={handleInputChange}
-                  minRows={10}
-                  placeholder={t('setting_index.otherSettings.customSettings.aboutPlaceholder')}
-                />
-              </FormControl>
-            </Grid>
-            <Grid xs={12}>
-              <Button variant="contained" onClick={submitAbout}>
-                {t('setting_index.otherSettings.customSettings.saveAbout')}
-              </Button>
-            </Grid>
-            <Grid xs={12}>
-              <Alert severity="warning">{t('setting_index.otherSettings.customSettings.copyrightWarning')}</Alert>
-            </Grid>
-            <Grid xs={12}>
-              <FormControl fullWidth>
-                <TextField
-                  multiline
-                  maxRows={15}
-                  id="Footer"
-                  label={t('setting_index.otherSettings.customSettings.footerLabel')}
-                  value={inputs.Footer}
-                  name="Footer"
-                  onChange={handleInputChange}
-                  minRows={10}
-                  placeholder={t('setting_index.otherSettings.customSettings.footerPlaceholder')}
-                />
-              </FormControl>
-            </Grid>
-            <Grid xs={12}>
-              <Button variant="contained" onClick={submitFooter}>
-                {t('setting_index.otherSettings.customSettings.setFooter')}
               </Button>
             </Grid>
           </Grid>
