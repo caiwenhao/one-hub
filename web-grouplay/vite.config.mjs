@@ -1,10 +1,13 @@
 // https://github.com/vitejs/vite/discussions/3448
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import jsconfigPaths from 'vite-jsconfig-paths';
 
 // ----------------------------------------------------------------------
+
+const resolveFrom = (p) => fileURLToPath(new URL(p, import.meta.url));
 
 export default defineConfig({
   plugins: [react(), jsconfigPaths()],
@@ -13,16 +16,11 @@ export default defineConfig({
   //     global: 'window'
   //   },
   resolve: {
-    alias: [
-      {
-        find: /^~(.+)/,
-        replacement: path.join(process.cwd(), 'node_modules/$1')
-      },
-      {
-        find: /^src(.+)/,
-        replacement: path.join(process.cwd(), 'src/$1')
-      }
-    ]
+    alias: {
+      '@': resolveFrom('./src'),
+      'src': resolveFrom('./src'),
+      '~': resolveFrom('./node_modules')
+    }
   },
   build: {
     outDir: 'build',
