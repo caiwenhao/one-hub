@@ -48,7 +48,7 @@ const DesignFooter = () => {
             <Grid container spacing={{ xs: 4, md: 6 }}>
               {[
                 { title: '导航', links: [ { label: '热门模型', href: '/models' }, { label: '价格方案', href: '/price' }, { label: '开发者中心', href: '/developer' } ] },
-                { title: '支持', links: [ { label: '联系我们', href: '/contact' }, { label: '常见问题', href: '/about' }, { label: '服务状态', href: '#' } ] },
+                { title: '支持', links: [ { label: '联系我们', href: '/contact' } ] },
                 { title: '联系', links: [ { label: 'sales@grouplay.cn', href: null }, { label: 'support@grouplay.cn', href: null } ] }
               ].map((section) => (
                 <Grid key={section.title} item xs={12} sm={4}>

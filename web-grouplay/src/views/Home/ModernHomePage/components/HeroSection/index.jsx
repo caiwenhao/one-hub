@@ -127,7 +127,7 @@ const HeroSection = () => {
             <Button
               variant="text"
               endIcon={<ArrowForward />}
-              onClick={() => navigate('/about')}
+              onClick={() => navigate('/contact')}
               sx={{
                 fontSize: { xs: '1rem', md: '1.125rem' },
                 color: colors.primary,

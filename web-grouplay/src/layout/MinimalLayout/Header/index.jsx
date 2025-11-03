@@ -195,40 +195,7 @@ const Header = () => {
           开发者中心
         </Typography>
 
-        <Typography
-          component={Link}
-          to="/playground"
-          sx={{
-            color: pathname === '/playground' ? '#1677ff' : '#718096',
-            fontWeight: pathname === '/playground' ? 600 : 500,
-            display: 'none',
-            textDecoration: 'none',
-            fontSize: '1rem',
-            cursor: 'pointer',
-            position: 'relative',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              color: '#1677ff'
-            },
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: '2px',
-              background: '#1677ff',
-              transform: pathname === '/playground' ? 'scaleX(1)' : 'scaleX(0)',
-              transformOrigin: 'center',
-              transition: 'transform 0.3s ease'
-            },
-            '&:hover::after': {
-              transform: 'scaleX(1)'
-            }
-          }}
-        >
-          应用体验
-        </Typography>
+        {/* 应用体验 菜单已按需求移除 */}
 
         <Typography
           component={Link}

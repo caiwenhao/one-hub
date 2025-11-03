@@ -1,84 +1,10 @@
-import React, { useState } from 'react';
-import { Box, Typography, Container, Grid, Paper, Dialog, DialogContent, IconButton } from '@mui/material';
+import React from 'react';
+import { Box, Typography, Container, Grid, Paper } from '@mui/material';
 import CodeIcon from '@mui/icons-material/Code';
-import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
-import WechatIcon from '@mui/icons-material/Chat';
-import BusinessIcon from '@mui/icons-material/Business';
-import CloseIcon from '@mui/icons-material/Close';
+import EmailIcon from '@mui/icons-material/Email';
 
-// 图片预览模态框组件
-const ImagePreviewModal = ({ open, onClose, imageUrl, title }) => {
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: {
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '16px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-        }
-      }}
-    >
-      <Box sx={{ position: 'relative' }}>
-        <IconButton
-          onClick={onClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            zIndex: 1,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            color: 'white',
-            '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.7)'
-            }
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-        <DialogContent sx={{ p: 3, textAlign: 'center' }}>
-          <Typography
-            variant="h6"
-            sx={{
-              mb: 3,
-              color: '#1A202C',
-              fontWeight: 600
-            }}
-          >
-            {title}
-          </Typography>
-          <img
-            src={imageUrl}
-            alt={title}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '500px',
-              width: 'auto',
-              height: 'auto',
-              borderRadius: '12px',
-              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
-            }}
-          />
-          <Typography
-            variant="body2"
-            sx={{
-              mt: 2,
-              color: '#718096',
-              fontSize: '0.875rem'
-            }}
-          >
-            扫描二维码或长按保存到相册
-          </Typography>
-        </DialogContent>
-      </Box>
-    </Dialog>
-  );
-};
+// 移除图片预览模态框（不再展示公众号/企业微信二维码）
 
 // 联系卡片组件
 const ContactCard = ({
@@ -268,28 +194,6 @@ const ContactCard = ({
 };
 
 const ContactChannels = () => {
-  const [previewModal, setPreviewModal] = useState({
-    open: false,
-    imageUrl: '',
-    title: ''
-  });
-
-  const handleImagePreview = (imageUrl, title) => {
-    setPreviewModal({
-      open: true,
-      imageUrl,
-      title
-    });
-  };
-
-  const handleClosePreview = () => {
-    setPreviewModal({
-      open: false,
-      imageUrl: '',
-      title: ''
-    });
-  };
-
   return (
     <Box
       component="section"
@@ -340,58 +244,7 @@ const ContactChannels = () => {
             />
           </Grid>
         </Grid>
-
-        {/* 第二行：微信公众号和企业微信 */}
-        <Grid container spacing={{ xs: 6, md: 6 }}>
-          {/* 微信公众号 */}
-          <Grid item xs={12} md={6}>
-            <ContactCard
-              title="微信公众号"
-              description={
-                <>
-                  关注我们的微信公众号，获取最新产品动态
-                  <br />
-                  和技术资讯，与我们保持密切联系
-                </>
-              }
-              imageUrl="/gzh.jpg"
-              contactType="image"
-              icon={WechatIcon}
-              gradientColors="linear-gradient(135deg, #10B981, #059669)"
-              bgGradient="linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, white 100%)"
-              onImageClick={() => handleImagePreview('/gzh.jpg', '微信公众号二维码')}
-            />
-          </Grid>
-
-          {/* 企业微信 */}
-          <Grid item xs={12} md={6}>
-            <ContactCard
-              title="企业微信"
-              description={
-                <>
-                  添加我们的企业微信，享受更专业的
-                  <br />
-                  一对一服务和技术支持
-                </>
-              }
-              imageUrl="/qywx.png"
-              contactType="image"
-              icon={BusinessIcon}
-              gradientColors="linear-gradient(135deg, #8B5CF6, #7C3AED)"
-              bgGradient="linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, white 100%)"
-              onImageClick={() => handleImagePreview('/qywx.png', '企业微信二维码')}
-            />
-          </Grid>
-        </Grid>
       </Container>
-
-      {/* 图片预览模态框 */}
-      <ImagePreviewModal
-        open={previewModal.open}
-        onClose={handleClosePreview}
-        imageUrl={previewModal.imageUrl}
-        title={previewModal.title}
-      />
     </Box>
   );
 };

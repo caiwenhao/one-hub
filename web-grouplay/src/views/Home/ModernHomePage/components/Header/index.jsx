@@ -46,7 +46,6 @@ const Header = () => {
     { label: '热门模型', href: '/models' },
     { label: '价格方案', href: '/price' },
     { label: '开发者中心', href: '/developer' },
-    { label: '应用体验', href: '/playground' },
     { label: '联系我们', href: '/contact' }
   ];
 
