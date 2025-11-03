@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Container, Typography, Grid, Button } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ModelCard from './ModelCard';
-import { mockModels, categories } from '../data/mockData';
+import { mockModels, categories } from '../data/mockData.js';
 import { colors, gradients, animationStyles, createGradientText } from '../styles/theme';
 
 const CategorySection = () => {
