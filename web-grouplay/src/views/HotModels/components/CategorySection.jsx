@@ -2,7 +2,131 @@ import React, { useState } from 'react';
 import { Box, Container, Typography, Grid, Button } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ModelCard from './ModelCard';
-import { mockModels, categories } from '@/views/HotModels/data/mockData.js';
+// 方案B：使用静态内置数据渲染“分类模型”，无外部依赖
+const categories = [
+  { id: 'text', name: '文本生成', icon: 'solar:document-text-bold' },
+  { id: 'image', name: '图像生成', icon: 'solar:camera-bold' },
+  { id: 'video', name: '视频生成', icon: 'solar:video-frame-play-vertical-bold' },
+  { id: 'audio', name: '音频处理', icon: 'solar:microphone-bold' },
+  { id: 'embedding', name: '向量嵌入', icon: 'solar:code-bold' }
+];
+
+const mockModels = {
+  textModels: [
+    {
+      id: 'deepseek-v3-1',
+      name: 'deepseek-v3.1',
+      provider: 'DeepSeek',
+      description: '支持百万级上下文，多步推理增强，覆盖 100+ 语言。',
+      iconColor: '#0EA5E9',
+      performance: { intelligence: 90, speed: 85, costEfficiency: 92, safety: 88 }
+    },
+    {
+      id: 'kimi-k2',
+      name: 'kimi-k2',
+      provider: 'Moonshot AI',
+      description: 'MoE 架构，面向工具调用与自主任务执行，性价比高。',
+      iconColor: '#8B5CF6',
+      performance: { intelligence: 86, speed: 88, costEfficiency: 90, safety: 86 }
+    },
+    {
+      id: 'gpt-4o',
+      name: 'GPT-4o',
+      provider: 'OpenAI',
+      description: '多模态旗舰，实时音视频/文本，通用能力强。',
+      iconColor: '#16a34a',
+      performance: { intelligence: 92, speed: 84, costEfficiency: 80, safety: 90 }
+    }
+  ],
+  imageModels: [
+    {
+      id: 'gpt-image-1',
+      name: 'GPT-Image-1',
+      provider: 'OpenAI',
+      description: '自回归图像生成，文本渲染与细粒度编辑强。',
+      iconColor: '#22c55e',
+      performance: { intelligence: 88, speed: 86, costEfficiency: 82, safety: 88 }
+    },
+    {
+      id: 'midjourney-v7',
+      name: 'Midjourney V7',
+      provider: 'Midjourney',
+      description: '艺术风格与细节表现出色，创意设计优选。',
+      iconColor: '#ef4444',
+      performance: { intelligence: 86, speed: 90, costEfficiency: 84, safety: 86 }
+    },
+    {
+      id: 'doubao-seedream-4-0',
+      name: 'Doubao-SeeDream-4.0',
+      provider: 'Doubao',
+      description: '文生图与编辑评测领先，2K/4K 输出稳定。',
+      iconColor: '#0ea5e9',
+      performance: { intelligence: 85, speed: 88, costEfficiency: 86, safety: 87 }
+    }
+  ],
+  videoModels: [
+    {
+      id: 'sora-2',
+      name: 'Sora-2',
+      provider: 'OpenAI',
+      description: '长镜头与物理一致性强，电影级视频生成。',
+      iconColor: '#3B82F6',
+      performance: { intelligence: 92, speed: 80, costEfficiency: 78, safety: 90 }
+    },
+    {
+      id: 'veo-3-1',
+      name: 'Veo 3.1',
+      provider: 'Google',
+      description: '1–3 张参考图保证角色一致，多风格快速渲染。',
+      iconColor: '#0EA5E9',
+      performance: { intelligence: 88, speed: 86, costEfficiency: 82, safety: 88 }
+    },
+    {
+      id: 'kling',
+      name: 'Kling',
+      provider: 'Kling',
+      description: '文本/图像/视频多模态输入，支持对象级编辑。',
+      iconColor: '#22c55e',
+      performance: { intelligence: 86, speed: 84, costEfficiency: 84, safety: 86 }
+    }
+  ],
+  audioModels: [
+    {
+      id: 'gpt-audio',
+      name: 'gpt-audio',
+      provider: 'OpenAI',
+      description: '兼顾识别、合成与指令理解，音频多模态。',
+      iconColor: '#22d3ee',
+      performance: { intelligence: 85, speed: 90, costEfficiency: 84, safety: 88 }
+    },
+    {
+      id: 'speech-2-5-hd-preview',
+      name: 'speech-2.5-hd-preview',
+      provider: 'OpenAI',
+      description: '高清语音合成预览，更自然音色与更低噪声。',
+      iconColor: '#10b981',
+      performance: { intelligence: 84, speed: 88, costEfficiency: 82, safety: 88 }
+    }
+  ],
+  embeddingModels: [
+    {
+      id: 'text-embedding-3-small',
+      name: 'text-embedding-3-small',
+      provider: 'OpenAI',
+      description: '小尺寸嵌入，性价比高，适合大规模检索。',
+      iconColor: '#94a3b8',
+      performance: { intelligence: 80, speed: 92, costEfficiency: 92, safety: 88 }
+    },
+    {
+      id: 'doubao-embedding',
+      name: 'doubao-embedding',
+      provider: 'Doubao',
+      description: '中文表现优秀，适合检索与匹配。',
+      iconColor: '#10b981',
+      performance: { intelligence: 82, speed: 90, costEfficiency: 88, safety: 88 }
+    }
+  ]
+};
 import { colors, gradients, animationStyles, createGradientText } from '../styles/theme';
 
 const CategorySection = () => {

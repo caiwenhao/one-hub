@@ -2,7 +2,44 @@ import React from 'react';
 import { Box, Container, Typography, Grid, Chip } from '@mui/material';
 import { Icon } from '@iconify/react';
 import ModelCard from './ModelCard';
-import { mockModels } from '@/views/HotModels/data/mockData.js';
+// 方案B：使用静态内置数据渲染“明星模型”，无外部依赖
+const mockModels = {
+  featured: [
+    {
+      id: 'gpt-5',
+      name: 'GPT-5',
+      provider: 'OpenAI',
+      abbr: 'O',
+      description:
+        '新一代通用模型，多模态与复杂推理更强，适合复杂编程任务与企业级集成。',
+      useCases: ['复杂编程任务', '前端原型开发', '多步推理', '企业级 API 集成'],
+      iconColor: '#3B82F6',
+      tag: { type: 'hot', label: '🔥 火爆' }
+    },
+    {
+      id: 'claude-sonnet-4',
+      name: 'Claude Sonnet 4.5',
+      provider: 'Anthropic',
+      abbr: 'A',
+      description:
+        '面向自主智能体与长时工具调度优化，代码能力强，支持更长输出。',
+      useCases: ['全栈开发', '漏洞修补', '自动化测试', '长时运行智能体'],
+      iconColor: '#F59E0B',
+      tag: { type: 'hot', label: '🔥 火爆' }
+    },
+    {
+      id: 'gemini-2-5-pro',
+      name: 'Gemini 2.5 Pro',
+      provider: 'Google',
+      abbr: 'G',
+      description:
+        '原生多模态与百万级上下文，长文档与代码理解优秀，适配复杂业务场景。',
+      useCases: ['Web 应用开发', '大规模代码分析', '视频理解', '企业文档处理'],
+      iconColor: '#6366F1',
+      tag: { type: 'recommended', label: '⭐ 推荐' }
+    }
+  ]
+};
 import { colors, gradients, animationStyles, createGradientText } from '../styles/theme';
 
 const FeaturedModels = () => {
