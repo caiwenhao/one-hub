@@ -1,0 +1,4 @@
+/* 多语言长度回退样式 */
+.l10n-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.l10n-break { word-break: break-word; hyphens: auto; }
+.l10n-nowrap { white-space: nowrap; }

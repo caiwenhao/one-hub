@@ -1,0 +1,30 @@
+{
+  "color": {
+    "brand": {
+      "primary": { "value": "#1677ff" },
+      "primaryDark": { "value": "#1554c5" },
+      "ink": { "value": "#0f5bd3" },
+      "secondary": { "value": "#0f172a" }
+    },
+    "text": {
+      "primary": { "value": "#1f2937" },
+      "secondary": { "value": "#6b7280" },
+      "inverse": { "value": "#ffffff" }
+    },
+    "bg": {
+      "page": { "value": "#f7f9fc" },
+      "card": { "value": "#ffffff" },
+      "subtle": { "value": "#f3f4f6" }
+    },
+    "border": {
+      "default": { "value": "#e5e7eb" },
+      "strong": { "value": "#d1d5db" }
+    },
+    "semantic": {
+      "success": { "value": "#10B981" },
+      "warning": { "value": "#F59E0B" },
+      "error": { "value": "#EF4444" },
+      "info": { "value": "#3B82F6" }
+    }
+  }
+}

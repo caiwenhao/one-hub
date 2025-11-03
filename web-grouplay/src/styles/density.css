@@ -1,0 +1,36 @@
+:root {
+  /* 控件密度（标准） */
+  --density-button-py: 6px;
+  --density-button-px: 16px;
+  --density-control-py: 14px; /* 输入/选择 */
+  --density-control-px: 16px;
+  --density-table-cell-py: 16px;
+  --density-table-cell-px: 12px;
+  --density-table-head-py: 14px;
+}
+
+/* 紧凑 */
+:root[data-density="compact"], [data-density="compact"] {
+  --density-button-py: 4px;
+  --density-button-px: 12px;
+  --density-control-py: 10px;
+  --density-control-px: 14px;
+  --density-table-cell-py: 10px;
+  --density-table-cell-px: 10px;
+  --density-table-head-py: 10px;
+}
+
+/* 舒适 */
+:root[data-density="comfortable"], [data-density="comfortable"] {
+  --density-button-py: 10px;
+  --density-button-px: 20px;
+  --density-control-py: 16px;
+  --density-control-px: 18px;
+  --density-table-cell-py: 18px;
+  --density-table-cell-px: 16px;
+  --density-table-head-py: 16px;
+}
+
+/* Skip Link 样式（可访问性） */
+.skip-link { position: absolute; left: -9999px; top: 8px; background: var(--color-bg-card); color: var(--color-text-primary); padding: 6px 10px; border-radius: var(--radii-sm); border: 1px solid var(--color-border-strong); }
+.skip-link:focus { left: 8px; outline: 2px solid var(--color-brand-primary); z-index: 2000; }
