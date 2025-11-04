@@ -77,7 +77,8 @@ const getValidationSchema = (t) =>
 const MINIMAX_UPSTREAM_OPTIONS = [
   { value: '', label: '默认（官方）' },
   { value: 'official', label: '官方（直连）' },
-  { value: 'ppinfra', label: 'PPInfra（聚合）' }
+  { value: 'ppinfra', label: 'PPInfra（聚合）' },
+  { value: 'polloi', label: 'Polloi（聚合）' }
 ];
 
 // OpenAI 上游供应商选项
@@ -130,7 +131,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
       17: ['ali', '阿里', '通义', 'qwen'],
       20: ['openrouter', 'router', 'or'],
       25: ['google', 'gemini', 'palm'],
-      27: ['minimax', 'mini max', '海螺', 'hailuo', 'ppinfra'],
+      27: ['minimax', 'mini max', '海螺', 'hailuo', 'ppinfra', 'polloi'],
       31: ['groq'],
       36: ['cohere'],
       37: ['stability', 'sd3', 'stable'],
@@ -588,6 +589,8 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                         setFieldValue('minimax_upstream', next);
                         if (next === 'ppinfra') {
                           setFieldValue('base_url', 'https://api.ppinfra.com');
+                        } else if (next === 'polloi') {
+                          setFieldValue('base_url', 'https://pollo.ai/api/platform');
                         } else if (next === 'official' || next === '') {
                           setFieldValue('base_url', 'https://api.minimaxi.com');
                         }
@@ -598,6 +601,22 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                             obj.upstream = next;
                           } else {
                             if (obj && typeof obj === 'object' && 'upstream' in obj) delete obj.upstream;
+                          }
+                          // 简化视频配置：选中聚合上游时，自动注入 video 段的合理默认值（用户可继续编辑）
+                          if (!obj.video || typeof obj.video !== 'object') obj.video = {};
+                          if (next === 'ppinfra') {
+                            obj.video.base_url = obj.video.base_url || 'https://api.ppinfra.com';
+                            obj.video.submit_path_template = obj.video.submit_path_template || '/v3/async/%s';
+                            obj.video.query_path_template = obj.video.query_path_template || '/v3/async/task-result';
+                            obj.video.auth_header = obj.video.auth_header || 'Authorization';
+                            obj.video.auth_scheme = obj.video.auth_scheme || 'Bearer';
+                          }
+                          if (next === 'polloi') {
+                            obj.video.base_url = obj.video.base_url || 'https://pollo.ai/api/platform';
+                            obj.video.submit_path_template = obj.video.submit_path_template || '/generation/minimax/%s';
+                            obj.video.query_path_template = obj.video.query_path_template || '/generation/%s/status';
+                            obj.video.auth_header = obj.video.auth_header || 'x-api-key';
+                            obj.video.auth_scheme = obj.video.auth_scheme || 'none';
                           }
                           setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
                         } catch (_) {

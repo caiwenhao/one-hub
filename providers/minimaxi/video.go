@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	MiniMaxVideoUpstreamOfficial = "official"
-	MiniMaxVideoUpstreamPPInfra  = "ppinfra"
+    MiniMaxVideoUpstreamOfficial = "official"
+    MiniMaxVideoUpstreamPPInfra  = "ppinfra"
+    MiniMaxVideoUpstreamPolloi   = "polloi"
 )
 
 // MiniMaxVideoConfig 描述视频能力所需的配置项
@@ -228,9 +229,34 @@ func mergeMiniMaxVideoConfig(dst, src *MiniMaxVideoConfig) {
 			dst.QueryPath = "/v3/async/task-result"
 		}
 	}
-	if dst.Upstream == MiniMaxVideoUpstreamPPInfra && dst.AuthScheme == "Bearer" {
-		dst.AuthScheme = "Bearer"
-	}
+    if dst.Upstream == MiniMaxVideoUpstreamPPInfra && dst.AuthScheme == "Bearer" {
+        dst.AuthScheme = "Bearer"
+    }
+
+    // Polloi 上游：设置合理默认值（仅当仍为官方默认时生效）
+    if dst.Upstream == MiniMaxVideoUpstreamPolloi {
+        // 规范域名：Polloi 实际生产域为 https://pollo.ai/api/platform
+        if dst.BaseURL == "https://api.minimaxi.com" || strings.TrimSpace(dst.BaseURL) == "" || strings.Contains(strings.ToLower(dst.BaseURL), "api.polloi.ai") {
+            dst.BaseURL = "https://pollo.ai/api/platform"
+        }
+        // Polloi 提交：/generation/minimax/{model-segment}
+        if dst.SubmitPathTemplate == "" && (dst.SubmitPath == "/v1/video_generation" || strings.TrimSpace(dst.SubmitPath) == "") {
+            dst.SubmitPathTemplate = "/generation/minimax/%s"
+            dst.SubmitPath = ""
+        }
+        // Polloi 查询：/generation/{taskId}/status （无需 model 段）
+        if dst.QueryPathTemplate == "" && (dst.QueryPath == "/v1/query/video_generation" || strings.TrimSpace(dst.QueryPath) == "") {
+            dst.QueryPathTemplate = "/generation/%s/status"
+            dst.QueryPath = ""
+        }
+        // Polloi 使用 x-api-key 直传
+        if strings.TrimSpace(dst.AuthHeader) == "" || strings.EqualFold(dst.AuthHeader, "authorization") {
+            dst.AuthHeader = "x-api-key"
+        }
+        if strings.EqualFold(strings.TrimSpace(dst.AuthScheme), "") || strings.EqualFold(dst.AuthScheme, "bearer") {
+            dst.AuthScheme = "none"
+        }
+    }
 }
 
 func (c *MiniMaxVideoClient) buildHeaders() map[string]string {
@@ -362,13 +388,30 @@ func (c *MiniMaxVideoClient) SubmitVideoTask(req *MiniMaxVideoCreateRequest) (*M
 		return nil, &types.OpenAIError{Message: fmt.Sprintf("create request failed: %s", err.Error()), Type: "minimax_video_request_error"}
 	}
 
-	var resp MiniMaxVideoCreateResponse
-	_, errWithCode := c.Requester.SendRequest(httpReq, &resp, false)
-	if errWithCode != nil {
-		return nil, &errWithCode.OpenAIError
-	}
+    // Polloi 上游：响应为 camelCase（taskId 等），需单独处理
+    if c.config.Upstream == MiniMaxVideoUpstreamPolloi {
+        var raw string
+        if _, errWithCode := c.Requester.SendRequest(httpReq, &raw, false); errWithCode != nil {
+            return nil, &errWithCode.OpenAIError
+        }
+        type polloiCreateResp struct {
+            TaskID string `json:"taskId"`
+            Status string `json:"status"`
+        }
+        var pr polloiCreateResp
+        if err := json.Unmarshal([]byte(raw), &pr); err != nil {
+            return nil, &types.OpenAIError{Message: fmt.Sprintf("decode polloi create response failed: %v", err), Type: "minimax_video_decode_error"}
+        }
+        return &MiniMaxVideoCreateResponse{TaskID: pr.TaskID, BaseResp: BaseResp{StatusCode: 0, StatusMsg: "success"}}, nil
+    }
 
-	return &resp, nil
+    var resp MiniMaxVideoCreateResponse
+    _, errWithCode := c.Requester.SendRequest(httpReq, &resp, false)
+    if errWithCode != nil {
+        return nil, &errWithCode.OpenAIError
+    }
+
+    return &resp, nil
 }
 
 // QueryVideoTask 查询视频任务状态
@@ -397,15 +440,75 @@ func (c *MiniMaxVideoClient) QueryVideoTask(taskID, model string) (*MiniMaxVideo
 		return nil, &types.OpenAIError{Message: fmt.Sprintf("create request failed: %s", err.Error()), Type: "minimax_video_request_error"}
 	}
 
-	var resp MiniMaxVideoQueryResponse
-	_, errWithCode := c.Requester.SendRequest(httpReq, &resp, false)
-	if errWithCode != nil {
-		return nil, &errWithCode.OpenAIError
-	}
+    // Polloi 上游：响应结构为 {taskId, generations: [{id,status,failMsg,url,mediaType,...}]}
+    if c.config.Upstream == MiniMaxVideoUpstreamPolloi {
+        var raw string
+        if _, errWithCode := c.Requester.SendRequest(httpReq, &raw, false); errWithCode != nil {
+            return nil, &errWithCode.OpenAIError
+        }
+        type polloiGen struct {
+            ID        string `json:"id"`
+            Status    string `json:"status"`
+            FailMsg   string `json:"failMsg"`
+            URL       string `json:"url"`
+            MediaType string `json:"mediaType"`
+            CreatedAt string `json:"createdDate"`
+            UpdatedAt string `json:"updatedDate"`
+        }
+        type polloiQueryResp struct {
+            TaskID      string       `json:"taskId"`
+            Generations []polloiGen  `json:"generations"`
+        }
+        var pq polloiQueryResp
+        if err := json.Unmarshal([]byte(raw), &pq); err != nil {
+            return nil, &types.OpenAIError{Message: fmt.Sprintf("decode polloi query response failed: %v", err), Type: "minimax_video_decode_error"}
+        }
 
-	resp.Normalize()
+        out := &MiniMaxVideoQueryResponse{TaskID: pq.TaskID, BaseResp: BaseResp{StatusCode: 0, StatusMsg: "success"}}
+        // 选择首个 video 或首个条目
+        var chosen *polloiGen
+        for i := range pq.Generations {
+            if strings.EqualFold(pq.Generations[i].MediaType, "video") {
+                chosen = &pq.Generations[i]
+                break
+            }
+        }
+        if chosen == nil && len(pq.Generations) > 0 {
+            chosen = &pq.Generations[0]
+        }
+        if chosen != nil {
+            st := strings.ToLower(strings.TrimSpace(chosen.Status))
+            switch st {
+            case "waiting":
+                out.Status = "queueing"
+            case "processing":
+                out.Status = "processing"
+            case "succeed", "success", "completed":
+                out.Status = "success"
+            case "failed", "fail", "error":
+                out.Status = "failed"
+            default:
+                out.Status = st
+            }
+            out.VideoURL = strings.TrimSpace(chosen.URL)
+            if out.Status == "failed" && strings.TrimSpace(chosen.FailMsg) != "" {
+                out.ErrorMessage = strings.TrimSpace(chosen.FailMsg)
+            }
+        }
 
-	return &resp, nil
+        out.Normalize()
+        return out, nil
+    }
+
+    var resp MiniMaxVideoQueryResponse
+    _, errWithCode := c.Requester.SendRequest(httpReq, &resp, false)
+    if errWithCode != nil {
+        return nil, &errWithCode.OpenAIError
+    }
+
+    resp.Normalize()
+
+    return &resp, nil
 }
 
 // RetrieveFile 获取文件下载信息
@@ -449,9 +552,9 @@ func (c *MiniMaxVideoClient) prepareSubmitPayload(req *MiniMaxVideoCreateRequest
 		clone.EnablePromptExpansion = &value
 	}
 
-	// PPInfra 上游：使用其兼容字段与命名
-	if c.config.Upstream == MiniMaxVideoUpstreamPPInfra {
-		payload := map[string]interface{}{}
+    // PPInfra 上游：使用其兼容字段与命名
+    if c.config.Upstream == MiniMaxVideoUpstreamPPInfra {
+        payload := map[string]interface{}{}
 		if clone.Prompt != "" {
 			payload["prompt"] = clone.Prompt
 		}
@@ -485,8 +588,48 @@ func (c *MiniMaxVideoClient) prepareSubmitPayload(req *MiniMaxVideoCreateRequest
 		return payload
 	}
 
-	// 官方上游：严格对齐 minimaxi 官方字段
-	payload := map[string]interface{}{}
+    // Polloi 上游：外层包裹 input + webhookUrl，input 内对齐我们内部统一字段
+    if c.config.Upstream == MiniMaxVideoUpstreamPolloi {
+        input := map[string]interface{}{}
+        if clone.Prompt != "" {
+            input["prompt"] = clone.Prompt
+        }
+        if clone.FirstFrameImage != "" {
+            input["image"] = clone.FirstFrameImage
+        }
+        if clone.LastFrameImage != "" {
+            input["end_image"] = clone.LastFrameImage
+        }
+        if clone.ReferenceImage != "" {
+            input["reference_image"] = clone.ReferenceImage
+        }
+        if len(clone.SubjectReference) > 0 {
+            input["subject_reference"] = clone.SubjectReference
+        }
+        if clone.Duration > 0 {
+            input["duration"] = clone.Duration
+        }
+        if clone.Resolution != "" {
+            input["resolution"] = clone.Resolution
+        }
+        if clone.EnablePromptExpansion != nil {
+            input["enable_prompt_expansion"] = *clone.EnablePromptExpansion
+        } else if clone.PromptOptimizer != nil {
+            input["enable_prompt_expansion"] = *clone.PromptOptimizer
+        }
+        if clone.ExternalTaskID != "" {
+            input["external_task_id"] = clone.ExternalTaskID
+        }
+
+        payload := map[string]interface{}{"input": input}
+        if clone.CallbackURL != "" {
+            payload["webhookUrl"] = clone.CallbackURL
+        }
+        return payload
+    }
+
+    // 官方上游：严格对齐 minimaxi 官方字段
+    payload := map[string]interface{}{}
 	if clone.Model != "" {
 		payload["model"] = clone.Model
 	}
