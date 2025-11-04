@@ -58,9 +58,11 @@ var providerFactories = make(map[int]ProviderFactory)
 
 // 在程序启动时，添加所有的供应商工厂
 func init() {
-	providerFactories = map[int]ProviderFactory{
-		config.ChannelTypeOpenAI:          openai.OpenAIProviderFactory{},
-		config.ChannelTypeAzure:           azure.AzureProviderFactory{},
+    providerFactories = map[int]ProviderFactory{
+        config.ChannelTypeOpenAI:          openai.OpenAIProviderFactory{},
+        // NewAPI 渠道：默认复用 OpenAI Provider 行为
+        config.ChannelTypeNewAPI:          openai.OpenAIProviderFactory{},
+        config.ChannelTypeAzure:           azure.AzureProviderFactory{},
 		config.ChannelTypeAli:             ali.AliProviderFactory{},
 		config.ChannelTypeTencent:         tencent.TencentProviderFactory{},
 		config.ChannelTypeBaidu:           baidu.BaiduProviderFactory{},

@@ -13,20 +13,20 @@ import (
 )
 
 const (
-    soraVendorOfficial = "official"
-    soraVendorMountSea = "mountsea"
-    soraVendorSutui   = "sutui"
+	soraVendorOfficial = "official"
+	soraVendorMountSea = "mountsea"
+	soraVendorSutui    = "sutui"
 )
 
 type openAIVideoResponse struct {
-    types.VideoJob
-    types.OpenAIErrorResponse
+	types.VideoJob
+	types.OpenAIErrorResponse
 }
 
 type openAIVideoListResponse struct {
-    Object string          `json:"object"`
-    Data   []types.VideoJob `json:"data"`
-    types.OpenAIErrorResponse
+	Object string           `json:"object"`
+	Data   []types.VideoJob `json:"data"`
+	types.OpenAIErrorResponse
 }
 
 type mountSeaCreateRequest struct {
@@ -79,164 +79,273 @@ type soraSizeInfo struct {
 }
 
 func (p *OpenAIProvider) CreateVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-    // 根据渠道配置与 BaseURL 识别供应商，分别适配官方与 MountSea 聚合
-    switch p.detectSoraVendor() {
-    case soraVendorMountSea:
-        return p.createMountSeaVideo(request)
-    case soraVendorSutui:
-        return p.createSutuiVideo(request)
-    default:
-        // 统一遵循 OpenAI 标准视频路由：/v1/videos
-        return p.createOfficialVideo(request)
-    }
+	// NewAPI 渠道：将 OpenAI 标准 /v1/videos 请求映射为供应商 /v1/videos/generations
+	if p.Channel != nil && p.Channel.Type == config.ChannelTypeNewAPI {
+		return p.createNewAPIVideoFromOpenAI(request)
+	}
+	// 根据渠道配置与 BaseURL 识别供应商，分别适配官方与 MountSea 聚合
+	switch p.detectSoraVendor() {
+	case soraVendorMountSea:
+		return p.createMountSeaVideo(request)
+	case soraVendorSutui:
+		return p.createSutuiVideo(request)
+	default:
+		// 统一遵循 OpenAI 标准视频路由：/v1/videos
+		return p.createOfficialVideo(request)
+	}
 }
 
 func (p *OpenAIProvider) RetrieveVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-    switch p.detectSoraVendor() {
-    case soraVendorMountSea:
-        return p.retrieveMountSeaVideo(videoID)
-    case soraVendorSutui:
-        return p.retrieveSutuiVideo(videoID)
-    default:
-        // 统一遵循 OpenAI 标准视频路由：/v1/videos
-        return p.retrieveOfficialVideo(videoID)
-    }
+	switch p.detectSoraVendor() {
+	case soraVendorMountSea:
+		return p.retrieveMountSeaVideo(videoID)
+	case soraVendorSutui:
+		return p.retrieveSutuiVideo(videoID)
+	default:
+		// 统一遵循 OpenAI 标准视频路由：/v1/videos
+		return p.retrieveOfficialVideo(videoID)
+	}
 }
 
 func (p *OpenAIProvider) DownloadVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode) {
-    switch p.detectSoraVendor() {
-    case soraVendorMountSea:
-        return p.downloadMountSeaVideo(videoID, variant)
-    case soraVendorSutui:
-        return p.downloadSutuiVideo(videoID, variant)
-    default:
-        // 统一遵循 OpenAI 标准视频路由：/v1/videos
-        return p.downloadOfficialVideo(videoID, variant)
-    }
+	switch p.detectSoraVendor() {
+	case soraVendorMountSea:
+		return p.downloadMountSeaVideo(videoID, variant)
+	case soraVendorSutui:
+		return p.downloadSutuiVideo(videoID, variant)
+	default:
+		// 统一遵循 OpenAI 标准视频路由：/v1/videos
+		return p.downloadOfficialVideo(videoID, variant)
+	}
 }
 
 func (p *OpenAIProvider) detectSoraVendor() string {
-    if p.Channel != nil && p.Channel.Plugin != nil {
-        if plugin := p.Channel.Plugin.Data(); plugin != nil {
-            if soraConfig, ok := plugin["sora"]; ok {
-                if vendor, ok := soraConfig["vendor"].(string); ok && vendor != "" {
-                    return strings.ToLower(vendor)
-                }
-            }
-        }
-    }
+	if p.Channel != nil && p.Channel.Plugin != nil {
+		if plugin := p.Channel.Plugin.Data(); plugin != nil {
+			if soraConfig, ok := plugin["sora"]; ok {
+				if vendor, ok := soraConfig["vendor"].(string); ok && vendor != "" {
+					return strings.ToLower(vendor)
+				}
+			}
+		}
+	}
 
-    base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
-    if base != "" && strings.Contains(base, "mountsea") {
-        return soraVendorMountSea
-    }
-    if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai")) {
-        return soraVendorSutui
-    }
+	base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
+	if base != "" && strings.Contains(base, "mountsea") {
+		return soraVendorMountSea
+	}
+	if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai")) {
+		return soraVendorSutui
+	}
 
-    return soraVendorOfficial
+	return soraVendorOfficial
 }
 
 func (p *OpenAIProvider) createOfficialVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-    // 若为 multipart/form-data，则透传原始请求体，保持与官方一致
-    contentType := ""
-    if p.Context != nil && p.Context.Request != nil {
-        contentType = p.Context.Request.Header.Get("Content-Type")
-    }
+	// 若为 multipart/form-data，则透传原始请求体，保持与官方一致
+	contentType := ""
+	if p.Context != nil && p.Context.Request != nil {
+		contentType = p.Context.Request.Header.Get("Content-Type")
+	}
 
-    if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
-        urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
-        if errWithCode != nil {
-            return nil, errWithCode
-        }
-        fullURL := p.GetFullRequestURL(urlPath, request.Model)
-        // 透传原始 body
-        raw, ok := p.GetRawBody()
-        if !ok {
-            return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
-        }
-        headers := p.GetRequestHeaders()
-        httpReq, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
-        if err != nil {
-            return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-        }
-        defer httpReq.Body.Close()
+	if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
+		urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
+		if errWithCode != nil {
+			return nil, errWithCode
+		}
+		fullURL := p.GetFullRequestURL(urlPath, request.Model)
+		// 透传原始 body
+		raw, ok := p.GetRawBody()
+		if !ok {
+			return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
+		}
+		headers := p.GetRequestHeaders()
+		httpReq, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
+		if err != nil {
+			return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+		}
+		defer httpReq.Body.Close()
 
-        response := &openAIVideoResponse{}
-        _, errWithCode = p.Requester.SendRequest(httpReq, response, false)
-        if errWithCode != nil {
-            return nil, errWithCode
-        }
-        if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
-            return nil, &types.OpenAIErrorWithStatusCode{OpenAIError: *openErr, StatusCode: http.StatusBadRequest}
-        }
-        job := response.VideoJob
-        if job.Object == "" {
-            job.Object = "video"
-        }
-        if job.Model == "" {
-            job.Model = request.Model
-        }
-        if job.CreatedAt == 0 {
-            job.CreatedAt = time.Now().Unix()
-        }
-        if job.Progress == 0 {
-            // 与官方示例保持一致
-            job.Progress = 0
-        }
-        if job.Quality == "" {
-            job.Quality = "standard"
-        }
-        return &job, nil
-    }
+		response := &openAIVideoResponse{}
+		_, errWithCode = p.Requester.SendRequest(httpReq, response, false)
+		if errWithCode != nil {
+			return nil, errWithCode
+		}
+		if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
+			return nil, &types.OpenAIErrorWithStatusCode{OpenAIError: *openErr, StatusCode: http.StatusBadRequest}
+		}
+		job := response.VideoJob
+		if job.Object == "" {
+			job.Object = "video"
+		}
+		if job.Model == "" {
+			job.Model = request.Model
+		}
+		if job.CreatedAt == 0 {
+			job.CreatedAt = time.Now().Unix()
+		}
+		if job.Progress == 0 {
+			// 与官方示例保持一致
+			job.Progress = 0
+		}
+		if job.Quality == "" {
+			job.Quality = "standard"
+		}
+		return &job, nil
+	}
 
-    // 默认 JSON 方式
-    reqCopy := *request
-    httpReq, errWithCode := p.GetRequestTextBody(config.RelayModeOpenAIVideo, reqCopy.Model, &reqCopy)
-    if errWithCode != nil {
-        return nil, errWithCode
-    }
-    defer httpReq.Body.Close()
+	// 默认 JSON 方式
+	reqCopy := *request
+	httpReq, errWithCode := p.GetRequestTextBody(config.RelayModeOpenAIVideo, reqCopy.Model, &reqCopy)
+	if errWithCode != nil {
+		return nil, errWithCode
+	}
+	defer httpReq.Body.Close()
 
-    response := &openAIVideoResponse{}
-    _, errWithCode = p.Requester.SendRequest(httpReq, response, false)
-    if errWithCode != nil {
-        return nil, errWithCode
-    }
+	response := &openAIVideoResponse{}
+	_, errWithCode = p.Requester.SendRequest(httpReq, response, false)
+	if errWithCode != nil {
+		return nil, errWithCode
+	}
 
-    if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
-        return nil, &types.OpenAIErrorWithStatusCode{
-            OpenAIError: *openErr,
-            StatusCode:  http.StatusBadRequest,
-        }
-    }
+	if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
+		return nil, &types.OpenAIErrorWithStatusCode{
+			OpenAIError: *openErr,
+			StatusCode:  http.StatusBadRequest,
+		}
+	}
 
-    job := response.VideoJob
-    if job.Object == "" {
-        job.Object = "video"
-    }
-    if job.Model == "" {
-        job.Model = request.Model
-    }
-    if job.CreatedAt == 0 {
-        job.CreatedAt = time.Now().Unix()
-    }
-    if job.Progress == 0 {
-        job.Progress = 0
-    }
-    if job.Quality == "" {
-        job.Quality = "standard"
-    }
-    return &job, nil
+	job := response.VideoJob
+	if job.Object == "" {
+		job.Object = "video"
+	}
+	if job.Model == "" {
+		job.Model = request.Model
+	}
+	if job.CreatedAt == 0 {
+		job.CreatedAt = time.Now().Unix()
+	}
+	if job.Progress == 0 {
+		job.Progress = 0
+	}
+	if job.Quality == "" {
+		job.Quality = "standard"
+	}
+	return &job, nil
+}
+
+// --- NewAPI adapter: map OpenAI /v1/videos -> vendor /v1/videos/generations ---
+type newAPIVideoGenerationsReq struct {
+	Model       string   `json:"model"`
+	Prompt      string   `json:"prompt,omitempty"`
+	Duration    int      `json:"duration,omitempty"`
+	AspectRatio string   `json:"aspect_ratio,omitempty"`
+	ImageURLs   []string `json:"image_urls,omitempty"`
+	Watermark   *bool    `json:"watermark,omitempty"`
+}
+
+type newAPICreateResp struct {
+	Code int `json:"code"`
+	Data []struct {
+		Status string `json:"status"`
+		TaskID string `json:"task_id"`
+	} `json:"data"`
+	Error any `json:"error"`
+}
+
+func (p *OpenAIProvider) createNewAPIVideoFromOpenAI(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
+	// 构造 generations 请求体
+	body := &newAPIVideoGenerationsReq{Model: request.Model, Prompt: request.Prompt}
+	if request.Seconds > 0 {
+		body.Duration = request.Seconds
+	}
+	// 映射 size -> aspect_ratio
+	if s := strings.TrimSpace(request.Size); s != "" {
+		// 简单按常用分辨率判断
+		switch strings.ToLower(s) {
+		case "1280x720":
+			body.AspectRatio = "16:9"
+		case "720x1280":
+			body.AspectRatio = "9:16"
+		case "1792x1024":
+			body.AspectRatio = "16:9"
+		case "1024x1792":
+			body.AspectRatio = "9:16"
+		}
+	}
+	// 图生视频：聚合输入图
+	if len(request.InputImages) > 0 {
+		body.ImageURLs = append(body.ImageURLs, request.InputImages...)
+	}
+	if strings.TrimSpace(request.InputImage) != "" {
+		body.ImageURLs = append(body.ImageURLs, request.InputImage)
+	}
+	// 水印：与 remove_watermark 反向
+	if request.RemoveWatermark {
+		f := false
+		body.Watermark = &f
+	}
+
+	headers := p.GetRequestHeaders()
+	if headers == nil {
+		headers = map[string]string{}
+	}
+	headers["Content-Type"] = "application/json"
+
+	fullURL := strings.TrimSuffix(p.GetBaseURL(), "/") + "/v1/videos/generations"
+	req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	defer req.Body.Close()
+
+	// 对于第三方 JSON，关闭 OpenAI 错误包装前缀
+	originalOpenAIFlag := p.Requester.IsOpenAI
+	p.Requester.IsOpenAI = false
+	defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+
+	resp := &newAPICreateResp{}
+	if _, errWith := p.Requester.SendRequest(req, resp, false); errWith != nil {
+		return nil, errWith
+	}
+	// 解析返回
+	var taskID, status string
+	if len(resp.Data) > 0 {
+		taskID = resp.Data[0].TaskID
+		status = resp.Data[0].Status
+	}
+	if taskID == "" {
+		return nil, common.StringErrorWrapperLocal("invalid upstream response", "bad_upstream", http.StatusBadGateway)
+	}
+	// 映射 status：submitted -> queued
+	st := strings.ToLower(strings.TrimSpace(status))
+	if st == "submitted" {
+		st = "queued"
+	}
+
+	job := &types.VideoJob{
+		ID:        taskID,
+		Object:    "video",
+		Model:     request.Model,
+		Status:    st,
+		Progress:  0,
+		Seconds:   request.Seconds,
+		Size:      request.Size,
+		Quality:   "standard",
+		CreatedAt: time.Now().Unix(),
+	}
+	return job, nil
 }
 
 func (p *OpenAIProvider) retrieveOfficialVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-    fullURL := p.buildOfficialVideoURL(videoID, "")
-    req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(p.GetRequestHeaders()))
-    if err != nil {
-        return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-    }
-    if req.Body != nil { defer req.Body.Close() }
+	fullURL := p.buildOfficialVideoURL(videoID, "")
+	req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(p.GetRequestHeaders()))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	if req.Body != nil {
+		defer req.Body.Close()
+	}
 
 	response := &openAIVideoResponse{}
 	_, errWithCode := p.Requester.SendRequest(req, response, false)
@@ -251,14 +360,14 @@ func (p *OpenAIProvider) retrieveOfficialVideo(videoID string) (*types.VideoJob,
 		}
 	}
 
-    job := response.VideoJob
-    if job.Object == "" {
-        job.Object = "video"
-    }
-    if job.Quality == "" {
-        job.Quality = "standard"
-    }
-    return &job, nil
+	job := response.VideoJob
+	if job.Object == "" {
+		job.Object = "video"
+	}
+	if job.Quality == "" {
+		job.Quality = "standard"
+	}
+	return &job, nil
 }
 
 func (p *OpenAIProvider) downloadOfficialVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode) {
@@ -290,93 +399,111 @@ func (p *OpenAIProvider) downloadOfficialVideo(videoID string, variant string) (
 
 // RemixVideo: 官方支持 /v1/videos/{id}/remix；MountSea 回退为通过 create 接口的 remixVideoId 能力
 func (p *OpenAIProvider) RemixVideo(videoID string, prompt string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-    switch p.detectSoraVendor() {
-    case soraVendorMountSea:
-        // 通过 create + RemixVideoID 实现
-        req := &types.VideoCreateRequest{RemixVideoID: videoID, Prompt: prompt, Model: p.GetOriginalModel()}
-        return p.createMountSeaVideo(req)
-    case soraVendorSutui:
-        // 通过 create + RemixVideoID 实现
-        req := &types.VideoCreateRequest{RemixVideoID: videoID, Prompt: prompt, Model: p.GetOriginalModel()}
-        return p.createSutuiVideo(req)
-    default:
-        // 官方路径
-        basePath := strings.TrimSuffix(p.Config.Videos, "/")
-        path := fmt.Sprintf("%s/%s/remix", basePath, videoID)
-        fullURL := p.buildOfficialVideoURL("", path)
-        headers := p.GetRequestHeaders()
-        body := map[string]string{"prompt": prompt}
-        req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
-        if err != nil {
-            return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-        }
-        if req.Body != nil {
-            defer req.Body.Close()
-        }
-        response := &openAIVideoResponse{}
-        _, errWithCode := p.Requester.SendRequest(req, response, false)
-        if errWithCode != nil {
-            return nil, errWithCode
-        }
-        if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
-            return nil, &types.OpenAIErrorWithStatusCode{OpenAIError: *openErr, StatusCode: http.StatusBadRequest}
-        }
-        job := response.VideoJob
-        if job.Object == "" {
-            job.Object = "video"
-        }
-        return &job, nil
-    }
+	switch p.detectSoraVendor() {
+	case soraVendorMountSea:
+		// 通过 create + RemixVideoID 实现
+		req := &types.VideoCreateRequest{RemixVideoID: videoID, Prompt: prompt, Model: p.GetOriginalModel()}
+		return p.createMountSeaVideo(req)
+	case soraVendorSutui:
+		// 通过 create + RemixVideoID 实现
+		req := &types.VideoCreateRequest{RemixVideoID: videoID, Prompt: prompt, Model: p.GetOriginalModel()}
+		return p.createSutuiVideo(req)
+	default:
+		// 官方路径
+		basePath := strings.TrimSuffix(p.Config.Videos, "/")
+		path := fmt.Sprintf("%s/%s/remix", basePath, videoID)
+		fullURL := p.buildOfficialVideoURL("", path)
+		headers := p.GetRequestHeaders()
+		body := map[string]string{"prompt": prompt}
+		req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+		if err != nil {
+			return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+		}
+		if req.Body != nil {
+			defer req.Body.Close()
+		}
+		response := &openAIVideoResponse{}
+		_, errWithCode := p.Requester.SendRequest(req, response, false)
+		if errWithCode != nil {
+			return nil, errWithCode
+		}
+		if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
+			return nil, &types.OpenAIErrorWithStatusCode{OpenAIError: *openErr, StatusCode: http.StatusBadRequest}
+		}
+		job := response.VideoJob
+		if job.Object == "" {
+			job.Object = "video"
+		}
+		return &job, nil
+	}
 }
 
 // ListVideos: 官方 /v1/videos?after=&limit=&order=
 func (p *OpenAIProvider) ListVideos(after string, limit int, order string) (*types.VideoList, *types.OpenAIErrorWithStatusCode) {
-    if p.detectSoraVendor() != soraVendorOfficial {
-        return nil, common.StringErrorWrapperLocal("list videos is not supported for this channel", "unsupported_api", http.StatusNotImplemented)
-    }
-    base := strings.TrimSuffix(p.GetFullRequestURL("", ""), "/")
-    videosPath := strings.TrimSuffix(p.Config.Videos, "/")
-    fullURL := fmt.Sprintf("%s%s", base, videosPath)
-    q := url.Values{}
-    if strings.TrimSpace(after) != "" { q.Set("after", after) }
-    if limit > 0 { q.Set("limit", strconv.Itoa(limit)) }
-    if strings.TrimSpace(order) != "" { q.Set("order", order) }
-    if enc := q.Encode(); enc != "" {
-        fullURL = fullURL + "?" + enc
-    }
-    req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(p.GetRequestHeaders()))
-    if err != nil {
-        return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-    }
-    if req.Body != nil { defer req.Body.Close() }
-    response := &openAIVideoListResponse{}
-    _, errWithCode := p.Requester.SendRequest(req, response, false)
-    if errWithCode != nil { return nil, errWithCode }
-    if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
-        return nil, &types.OpenAIErrorWithStatusCode{OpenAIError: *openErr, StatusCode: http.StatusBadRequest}
-    }
-    return &types.VideoList{Object: response.Object, Data: response.Data}, nil
+	if p.detectSoraVendor() != soraVendorOfficial {
+		return nil, common.StringErrorWrapperLocal("list videos is not supported for this channel", "unsupported_api", http.StatusNotImplemented)
+	}
+	base := strings.TrimSuffix(p.GetFullRequestURL("", ""), "/")
+	videosPath := strings.TrimSuffix(p.Config.Videos, "/")
+	fullURL := fmt.Sprintf("%s%s", base, videosPath)
+	q := url.Values{}
+	if strings.TrimSpace(after) != "" {
+		q.Set("after", after)
+	}
+	if limit > 0 {
+		q.Set("limit", strconv.Itoa(limit))
+	}
+	if strings.TrimSpace(order) != "" {
+		q.Set("order", order)
+	}
+	if enc := q.Encode(); enc != "" {
+		fullURL = fullURL + "?" + enc
+	}
+	req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(p.GetRequestHeaders()))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	if req.Body != nil {
+		defer req.Body.Close()
+	}
+	response := &openAIVideoListResponse{}
+	_, errWithCode := p.Requester.SendRequest(req, response, false)
+	if errWithCode != nil {
+		return nil, errWithCode
+	}
+	if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
+		return nil, &types.OpenAIErrorWithStatusCode{OpenAIError: *openErr, StatusCode: http.StatusBadRequest}
+	}
+	return &types.VideoList{Object: response.Object, Data: response.Data}, nil
 }
 
 // DeleteVideo: 官方 DELETE /v1/videos/{id}
 func (p *OpenAIProvider) DeleteVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-    if p.detectSoraVendor() != soraVendorOfficial {
-        return nil, common.StringErrorWrapperLocal("delete video is not supported for this channel", "unsupported_api", http.StatusNotImplemented)
-    }
-    basePath := strings.TrimSuffix(p.Config.Videos, "/")
-    fullURL := p.buildOfficialVideoURL("", fmt.Sprintf("%s/%s", basePath, videoID))
-    req, err := p.Requester.NewRequest(http.MethodDelete, fullURL, p.Requester.WithHeader(p.GetRequestHeaders()))
-    if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
-    if req.Body != nil { defer req.Body.Close() }
-    response := &openAIVideoResponse{}
-    _, errWithCode := p.Requester.SendRequest(req, response, false)
-    if errWithCode != nil { return nil, errWithCode }
-    if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
-        return nil, &types.OpenAIErrorWithStatusCode{OpenAIError: *openErr, StatusCode: http.StatusBadRequest}
-    }
-    job := response.VideoJob
-    if job.Object == "" { job.Object = "video" }
-    return &job, nil
+	if p.detectSoraVendor() != soraVendorOfficial {
+		return nil, common.StringErrorWrapperLocal("delete video is not supported for this channel", "unsupported_api", http.StatusNotImplemented)
+	}
+	basePath := strings.TrimSuffix(p.Config.Videos, "/")
+	fullURL := p.buildOfficialVideoURL("", fmt.Sprintf("%s/%s", basePath, videoID))
+	req, err := p.Requester.NewRequest(http.MethodDelete, fullURL, p.Requester.WithHeader(p.GetRequestHeaders()))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	if req.Body != nil {
+		defer req.Body.Close()
+	}
+	response := &openAIVideoResponse{}
+	_, errWithCode := p.Requester.SendRequest(req, response, false)
+	if errWithCode != nil {
+		return nil, errWithCode
+	}
+	if openErr := ErrorHandle(&response.OpenAIErrorResponse); openErr != nil {
+		return nil, &types.OpenAIErrorWithStatusCode{OpenAIError: *openErr, StatusCode: http.StatusBadRequest}
+	}
+	job := response.VideoJob
+	if job.Object == "" {
+		job.Object = "video"
+	}
+	return &job, nil
 }
 
 func (p *OpenAIProvider) buildOfficialVideoURL(videoID string, overridePath string) string {
@@ -395,11 +522,11 @@ func (p *OpenAIProvider) buildOfficialVideoURL(videoID string, overridePath stri
 }
 
 func (p *OpenAIProvider) createMountSeaVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-    sizeInfo := normalizeSoraSize(request.Size)
-    duration := request.Seconds
-    if duration <= 0 {
-        duration = 4
-    }
+	sizeInfo := normalizeSoraSize(request.Size)
+	duration := request.Seconds
+	if duration <= 0 {
+		duration = 4
+	}
 
 	msReq := &mountSeaCreateRequest{
 		Model:           request.Model,
@@ -459,15 +586,15 @@ func (p *OpenAIProvider) createMountSeaVideo(request *types.VideoCreateRequest) 
 	}
 
 	status, progress := mapMountSeaStatus(response.Status)
-    job := &types.VideoJob{
-        ID:       response.TaskID,
-        Object:   "video",
-        Model:    request.Model,
-        Status:   status,
-        Progress: progress,
-        Seconds:  duration,
-        Size:     sizeInfo.Resolution,
-    }
+	job := &types.VideoJob{
+		ID:       response.TaskID,
+		Object:   "video",
+		Model:    request.Model,
+		Status:   status,
+		Progress: progress,
+		Seconds:  duration,
+		Size:     sizeInfo.Resolution,
+	}
 
 	if response.CreatedAt != "" {
 		if ts, err := parseMountSeaTime(response.CreatedAt); err == nil {
@@ -475,15 +602,15 @@ func (p *OpenAIProvider) createMountSeaVideo(request *types.VideoCreateRequest) 
 		}
 	}
 
-    // 对齐官方：若缺失，填充 created_at、quality
-    if job.CreatedAt == 0 {
-        job.CreatedAt = time.Now().Unix()
-    }
-    if job.Quality == "" {
-        job.Quality = "standard"
-    }
+	// 对齐官方：若缺失，填充 created_at、quality
+	if job.CreatedAt == 0 {
+		job.CreatedAt = time.Now().Unix()
+	}
+	if job.Quality == "" {
+		job.Quality = "standard"
+	}
 
-    return job, nil
+	return job, nil
 }
 
 func (p *OpenAIProvider) retrieveMountSeaVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
@@ -589,202 +716,216 @@ func (p *OpenAIProvider) downloadMountSeaVideo(videoID string, variant string) (
 // --- Sutui (速推) upstream adapter ---
 
 type sutuiCreateResponse struct {
-    ID        string      `json:"id"`
-    Object    string      `json:"object"`
-    Model     string      `json:"model"`
-    Status    string      `json:"status"`
-    Progress  any         `json:"progress"`
-    CreatedAt int64       `json:"created_at"`
-    Seconds   int         `json:"seconds"`
-    Size      string      `json:"size"`
+	ID        string `json:"id"`
+	Object    string `json:"object"`
+	Model     string `json:"model"`
+	Status    string `json:"status"`
+	Progress  any    `json:"progress"`
+	CreatedAt int64  `json:"created_at"`
+	Seconds   int    `json:"seconds"`
+	Size      string `json:"size"`
 }
 
 type sutuiRetrieveResponse struct {
-    CompletedAt         int64  `json:"completed_at"`
-    CreatedAt           int64  `json:"created_at"`
-    ID                  string `json:"id"`
-    Model               string `json:"model"`
-    Object              string `json:"object"`
-    Progress            any    `json:"progress"`
-    Seconds             int    `json:"seconds"`
-    Size                string `json:"size"`
-    Status              string `json:"status"`
-    VideoURL            string `json:"video_url"`
-    RemixedFromVideoID  any    `json:"remixed_from_video_id"`
+	CompletedAt        int64  `json:"completed_at"`
+	CreatedAt          int64  `json:"created_at"`
+	ID                 string `json:"id"`
+	Model              string `json:"model"`
+	Object             string `json:"object"`
+	Progress           any    `json:"progress"`
+	Seconds            int    `json:"seconds"`
+	Size               string `json:"size"`
+	Status             string `json:"status"`
+	VideoURL           string `json:"video_url"`
+	RemixedFromVideoID any    `json:"remixed_from_video_id"`
 }
 
 func anyToFloat(v any) float64 {
-    switch t := v.(type) {
-    case nil:
-        return 0
-    case float64:
-        return t
-    case float32:
-        return float64(t)
-    case int:
-        return float64(t)
-    case int32:
-        return float64(t)
-    case int64:
-        return float64(t)
-    case uint:
-        return float64(t)
-    case uint32:
-        return float64(t)
-    case uint64:
-        return float64(t)
-    case string:
-        if f, err := strconv.ParseFloat(t, 64); err == nil {
-            return f
-        }
-        return 0
-    default:
-        return 0
-    }
+	switch t := v.(type) {
+	case nil:
+		return 0
+	case float64:
+		return t
+	case float32:
+		return float64(t)
+	case int:
+		return float64(t)
+	case int32:
+		return float64(t)
+	case int64:
+		return float64(t)
+	case uint:
+		return float64(t)
+	case uint32:
+		return float64(t)
+	case uint64:
+		return float64(t)
+	case string:
+		if f, err := strconv.ParseFloat(t, 64); err == nil {
+			return f
+		}
+		return 0
+	default:
+		return 0
+	}
 }
 
 func (p *OpenAIProvider) createSutuiVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-    // 构造 URL
-    urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
-    if errWithCode != nil {
-        return nil, errWithCode
-    }
-    fullURL := p.GetFullRequestURL(urlPath, request.Model)
+	// 构造 URL
+	urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
+	if errWithCode != nil {
+		return nil, errWithCode
+	}
+	fullURL := p.GetFullRequestURL(urlPath, request.Model)
 
-    // 透传原始 Content-Type，尤其是 multipart 边界
-    headers := p.GetRequestHeaders()
-    contentType := ""
-    if p.Context != nil && p.Context.Request != nil {
-        contentType = p.Context.Request.Header.Get("Content-Type")
-    }
-    if contentType != "" {
-        headers["Content-Type"] = contentType
-    }
+	// 透传原始 Content-Type，尤其是 multipart 边界
+	headers := p.GetRequestHeaders()
+	contentType := ""
+	if p.Context != nil && p.Context.Request != nil {
+		contentType = p.Context.Request.Header.Get("Content-Type")
+	}
+	if contentType != "" {
+		headers["Content-Type"] = contentType
+	}
 
-    // 临时关闭 OpenAI 错误前缀
-    originalOpenAIFlag := p.Requester.IsOpenAI
-    p.Requester.IsOpenAI = false
-    defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+	// 临时关闭 OpenAI 错误前缀
+	originalOpenAIFlag := p.Requester.IsOpenAI
+	p.Requester.IsOpenAI = false
+	defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
 
-    var httpReq *http.Request
-    if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
-        raw, ok := p.GetRawBody()
-        if !ok {
-            return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
-        }
-        req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
-        if err != nil {
-            return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-        }
-        httpReq = req
-    } else {
-        // JSON 方式尽量沿用统一的构造（支持自定义参数合并）
-        reqCopy := *request
-        req, errWith := p.GetRequestTextBody(config.RelayModeOpenAIVideo, reqCopy.Model, &reqCopy)
-        if errWith != nil {
-            return nil, errWith
-        }
-        httpReq = req
-    }
-    if httpReq.Body != nil { defer httpReq.Body.Close() }
+	var httpReq *http.Request
+	if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
+		raw, ok := p.GetRawBody()
+		if !ok {
+			return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
+		}
+		req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
+		if err != nil {
+			return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+		}
+		httpReq = req
+	} else {
+		// JSON 方式尽量沿用统一的构造（支持自定义参数合并）
+		reqCopy := *request
+		req, errWith := p.GetRequestTextBody(config.RelayModeOpenAIVideo, reqCopy.Model, &reqCopy)
+		if errWith != nil {
+			return nil, errWith
+		}
+		httpReq = req
+	}
+	if httpReq.Body != nil {
+		defer httpReq.Body.Close()
+	}
 
-    respObj := &sutuiCreateResponse{}
-    _, errWith := p.Requester.SendRequest(httpReq, respObj, false)
-    if errWith != nil {
-        return nil, errWith
-    }
+	respObj := &sutuiCreateResponse{}
+	_, errWith := p.Requester.SendRequest(httpReq, respObj, false)
+	if errWith != nil {
+		return nil, errWith
+	}
 
-    job := &types.VideoJob{
-        ID:        respObj.ID,
-        Object:    respObj.Object,
-        CreatedAt: respObj.CreatedAt,
-        Status:    respObj.Status,
-        Model:     request.Model,
-        Progress:  anyToFloat(respObj.Progress),
-        Seconds:   respObj.Seconds,
-        Size:      respObj.Size,
-        Quality:   "standard",
-    }
-    if job.Object == "" { job.Object = "video" }
-    if job.CreatedAt == 0 { job.CreatedAt = time.Now().Unix() }
-    return job, nil
+	job := &types.VideoJob{
+		ID:        respObj.ID,
+		Object:    respObj.Object,
+		CreatedAt: respObj.CreatedAt,
+		Status:    respObj.Status,
+		Model:     request.Model,
+		Progress:  anyToFloat(respObj.Progress),
+		Seconds:   respObj.Seconds,
+		Size:      respObj.Size,
+		Quality:   "standard",
+	}
+	if job.Object == "" {
+		job.Object = "video"
+	}
+	if job.CreatedAt == 0 {
+		job.CreatedAt = time.Now().Unix()
+	}
+	return job, nil
 }
 
 func (p *OpenAIProvider) retrieveSutuiVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-    fullURL := p.buildOfficialVideoURL(videoID, "")
-    headers := p.GetRequestHeaders()
+	fullURL := p.buildOfficialVideoURL(videoID, "")
+	headers := p.GetRequestHeaders()
 
-    originalOpenAIFlag := p.Requester.IsOpenAI
-    p.Requester.IsOpenAI = false
-    defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+	originalOpenAIFlag := p.Requester.IsOpenAI
+	p.Requester.IsOpenAI = false
+	defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
 
-    req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(headers))
-    if err != nil {
-        return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-    }
-    if req.Body != nil { defer req.Body.Close() }
+	req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(headers))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	if req.Body != nil {
+		defer req.Body.Close()
+	}
 
-    respObj := &sutuiRetrieveResponse{}
-    _, errWith := p.Requester.SendRequest(req, respObj, false)
-    if errWith != nil {
-        return nil, errWith
-    }
+	respObj := &sutuiRetrieveResponse{}
+	_, errWith := p.Requester.SendRequest(req, respObj, false)
+	if errWith != nil {
+		return nil, errWith
+	}
 
-    job := &types.VideoJob{
-        ID:        respObj.ID,
-        Object:    respObj.Object,
-        CreatedAt: respObj.CreatedAt,
-        CompletedAt: respObj.CompletedAt,
-        Status:    respObj.Status,
-        Model:     respObj.Model,
-        Progress:  anyToFloat(respObj.Progress),
-        Seconds:   respObj.Seconds,
-        Size:      respObj.Size,
-        Quality:   "standard",
-    }
-    if job.Object == "" { job.Object = "video" }
-    if job.Result == nil && strings.TrimSpace(respObj.VideoURL) != "" {
-        job.Result = &types.VideoJobResult{ VideoURL: respObj.VideoURL }
-    }
-    return job, nil
+	job := &types.VideoJob{
+		ID:          respObj.ID,
+		Object:      respObj.Object,
+		CreatedAt:   respObj.CreatedAt,
+		CompletedAt: respObj.CompletedAt,
+		Status:      respObj.Status,
+		Model:       respObj.Model,
+		Progress:    anyToFloat(respObj.Progress),
+		Seconds:     respObj.Seconds,
+		Size:        respObj.Size,
+		Quality:     "standard",
+	}
+	if job.Object == "" {
+		job.Object = "video"
+	}
+	if job.Result == nil && strings.TrimSpace(respObj.VideoURL) != "" {
+		job.Result = &types.VideoJobResult{VideoURL: respObj.VideoURL}
+	}
+	return job, nil
 }
 
 func (p *OpenAIProvider) downloadSutuiVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode) {
-    if strings.TrimSpace(variant) != "" && strings.ToLower(variant) != "video" {
-        return nil, common.StringErrorWrapperLocal("variant not supported for Sutui channel", "unsupported_variant", http.StatusNotImplemented)
-    }
+	if strings.TrimSpace(variant) != "" && strings.ToLower(variant) != "video" {
+		return nil, common.StringErrorWrapperLocal("variant not supported for Sutui channel", "unsupported_variant", http.StatusNotImplemented)
+	}
 
-    job, errWith := p.retrieveSutuiVideo(videoID)
-    if errWith != nil { return nil, errWith }
-    if job == nil || job.Result == nil || strings.TrimSpace(job.Result.VideoURL) == "" {
-        return nil, common.StringErrorWrapperLocal("video url not ready", "video_not_ready", http.StatusBadRequest)
-    }
+	job, errWith := p.retrieveSutuiVideo(videoID)
+	if errWith != nil {
+		return nil, errWith
+	}
+	if job == nil || job.Result == nil || strings.TrimSpace(job.Result.VideoURL) == "" {
+		return nil, common.StringErrorWrapperLocal("video url not ready", "video_not_ready", http.StatusBadRequest)
+	}
 
-    // 直接下载外链
-    originalOpenAIFlag := p.Requester.IsOpenAI
-    p.Requester.IsOpenAI = false
-    defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+	// 直接下载外链
+	originalOpenAIFlag := p.Requester.IsOpenAI
+	p.Requester.IsOpenAI = false
+	defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
 
-    req, err := p.Requester.NewRequest(http.MethodGet, job.Result.VideoURL, p.Requester.WithHeader(map[string]string{}))
-    if err != nil {
-        return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-    }
-    resp, errWithCode := p.Requester.SendRequest(req, nil, true)
-    if errWithCode != nil { return nil, errWithCode }
-    return resp, nil
+	req, err := p.Requester.NewRequest(http.MethodGet, job.Result.VideoURL, p.Requester.WithHeader(map[string]string{}))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	resp, errWithCode := p.Requester.SendRequest(req, nil, true)
+	if errWithCode != nil {
+		return nil, errWithCode
+	}
+	return resp, nil
 }
 
 func normalizeSoraSize(size string) soraSizeInfo {
-    value := strings.ToLower(strings.TrimSpace(size))
-    value = strings.ReplaceAll(value, " ", "")
+	value := strings.ToLower(strings.TrimSpace(size))
+	value = strings.ReplaceAll(value, " ", "")
 
-    if value == "" {
-        return soraSizeInfo{
-            Resolution:  "720x1280",
-            Orientation: "portrait",
-            SizeLabel:   "small",
-        }
-    }
+	if value == "" {
+		return soraSizeInfo{
+			Resolution:  "720x1280",
+			Orientation: "portrait",
+			SizeLabel:   "small",
+		}
+	}
 
 	if strings.Contains(value, "x") {
 		parts := strings.Split(value, "x")
@@ -804,26 +945,26 @@ func normalizeSoraSize(size string) soraSizeInfo {
 		}
 	}
 
-    switch value {
-    case "landscape":
-        return soraSizeInfo{
-            Resolution:  "1280x720",
-            Orientation: "landscape",
-            SizeLabel:   "small",
-        }
-    case "portrait":
-        return soraSizeInfo{
-            Resolution:  "720x1280",
-            Orientation: "portrait",
-            SizeLabel:   "small",
-        }
-    default:
-        return soraSizeInfo{
-            Resolution:  "720x1280",
-            Orientation: "portrait",
-            SizeLabel:   "small",
-        }
-    }
+	switch value {
+	case "landscape":
+		return soraSizeInfo{
+			Resolution:  "1280x720",
+			Orientation: "landscape",
+			SizeLabel:   "small",
+		}
+	case "portrait":
+		return soraSizeInfo{
+			Resolution:  "720x1280",
+			Orientation: "portrait",
+			SizeLabel:   "small",
+		}
+	default:
+		return soraSizeInfo{
+			Resolution:  "720x1280",
+			Orientation: "portrait",
+			SizeLabel:   "small",
+		}
+	}
 }
 
 func mapResolutionToSizeLabel(resolution string) string {

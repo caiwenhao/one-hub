@@ -292,6 +292,13 @@ export const CHANNEL_OPTIONS = {
     color: 'default',
     url: 'https://console.huaweicloud.com/modelarts'
   },
+  60: {
+    key: 60,
+    text: 'NewAPI',
+    value: 60,
+    color: 'primary',
+    url: ''
+  },
   8: {
     key: 8,
     text: '自定义渠道',

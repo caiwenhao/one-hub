@@ -55,6 +55,8 @@ func setOpenAIRouter(router *gin.Engine) {
 		relayV1Router.POST("/rerank", relay.RelayRerank)
 		relayV1Router.GET("/realtime", relay.ChatRealtime)
 		relayV1Router.POST("/videos", relay.VideoCreate)
+		relayV1Router.POST("/videos/generations", relay.VideoGenerationsCreate)
+		relayV1Router.GET("/tasks/:id", relay.NewAPITaskRetrieve)
 		relayV1Router.GET("/videos/:id", relay.VideoRetrieve)
 		relayV1Router.GET("/videos/:id/content", relay.VideoDownload)
 		relayV1Router.GET("/videos", relay.VideoList)
@@ -136,14 +138,14 @@ func setClaudeRouter(router *gin.Engine) {
 }
 
 func setGeminiRouter(router *gin.Engine) {
-    relayGeminiRouter := router.Group("/gemini")
-    relayGeminiRouter.Use(middleware.APIEnabled("gemini"), middleware.RelayGeminiPanicRecover(), middleware.GeminiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
-    {
-        relayGeminiRouter.POST("/:version/models/:model", relay.Relay)
-        relayGeminiRouter.GET("/:version/models", relay.ListGeminiModelsByToken)
-        // Operations 代理：用于 Veo 等长任务轮询
-        relayGeminiRouter.GET("/:version/operations/*name", relay.GeminiOperations)
-    }
+	relayGeminiRouter := router.Group("/gemini")
+	relayGeminiRouter.Use(middleware.APIEnabled("gemini"), middleware.RelayGeminiPanicRecover(), middleware.GeminiAuth(), middleware.Distribute(), middleware.DynamicRedisRateLimiter())
+	{
+		relayGeminiRouter.POST("/:version/models/:model", relay.Relay)
+		relayGeminiRouter.GET("/:version/models", relay.ListGeminiModelsByToken)
+		// Operations 代理：用于 Veo 等长任务轮询
+		relayGeminiRouter.GET("/:version/operations/*name", relay.GeminiOperations)
+	}
 }
 
 func setRecraftRouter(router *gin.Engine) {
@@ -178,8 +180,8 @@ func setMiniMaxRouter(router *gin.Engine) {
 		// 其他能力：生文本/生图/生语音
 		minimaxiRouter.POST("/v1/chat/completions", relay.MiniMaxRelay)
 		minimaxiRouter.POST("/v1/images/generations", relay.MiniMaxRelay)
-            minimaxiRouter.POST("/v1/t2a_v2", relay.MiniMaxRelay)
-            minimaxiRouter.POST("/v1/t2a_async_v2", relay.MiniMaxRelay)
+		minimaxiRouter.POST("/v1/t2a_v2", relay.MiniMaxRelay)
+		minimaxiRouter.POST("/v1/t2a_async_v2", relay.MiniMaxRelay)
 	}
 }
 

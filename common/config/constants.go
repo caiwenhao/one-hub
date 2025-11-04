@@ -306,7 +306,9 @@ const (
 	ChannelTypeXAI             = 56
 	ChannelTypeVidu            = 57
 	ChannelTypeVolcArk         = 58
-	ChannelTypeHuawei          = 59
+    ChannelTypeHuawei          = 59
+    // 新增：NewAPI 渠道类型（复用 OpenAI 路由 + 扩展 /v1/videos/generations）
+    ChannelTypeNewAPI          = 60
 )
 
 const (

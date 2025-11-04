@@ -1101,9 +1101,32 @@ var defaultMiniMaxVideoPrice = map[string]float64{
             Input:       0,
             Output:      base,
         }
-		price.Normalize()
-		prices = append(prices, price)
-	}
+        price.Normalize()
+        prices = append(prices, price)
+    }
+
+    // NewAPI 渠道（按次计费，单位 USD/each）默认价
+    // 需求：视频与图片模型均按次计费
+    var defaultNewAPITimesPriceUSD = map[string]float64{
+        // 视频
+        "sora-2":          0.025,
+        "veo3.1-fast":     0.083,
+        "veo3.1-quality":  0.600,
+        // 图片
+        "gemini-2.5-flash-image-preview": 0.008,
+    }
+    for modelName, usd := range defaultNewAPITimesPriceUSD {
+        base := usd / DollarRate
+        price := &Price{
+            Model:       modelName,
+            Type:        TimesPriceType,
+            ChannelType: config.ChannelTypeNewAPI,
+            Input:       0,
+            Output:      base,
+        }
+        price.Normalize()
+        prices = append(prices, price)
+    }
 
 	var defaultSoraVideoPrice = map[string]map[string]float64{
 		"sora-2": {

@@ -615,6 +615,18 @@
   </Expandable>
 </ResponseField>
 
+## 计费说明（NewAPI 渠道）
+
+- 计费模式：按次计费（Times）。以下为内置默认单价（USD/次），可在价格面板自定义：
+  - `sora-2`：$0.025 / 次
+  - `veo3.1-fast`：$0.083 / 次
+  - `veo3.1-quality`：$0.600 / 次
+  - `gemini-2.5-flash-image-preview`：$0.008 / 次
+
+说明：
+- `/v1/videos/generations` 已内置预/后扣逻辑（按次）。
+- `/v1/images/generations` 走 OpenAI 标准图像接口，亦采用按次计费（上述单价）。
+
 
 # Gemini-2.5-Flash-Image（Nano banana）图像生成
 

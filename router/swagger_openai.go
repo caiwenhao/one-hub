@@ -210,6 +210,28 @@ func docOpenAIVideoRemix(*gin.Context) {}
 // @Router       /v1/videos/{id} [delete]
 func docOpenAIVideoDelete(*gin.Context) {}
 
+// --- NewAPI 扩展 ---
+// @Summary      Create vendor video (NewAPI)
+// @Description  供应商风格：POST /v1/videos/generations（仅 NewAPI 渠道可用）。请求体字段：model/prompt/duration/aspect_ratio/image_urls/watermark；返回体为上游 JSON（{code,data}）。
+// @Tags         NewAPI Video
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request body map[string]interface{} true "Vendor generations request"
+// @Success      200 {object} map[string]interface{}
+// @Router       /v1/videos/generations [post]
+func docNewAPIVideoGenerations(*gin.Context) {}
+
+// @Summary      Retrieve vendor task (NewAPI)
+// @Description  供应商风格：GET /v1/tasks/{id}（仅 NewAPI 渠道可用）。返回上游 JSON（包含 code/data 或统一结构）。
+// @Tags         NewAPI Task
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "Task ID"
+// @Success      200 {object} map[string]interface{}
+// @Router       /v1/tasks/{id} [get]
+func docNewAPITaskRetrieve(*gin.Context) {}
+
 // @Summary      Files proxy (passthrough)
 // @Description  Passthrough to upstream API. Additional subpaths are supported.
 // @Tags         OpenAI Passthrough

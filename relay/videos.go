@@ -1,21 +1,22 @@
 package relay
 
 import (
-    "context"
-    "encoding/json"
-    "fmt"
-    "io"
-    "math"
-    "net/http"
-    "one-api/common"
-    "one-api/common/logger"
-    "one-api/model"
-    providersBase "one-api/providers/base"
-    "one-api/relay/relay_util"
-    "one-api/types"
-    "strconv"
-    "strings"
-    "time"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"math"
+	"net/http"
+	"one-api/common"
+	"one-api/common/config"
+	"one-api/common/logger"
+	"one-api/model"
+	providersBase "one-api/providers/base"
+	"one-api/relay/relay_util"
+	"one-api/types"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
@@ -37,11 +38,11 @@ func VideoCreate(c *gin.Context) {
 		return
 	}
 
-    originalModel := strings.TrimSpace(req.Model)
-    if originalModel == "" {
-        // 官方默认模型 sora-2
-        originalModel = "sora-2"
-    }
+	originalModel := strings.TrimSpace(req.Model)
+	if originalModel == "" {
+		// 官方默认模型 sora-2
+		originalModel = "sora-2"
+	}
 
 	normalize := normalizeSoraSizeInfo(req.Size)
 	if req.Seconds <= 0 {
@@ -64,8 +65,17 @@ func VideoCreate(c *gin.Context) {
 		return
 	}
 
-	billingModel := buildSoraBillingModel(mappedModel, normalize.Resolution)
-	quota := relay_util.NewQuota(c, billingModel, req.Seconds)
+	// 针对 NewAPI 渠道：按次计费，不依赖 seconds
+	isNewAPI := c.GetInt("channel_type") == config.ChannelTypeNewAPI
+	var quota *relay_util.Quota
+	var billingModel string
+	if isNewAPI {
+		billingModel = originalModel
+		quota = relay_util.NewQuota(c, billingModel, 0)
+	} else {
+		billingModel = buildSoraBillingModel(mappedModel, normalize.Resolution)
+		quota = relay_util.NewQuota(c, billingModel, req.Seconds)
+	}
 	if errWithCode := quota.PreQuotaConsumption(); errWithCode != nil {
 		newErr := FilterOpenAIErr(c, errWithCode)
 		relayResponseWithOpenAIErr(c, &newErr)
@@ -92,9 +102,10 @@ func VideoCreate(c *gin.Context) {
 		job.Size = normalize.Resolution
 	}
 
-	usage := &types.Usage{
-		PromptTokens: req.Seconds,
-		TotalTokens:  req.Seconds,
+	usage := &types.Usage{}
+	if !isNewAPI {
+		usage.PromptTokens = req.Seconds
+		usage.TotalTokens = req.Seconds
 	}
 	quota.Consume(c, usage, false)
 
@@ -224,159 +235,177 @@ func VideoDownload(c *gin.Context) {
 
 // VideoRemix 实现 /v1/videos/{id}/remix
 func VideoRemix(c *gin.Context) {
-    videoID := strings.TrimSpace(c.Param("id"))
-    if videoID == "" {
-        common.AbortWithMessage(c, http.StatusBadRequest, "video id is required")
-        return
-    }
+	videoID := strings.TrimSpace(c.Param("id"))
+	if videoID == "" {
+		common.AbortWithMessage(c, http.StatusBadRequest, "video id is required")
+		return
+	}
 
-    var req types.VideoRemixRequest
-    if err := common.UnmarshalBodyReusable(c, &req); err != nil {
-        common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
-        return
-    }
-    if strings.TrimSpace(req.Prompt) == "" {
-        common.AbortWithMessage(c, http.StatusBadRequest, "prompt is required")
-        return
-    }
+	var req types.VideoRemixRequest
+	if err := common.UnmarshalBodyReusable(c, &req); err != nil {
+		common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if strings.TrimSpace(req.Prompt) == "" {
+		common.AbortWithMessage(c, http.StatusBadRequest, "prompt is required")
+		return
+	}
 
-    // 优先根据历史任务锁定渠道与属性
-    var props soraTaskProperties
-    task, _ := model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
-    if task != nil {
-        props = parseSoraTaskProperties(task.Properties)
-        c.Set("specific_channel_id", task.ChannelId)
-    }
+	// 优先根据历史任务锁定渠道与属性
+	var props soraTaskProperties
+	task, _ := model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
+	if task != nil {
+		props = parseSoraTaskProperties(task.Properties)
+		c.Set("specific_channel_id", task.ChannelId)
+	}
 
-    // 选择供应商（若无历史任务，则默认以 sora-2 选择）
-    modelName := props.Model
-    if strings.TrimSpace(modelName) == "" {
-        modelName = "sora-2"
-    }
+	// 选择供应商（若无历史任务，则默认以 sora-2 选择）
+	modelName := props.Model
+	if strings.TrimSpace(modelName) == "" {
+		modelName = "sora-2"
+	}
 
-    provider, mappedModel, err := GetProvider(c, modelName)
-    if err != nil {
-        common.AbortWithMessage(c, http.StatusServiceUnavailable, err.Error())
-        return
-    }
-    if mappedModel == "" { mappedModel = modelName }
+	provider, mappedModel, err := GetProvider(c, modelName)
+	if err != nil {
+		common.AbortWithMessage(c, http.StatusServiceUnavailable, err.Error())
+		return
+	}
+	if mappedModel == "" {
+		mappedModel = modelName
+	}
 
-    videoProvider, ok := provider.(providersBase.VideoInterface)
-    if !ok {
-        common.AbortWithMessage(c, http.StatusNotImplemented, "video interface not implemented for channel")
-        return
-    }
+	videoProvider, ok := provider.(providersBase.VideoInterface)
+	if !ok {
+		common.AbortWithMessage(c, http.StatusNotImplemented, "video interface not implemented for channel")
+		return
+	}
 
-    // 计费：使用原视频的时长/分辨率作为预估
-    seconds := props.Seconds
-    if seconds <= 0 { seconds = defaultSoraDuration() }
-    billingModel := buildSoraBillingModel(mappedModel, props.Resolution)
-    quota := relay_util.NewQuota(c, billingModel, seconds)
-    if errWithCode := quota.PreQuotaConsumption(); errWithCode != nil {
-        newErr := FilterOpenAIErr(c, errWithCode)
-        relayResponseWithOpenAIErr(c, &newErr)
-        return
-    }
+	// 计费：使用原视频的时长/分辨率作为预估
+	seconds := props.Seconds
+	if seconds <= 0 {
+		seconds = defaultSoraDuration()
+	}
+	billingModel := buildSoraBillingModel(mappedModel, props.Resolution)
+	quota := relay_util.NewQuota(c, billingModel, seconds)
+	if errWithCode := quota.PreQuotaConsumption(); errWithCode != nil {
+		newErr := FilterOpenAIErr(c, errWithCode)
+		relayResponseWithOpenAIErr(c, &newErr)
+		return
+	}
 
-    job, errWithCode := videoProvider.RemixVideo(videoID, req.Prompt)
-    if errWithCode != nil {
-        quota.Undo(c)
-        newErr := FilterOpenAIErr(c, errWithCode)
-        relayResponseWithOpenAIErr(c, &newErr)
-        return
-    }
+	job, errWithCode := videoProvider.RemixVideo(videoID, req.Prompt)
+	if errWithCode != nil {
+		quota.Undo(c)
+		newErr := FilterOpenAIErr(c, errWithCode)
+		relayResponseWithOpenAIErr(c, &newErr)
+		return
+	}
 
-    if job.Object == "" { job.Object = "video" }
-    if job.Model == "" { job.Model = modelName }
-    if job.RemixedFromVideoID == "" { job.RemixedFromVideoID = videoID }
-    if job.Quality == "" { job.Quality = "standard" }
-    if job.CreatedAt == 0 { job.CreatedAt = time.Now().Unix() }
+	if job.Object == "" {
+		job.Object = "video"
+	}
+	if job.Model == "" {
+		job.Model = modelName
+	}
+	if job.RemixedFromVideoID == "" {
+		job.RemixedFromVideoID = videoID
+	}
+	if job.Quality == "" {
+		job.Quality = "standard"
+	}
+	if job.CreatedAt == 0 {
+		job.CreatedAt = time.Now().Unix()
+	}
 
-    usage := &types.Usage{ PromptTokens: seconds, TotalTokens: seconds }
-    quota.Consume(c, usage, false)
+	usage := &types.Usage{PromptTokens: seconds, TotalTokens: seconds}
+	quota.Consume(c, usage, false)
 
-    // 若历史 props 缺失，构建默认属性保存
-    if props.Model == "" {
-        normalize := normalizeSoraSizeInfo("")
-        props = soraTaskProperties{
-            Model: mappedModel, Resolution: normalize.Resolution, Seconds: seconds,
-            Orientation: normalize.Orientation, SizeLabel: normalize.SizeLabel,
-            BillingModel: billingModel,
-        }
-    }
+	// 若历史 props 缺失，构建默认属性保存
+	if props.Model == "" {
+		normalize := normalizeSoraSizeInfo("")
+		props = soraTaskProperties{
+			Model: mappedModel, Resolution: normalize.Resolution, Seconds: seconds,
+			Orientation: normalize.Orientation, SizeLabel: normalize.SizeLabel,
+			BillingModel: billingModel,
+		}
+	}
 
-    saveSoraTask(c, provider.GetChannel().Id, job, props)
-    c.JSON(http.StatusOK, job)
+	saveSoraTask(c, provider.GetChannel().Id, job, props)
+	c.JSON(http.StatusOK, job)
 }
 
 // VideoList 实现 /v1/videos（官方上游列表）。
 // 注意：官方为组织级别列表。此处采用上游直透策略。
 func VideoList(c *gin.Context) {
-    after := strings.TrimSpace(c.Query("after"))
-    order := strings.TrimSpace(c.Query("order"))
-    limitVal := strings.TrimSpace(c.Query("limit"))
-    limit := 0
-    if limitVal != "" {
-        if v, err := strconv.Atoi(limitVal); err == nil { limit = v }
-    }
+	after := strings.TrimSpace(c.Query("after"))
+	order := strings.TrimSpace(c.Query("order"))
+	limitVal := strings.TrimSpace(c.Query("limit"))
+	limit := 0
+	if limitVal != "" {
+		if v, err := strconv.Atoi(limitVal); err == nil {
+			limit = v
+		}
+	}
 
-    // 选择一个 OpenAI 视频渠道（按默认模型 sora-2 选路）
-    provider, _, err := GetProvider(c, "sora-2")
-    if err != nil {
-        common.AbortWithMessage(c, http.StatusServiceUnavailable, err.Error())
-        return
-    }
-    videoProvider, ok := provider.(providersBase.VideoInterface)
-    if !ok {
-        common.AbortWithMessage(c, http.StatusNotImplemented, "video interface not implemented for channel")
-        return
-    }
+	// 选择一个 OpenAI 视频渠道（按默认模型 sora-2 选路）
+	provider, _, err := GetProvider(c, "sora-2")
+	if err != nil {
+		common.AbortWithMessage(c, http.StatusServiceUnavailable, err.Error())
+		return
+	}
+	videoProvider, ok := provider.(providersBase.VideoInterface)
+	if !ok {
+		common.AbortWithMessage(c, http.StatusNotImplemented, "video interface not implemented for channel")
+		return
+	}
 
-    list, errWithCode := videoProvider.ListVideos(after, limit, order)
-    if errWithCode != nil {
-        newErr := FilterOpenAIErr(c, errWithCode)
-        relayResponseWithOpenAIErr(c, &newErr)
-        return
-    }
-    if list == nil {
-        list = &types.VideoList{Object: "list", Data: []types.VideoJob{}}
-    }
-    c.JSON(http.StatusOK, list)
+	list, errWithCode := videoProvider.ListVideos(after, limit, order)
+	if errWithCode != nil {
+		newErr := FilterOpenAIErr(c, errWithCode)
+		relayResponseWithOpenAIErr(c, &newErr)
+		return
+	}
+	if list == nil {
+		list = &types.VideoList{Object: "list", Data: []types.VideoJob{}}
+	}
+	c.JSON(http.StatusOK, list)
 }
 
 // VideoDelete 实现 DELETE /v1/videos/{id}
 func VideoDelete(c *gin.Context) {
-    videoID := strings.TrimSpace(c.Param("id"))
-    if videoID == "" {
-        common.AbortWithMessage(c, http.StatusBadRequest, "video id is required")
-        return
-    }
+	videoID := strings.TrimSpace(c.Param("id"))
+	if videoID == "" {
+		common.AbortWithMessage(c, http.StatusBadRequest, "video id is required")
+		return
+	}
 
-    // 优先根据历史任务锁定渠道
-    task, _ := model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
-    if task != nil {
-        c.Set("specific_channel_id", task.ChannelId)
-    }
+	// 优先根据历史任务锁定渠道
+	task, _ := model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
+	if task != nil {
+		c.Set("specific_channel_id", task.ChannelId)
+	}
 
-    provider, _, err := GetProvider(c, "sora-2")
-    if err != nil {
-        common.AbortWithMessage(c, http.StatusServiceUnavailable, err.Error())
-        return
-    }
-    videoProvider, ok := provider.(providersBase.VideoInterface)
-    if !ok {
-        common.AbortWithMessage(c, http.StatusNotImplemented, "video interface not implemented for channel")
-        return
-    }
+	provider, _, err := GetProvider(c, "sora-2")
+	if err != nil {
+		common.AbortWithMessage(c, http.StatusServiceUnavailable, err.Error())
+		return
+	}
+	videoProvider, ok := provider.(providersBase.VideoInterface)
+	if !ok {
+		common.AbortWithMessage(c, http.StatusNotImplemented, "video interface not implemented for channel")
+		return
+	}
 
-    job, errWithCode := videoProvider.DeleteVideo(videoID)
-    if errWithCode != nil {
-        newErr := FilterOpenAIErr(c, errWithCode)
-        relayResponseWithOpenAIErr(c, &newErr)
-        return
-    }
-    if job == nil { job = &types.VideoJob{ID: videoID, Object: "video"} }
-    c.JSON(http.StatusOK, job)
+	job, errWithCode := videoProvider.DeleteVideo(videoID)
+	if errWithCode != nil {
+		newErr := FilterOpenAIErr(c, errWithCode)
+		relayResponseWithOpenAIErr(c, &newErr)
+		return
+	}
+	if job == nil {
+		job = &types.VideoJob{ID: videoID, Object: "video"}
+	}
+	c.JSON(http.StatusOK, job)
 }
 
 func saveSoraTask(c *gin.Context, channelID int, job *types.VideoJob, props soraTaskProperties) {
@@ -467,15 +496,15 @@ func mapVideoStatus(status string) model.TaskStatus {
 }
 
 func normalizeSoraSizeInfo(size string) soraSizeInfoHelper {
-    value := strings.ToLower(strings.TrimSpace(size))
-    value = strings.ReplaceAll(value, " ", "")
-    if value == "" {
-        return soraSizeInfoHelper{
-            Resolution:  "720x1280",
-            Orientation: "portrait",
-            SizeLabel:   "small",
-        }
-    }
+	value := strings.ToLower(strings.TrimSpace(size))
+	value = strings.ReplaceAll(value, " ", "")
+	if value == "" {
+		return soraSizeInfoHelper{
+			Resolution:  "720x1280",
+			Orientation: "portrait",
+			SizeLabel:   "small",
+		}
+	}
 
 	if strings.Contains(value, "x") {
 		parts := strings.Split(value, "x")
@@ -495,26 +524,26 @@ func normalizeSoraSizeInfo(size string) soraSizeInfoHelper {
 		}
 	}
 
-    switch value {
-    case "landscape":
-        return soraSizeInfoHelper{
-            Resolution:  "1280x720",
-            Orientation: "landscape",
-            SizeLabel:   "small",
-        }
-    case "portrait":
-        return soraSizeInfoHelper{
-            Resolution:  "720x1280",
-            Orientation: "portrait",
-            SizeLabel:   "small",
-        }
-    default:
-        return soraSizeInfoHelper{
-            Resolution:  "720x1280",
-            Orientation: "portrait",
-            SizeLabel:   "small",
-        }
-    }
+	switch value {
+	case "landscape":
+		return soraSizeInfoHelper{
+			Resolution:  "1280x720",
+			Orientation: "landscape",
+			SizeLabel:   "small",
+		}
+	case "portrait":
+		return soraSizeInfoHelper{
+			Resolution:  "720x1280",
+			Orientation: "portrait",
+			SizeLabel:   "small",
+		}
+	default:
+		return soraSizeInfoHelper{
+			Resolution:  "720x1280",
+			Orientation: "portrait",
+			SizeLabel:   "small",
+		}
+	}
 }
 
 type soraSizeInfoHelper struct {
@@ -535,16 +564,16 @@ func mapResolutionSizeLabel(resolution string) string {
 }
 
 func buildSoraBillingModel(modelName, resolution string) string {
-    modelName = strings.TrimSpace(modelName)
-    if resolution == "" {
-        return modelName
-    }
-    // Sutui 上游模型（sora_video2-*）已经在模型名中体现了方向/清晰度/时长等，无需追加分辨率，保持与定价键一致
-    lower := strings.ToLower(modelName)
-    if strings.HasPrefix(lower, "sora_video2") {
-        return modelName
-    }
-    return fmt.Sprintf("%s-%s", modelName, resolution)
+	modelName = strings.TrimSpace(modelName)
+	if resolution == "" {
+		return modelName
+	}
+	// Sutui 上游模型（sora_video2-*）已经在模型名中体现了方向/清晰度/时长等，无需追加分辨率，保持与定价键一致
+	lower := strings.ToLower(modelName)
+	if strings.HasPrefix(lower, "sora_video2") {
+		return modelName
+	}
+	return fmt.Sprintf("%s-%s", modelName, resolution)
 }
 
 func submitTimeFromJob(job *types.VideoJob) int64 {
@@ -558,6 +587,6 @@ func submitTimeFromJob(job *types.VideoJob) int64 {
 }
 
 func defaultSoraDuration() int {
-    // 官方默认 4 秒
-    return 4
+	// 官方默认 4 秒
+	return 4
 }
