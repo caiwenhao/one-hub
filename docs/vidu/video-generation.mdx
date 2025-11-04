@@ -1,0 +1,104 @@
+---
+title: "视频生成"
+description: "常见调用示例与要点（非 API 规范）"
+openapi: 'POST /vidu/ent/v2/{action}'
+---
+
+说明
+
+- 路径：`/vidu/ent/v2/{action}`，其中 `action` 为以下之一：
+  - `text2video`（文生视频）
+  - `img2video`（图生视频，`images` 仅 1 张）
+  - `start-end2video`（首帧+末帧，`images` 恰好 2 张）
+  - `reference2video`（参考生视频，`images` 1-7 张，需 `prompt`）
+- 模型名：仅需填写基础模型名（`viduq2-pro`、`viduq2-turbo`、`viduq1`、`viduq1-classic`、`vidu2.0`、`vidu1.5`）。
+- 错峰：`off_peak=true` 自动半价（已内置官方向上取整规则）。
+- 水印：`watermark`、`wm_position`、`wm_url` 可选。
+
+示例：文生视频（text2video）
+
+```bash
+curl --request POST \
+  --url https://models.kapon.cloud/vidu/ent/v2/text2video \
+  --header 'Authorization: Token <VIDU_TOKEN>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "model": "viduq2-turbo",
+  "prompt": "A girl runs toward the camera and winks with a smile.",
+  "duration": 4,
+  "resolution": "720p",
+  "style": "general",
+  "off_peak": false
+}'
+```
+
+示例：图生视频（img2video）
+
+```bash
+curl --request POST \
+  --url https://models.kapon.cloud/vidu/ent/v2/img2video \
+  --header 'Authorization: Token <VIDU_TOKEN>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "model": "vidu1.5",
+  "images": ["https://your.cdn.com/first.png"],
+  "duration": 4,
+  "resolution": "720p",
+  "off_peak": true,
+  "watermark": false
+}'
+```
+
+示例：首尾帧（start-end2video）
+
+```bash
+curl --request POST \
+  --url https://models.kapon.cloud/vidu/ent/v2/start-end2video \
+  --header 'Authorization: Token <VIDU_TOKEN>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "model": "viduq2-pro",
+  "images": [
+    "https://your.cdn.com/start.png",
+    "https://your.cdn.com/end.png"
+  ],
+  "duration": 5,
+  "resolution": "1080p"
+}'
+```
+
+示例：参考生视频（reference2video）
+
+```bash
+curl --request POST \
+  --url https://models.kapon.cloud/vidu/ent/v2/reference2video \
+  --header 'Authorization: Token <VIDU_TOKEN>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "model": "viduq1",
+  "images": [
+    "https://your.cdn.com/ref-1.jpg",
+    "https://your.cdn.com/ref-2.jpg"
+  ],
+  "prompt": "A mouse runs toward the camera, smiling and blinking.",
+  "duration": 5,
+  "resolution": "1080p",
+  "watermark": false
+}'
+```
+
+创建成功返回（示例）
+
+```json
+{
+  "task_id": "176843862716480",
+  "state": "created"
+}
+```
+
+小贴士
+
+- 文本提示词：`text2video` 与 `reference2video` 推荐传 `prompt`（最长 2000 字符）。
+- 图片数量：`img2video` 必须 1 张；`start-end2video` 必须 2 张；`reference2video` 支持 1–7 张。
+- 分辨率与时长：不同模型可选项不同，未填写时系统会自动补默认值（与官方一致）。
+

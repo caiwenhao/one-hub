@@ -225,6 +225,13 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
   };
 
   const basicModels = (channelType) => {
+    // Vidu：仅返回基础模型，避免自动填充变种模型
+    if (channelType === 57) {
+      const group = typeConfig[channelType]?.modelGroup || 'Vidu';
+      const bases = ['viduq2-pro', 'viduq2-turbo', 'viduq1', 'viduq1-classic', 'vidu2.0', 'vidu1.5'];
+      return bases.map((id) => ({ id, group }));
+    }
+
     let modelGroup = typeConfig[channelType]?.modelGroup || defaultConfig.modelGroup;
     // 循环 modelOptions，找到 modelGroup 对应的模型
     let modelList = [];
@@ -636,6 +643,58 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                   </FormControl>
                 )}
 
+                {/* Vidu 专用：上游供应商选择（官方 / Pollo.ai） */}
+                {!isTag && values.type === 57 && (
+                  <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
+                    <InputLabel id="vidu-upstream-label">上游供应商</InputLabel>
+                    <Select
+                      labelId="vidu-upstream-label"
+                      id="vidu-upstream"
+                      name="vidu_upstream"
+                      value={values.vidu_upstream || ''}
+                      label="上游供应商"
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setFieldValue('vidu_upstream', next);
+
+                        const group = typeConfig[57]?.modelGroup || 'Vidu';
+                        const officialModels = ['viduq2-pro','viduq2-turbo','viduq1','viduq1-classic','vidu2.0','vidu1.5'].map(id => ({ id, group }));
+                        const polloModels = ['viduq2-pro','viduq2-turbo','viduq1'].map(id => ({ id, group }));
+
+                        if (next === 'pollo') {
+                          // 切换到 Pollo 上游
+                          setFieldValue('base_url', 'https://pollo.ai/api/platform');
+                          // 写入 custom_parameter 顶层 upstream=pollo 便于后端识别
+                          try {
+                            const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};
+                            obj.upstream = 'pollo';
+                            setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
+                          } catch (_) {}
+                          // 自动填充 Pollo 支持的基础模型
+                          setFieldValue('models', polloModels);
+                        } else {
+                          // 官方直连
+                          setFieldValue('base_url', 'https://api.vidu.cn');
+                          try {
+                            const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};
+                            if (obj && typeof obj === 'object' && 'upstream' in obj) delete obj.upstream;
+                            setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
+                          } catch (_) {}
+                          // 自动填充官方基础模型
+                          setFieldValue('models', officialModels);
+                        }
+                      }}
+                    >
+                      <MenuItem value="">默认（官方）</MenuItem>
+                      <MenuItem value="official">官方（直连）</MenuItem>
+                      <MenuItem value="pollo">Pollo.ai</MenuItem>
+                    </Select>
+                    <FormHelperText id="helper-tex-vidu-upstream-label">
+                      默认直连官方；选择 Pollo.ai 将自动切换认证与路径，模型仅需基础名（系统会自动映射计费组合）。
+                    </FormHelperText>
+                  </FormControl>
+                )}
+
                 {/* OpenAI 专用：上游供应商选择（顶层 upstream） */}
                 {!isTag && values.type === 1 && (
                   <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
@@ -992,11 +1051,12 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                       renderTags={(value, getTagProps) =>
                         value.map((option, index) => {
                           const tagProps = getTagProps({ index });
+                          const { key, ...chipProps } = tagProps || {};
                           return (
                             <Chip
-                              key={index}
+                              key={key || option.id || index}
                               label={option.id}
-                              {...tagProps}
+                              {...chipProps}
                               onClick={() => copy(option.id)}
                               sx={{
                                 maxWidth: '100%',
@@ -1118,7 +1178,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                       {errors.key}
                     </FormHelperText>
                   ) : (
-                    <FormHelperText id="helper-tex-channel-key-label">
+                    <FormHelperText id="helper-tex-channel-key-label" component="div">
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>{customizeT(inputPrompt.key)}</span>
                         {channelId === 0 && (
@@ -1128,7 +1188,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                               checked={Boolean(batchAdd)} 
                               onChange={(e) => setBatchAdd(e.target.checked)} 
                             />
-                            <Typography variant="body2">{t('channel_edit.batchAdd')}</Typography>
+                            <Typography variant="body2" component="span">{t('channel_edit.batchAdd')}</Typography>
                           </Box>
                         )}
                       </Box>
@@ -1380,8 +1440,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                   Object.keys(pluginList[values.type]).map((pluginId) => {
                     const plugin = pluginList[values.type][pluginId];
                     return (
-                      <>
-                        <Box
+                        <Box key={pluginId}
                           sx={{
                             border: '1px solid #e0e0e0',
                             borderRadius: 2,
@@ -1400,7 +1459,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                           >
                             <Box sx={{ flex: 1 }}>
                               <Typography variant="h3">{customizeT(plugin.name)}</Typography>
-                              <Typography variant="caption">{customizeT(plugin.description)}</Typography>
+                              <Typography variant="caption" component="span">{customizeT(plugin.description)}</Typography>
                             </Box>
                             <Button
                               onClick={() => setExpanded(!expanded)}
@@ -1461,7 +1520,6 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                             </Box>
                           </Collapse>
                         </Box>
-                      </>
                     );
                   })}
                 <DialogActions>

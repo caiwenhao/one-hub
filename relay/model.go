@@ -381,6 +381,13 @@ func shouldAttachVariants(base string) (bool, string) {
         "i2v-01-live",
         "i2v-01",
         "s2v-01",
+        // Vidu 基础模型（按文档）
+        "viduq2-pro",
+        "viduq2-turbo",
+        "viduq1-classic",
+        "viduq1",
+        "vidu2.0",
+        "vidu1.5",
     }
     for _, k := range ordered {
         if lower == k || strings.Contains(lower, k) {
@@ -455,6 +462,32 @@ func collectSoraVariants(baseSegment string, allPrices map[string]*model.Price) 
     return variants
 }
 
+// Vidu：按基础模型（文档模型）展开所有精确计费组合
+func collectViduVariants(baseSegment string, allPrices map[string]*model.Price) []VariantDisplay {
+    var variants []VariantDisplay
+    baseLower := strings.ToLower(strings.TrimSpace(baseSegment))
+    // 期待键格式：vidu-<action>-<model>-<resolution>-<duration>s[-style][-offpeak]
+    needle := "-" + baseLower + "-"
+    for name, pr := range allPrices {
+        lower := strings.ToLower(name)
+        if pr == nil || pr.ChannelType != config.ChannelTypeVidu || pr.Type != model.TimesPriceType {
+            continue
+        }
+        if !strings.HasPrefix(lower, "vidu-") {
+            continue
+        }
+        if !strings.Contains(lower, needle) {
+            continue
+        }
+        variants = append(variants, VariantDisplay{
+            Model:        name,
+            PriceDisplay: buildPriceDisplayForModel(name, pr),
+        })
+    }
+    sort.Slice(variants, func(i, j int) bool { return variants[i].Model < variants[j].Model })
+    return variants
+}
+
 func AvailableModel(c *gin.Context) {
 	groupName := c.GetString("group")
 
@@ -504,11 +537,13 @@ func getAvailableModels(groupName string) map[string]*AvailableModelResponse {
                 disp = buildPriceDisplayForModel(modelName, price)
             }
 
-            // 精确计费组合（对 minimaxi 与 sora 视频基础模型展开）
+            // 精确计费组合（对 minimaxi / sora / vidu 基础模型展开）
             var variants []VariantDisplay
             if ok, seg := shouldAttachVariants(modelName); ok {
                 if strings.HasPrefix(seg, "sora-2") {
                     variants = collectSoraVariants(seg, model.PricingInstance.GetAllPrices())
+                } else if strings.HasPrefix(seg, "vidu") || strings.HasPrefix(seg, "viduq") {
+                    variants = collectViduVariants(seg, model.PricingInstance.GetAllPrices())
                 } else {
                     variants = collectMiniMaxVariants(seg, model.PricingInstance.GetAllPrices())
                 }

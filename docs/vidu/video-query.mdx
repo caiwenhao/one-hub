@@ -1,0 +1,50 @@
+---
+title: "任务查询"
+description: "查询 creations 与取消任务（非 API 规范）"
+openapi: 'GET /vidu/ent/v2/tasks/{task_id}/creations'
+---
+
+查询任务（creations）
+
+```bash
+curl --request GET \
+  --url https://models.kapon.cloud/vidu/ent/v2/tasks/$TASK_ID/creations \
+  --header 'Authorization: Token <VIDU_TOKEN>'
+```
+
+响应示例
+
+```json
+{
+  "id": "176843862716480",
+  "state": "success",
+  "credits": 10,
+  "creations": [
+    {
+      "id": "creation_123",
+      "url": "https://your.cdn/generate/abc.mp4",
+      "cover_url": "https://your.cdn/generate/abc.jpg",
+      "watermarked_url": "https://your.cdn/generate/abc_wm.mp4"
+    }
+  ]
+}
+```
+
+状态枚举
+
+- `created` / `queueing` / `processing` / `success` / `failed`
+
+取消任务
+
+```bash
+curl --request POST \
+  --url https://models.kapon.cloud/vidu/ent/v2/tasks/$TASK_ID/cancel \
+  --header 'Authorization: Token <VIDU_TOKEN>'
+```
+
+说明
+
+- 返回体包含消耗的 `credits`（若有）、`creations`（成功时）等；结构与官方一致。
+- `watermarked_url` 为带水印的视频地址（若生成时开启 `watermark` 或系统默认提供）。
+- 未填写 `callback_url` 时，可通过本查询接口轮询获取最新进度。
+

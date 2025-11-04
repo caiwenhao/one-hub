@@ -623,7 +623,16 @@ const typeConfig = {
       key: '请输入 Vidu 平台的 Token，通常为 Token xxxxx'
     },
     input: {
-      test_model: 'vidu-img2video-vidu1.5-4s-360p'
+      // 简化：仅需配置文档中的基础模型名
+      models: [
+        'viduq2-pro',
+        'viduq2-turbo',
+        'viduq1',
+        'viduq1-classic',
+        'vidu2.0',
+        'vidu1.5'
+      ],
+      test_model: 'viduq1'
     },
     modelGroup: 'Vidu'
   },
