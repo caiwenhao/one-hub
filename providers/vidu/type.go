@@ -10,10 +10,15 @@ type ViduTaskRequest struct {
 	Resolution        string   `json:"resolution,omitempty"`         // 分辨率：720p、1080p、360p
 	MovementAmplitude string   `json:"movement_amplitude,omitempty"` // 运动幅度：auto、small、medium、large
 	BGM               *bool    `json:"bgm,omitempty"`                // 是否添加背景音乐
-	Payload           string   `json:"payload,omitempty"`            // 透传参数，最多1048576个字符
-	OffPeak           *bool    `json:"off_peak,omitempty"`           // 错峰模式
-	Watermark         *bool    `json:"watermark,omitempty"`          // 是否添加水印
-	CallbackURL       string   `json:"callback_url,omitempty"`       // 回调URL
+    Payload           string   `json:"payload,omitempty"`            // 透传参数，最多1048576个字符
+    OffPeak           *bool    `json:"off_peak,omitempty"`           // 错峰模式
+    Watermark         *bool    `json:"watermark,omitempty"`          // 是否添加水印
+    // 额外：与文档对齐的可选参数
+    IsRec             *bool    `json:"is_rec,omitempty"`             // 是否使用推荐提示词
+    WMPosition        *int     `json:"wm_position,omitempty"`        // 水印位置 1/2/3/4
+    WMURL             string   `json:"wm_url,omitempty"`             // 自定义水印 URL
+    MetaData          string   `json:"meta_data,omitempty"`          // 元数据标识（json 字符串）
+    CallbackURL       string   `json:"callback_url,omitempty"`       // 回调URL
 
 	// 图生视频专用 (img2video)
 	Images []string `json:"images,omitempty"` // 首帧图像，只支持1张图

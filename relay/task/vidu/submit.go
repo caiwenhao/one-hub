@@ -107,8 +107,8 @@ func (t *ViduTask) Relay() *base.TaskError {
 func (t *ViduTask) actionValidate() error {
 	// 验证action是否为支持的类型
 	switch t.Action {
-	case viduProvider.ViduActionImg2Video:
-		req := t.Request.(*viduProvider.ViduTaskRequest)
+    case viduProvider.ViduActionImg2Video:
+        req := t.Request.(*viduProvider.ViduTaskRequest)
 		if len(req.Images) != 1 {
 			return fmt.Errorf("images must contain exactly 1 image for img2video")
 		}
@@ -123,11 +123,14 @@ func (t *ViduTask) actionValidate() error {
 		if req.Resolution == "" {
 			req.Resolution = getDefaultResolution(req.Model, *req.Duration)
 		}
-		// 构造详细的模型名称用于计费
-		t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
+        // 构造详细的模型名称用于计费
+        t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
+        if req.OffPeak != nil && *req.OffPeak {
+            t.OriginalModel = t.OriginalModel + "-offpeak"
+        }
 
-	case viduProvider.ViduActionReference2Video:
-		req := t.Request.(*viduProvider.ViduTaskRequest)
+    case viduProvider.ViduActionReference2Video:
+        req := t.Request.(*viduProvider.ViduTaskRequest)
 		if len(req.Images) == 0 {
 			return fmt.Errorf("images is required for reference2video")
 		}
@@ -148,11 +151,14 @@ func (t *ViduTask) actionValidate() error {
 		if req.Resolution == "" {
 			req.Resolution = getDefaultResolution(req.Model, *req.Duration)
 		}
-		// 构造详细的模型名称用于计费
-		t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
+        // 构造详细的模型名称用于计费
+        t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
+        if req.OffPeak != nil && *req.OffPeak {
+            t.OriginalModel = t.OriginalModel + "-offpeak"
+        }
 
-	case viduProvider.ViduActionStartEnd2Video:
-		req := t.Request.(*viduProvider.ViduTaskRequest)
+    case viduProvider.ViduActionStartEnd2Video:
+        req := t.Request.(*viduProvider.ViduTaskRequest)
 		if len(req.Images) != 2 {
 			return fmt.Errorf("exactly 2 images are required for start-end2video (start and end frames)")
 		}
@@ -167,11 +173,14 @@ func (t *ViduTask) actionValidate() error {
 		if req.Resolution == "" {
 			req.Resolution = getDefaultResolution(req.Model, *req.Duration)
 		}
-		// 构造详细的模型名称用于计费
-		t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
+        // 构造详细的模型名称用于计费
+        t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
+        if req.OffPeak != nil && *req.OffPeak {
+            t.OriginalModel = t.OriginalModel + "-offpeak"
+        }
 
-	case viduProvider.ViduActionText2Video:
-		req := t.Request.(*viduProvider.ViduTaskRequest)
+    case viduProvider.ViduActionText2Video:
+        req := t.Request.(*viduProvider.ViduTaskRequest)
 		if strings.TrimSpace(req.Prompt) == "" {
 			return fmt.Errorf("prompt is required for text2video")
 		}
@@ -189,8 +198,11 @@ func (t *ViduTask) actionValidate() error {
 		if req.Style == "" {
 			req.Style = "general"
 		}
-		// 构造详细的模型名称用于计费（包含风格）
-		t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, req.Style)
+        // 构造详细的模型名称用于计费（包含风格）
+        t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, req.Style)
+        if req.OffPeak != nil && *req.OffPeak {
+            t.OriginalModel = t.OriginalModel + "-offpeak"
+        }
 
 	case viduProvider.ViduActionReference2Image:
 		req := t.Request.(*viduProvider.ViduReference2ImageRequest)

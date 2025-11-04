@@ -1,10 +1,13 @@
 package model
 
 import (
-	"one-api/common/config"
-	"strings"
+    "fmt"
+    "math"
+    "one-api/common/config"
+    "strings"
 
-	"github.com/shopspring/decimal"
+    "github.com/samber/lo"
+    "github.com/shopspring/decimal"
     "gorm.io/datatypes"
     "gorm.io/gorm"
 )
@@ -851,8 +854,10 @@ func GetDefaultPrice() []*Price {
 	// 这样前端使用 $: base*DollarRate、￥: base*RMBRate 可分别得到 USD/人民币价格
 	const viduCreditToYuan = 0.3125
 
-	// Vidu 默认价格配置（值为积分，后续换算成人民币）
-	var defaultViduCredits = map[string]float64{
+    // Vidu 默认价格配置（值为“缩放后的积分”，后续换算成人民币）
+    // 说明：我们将官方“积分”整体 ÷10 存入表内，同时将单价乘以 10（viduCreditToYuan = 0.3125），
+    // 以保证最终 RMB 金额与文档一致，同时保留小数粒度（便于 Q2 的 540p 档与 1 秒档）。
+    var defaultViduCredits = map[string]float64{
 		// === 新模型 viduq2-pro ===
 		// 图生视频 - viduq2-pro
 		"vidu-img2video-viduq2-pro-720p-2s":  3,
@@ -1103,6 +1108,95 @@ var defaultMiniMaxVideoPrice = map[string]float64{
         }
         price.Normalize()
         prices = append(prices, price)
+    }
+
+    // —— 扩展：按文档生成 ViduQ2 的完整价档（1–8 秒，含 540p）——
+    // 命名规则与 submit.go 一致：vidu-<action>-<model>-<resolution>-<duration>s
+    // Q2 图生&首尾帧：pro/turbo 各有不同价档；Q2 文生/参考生：文档未区分 pro/turbo，按 Q2 通用价给 pro/turbo 各一套
+    add := func(model, action, res string, sec int, credits float64) {
+        key := fmt.Sprintf("vidu-%s-%s-%s-%ds", action, model, res, sec)
+        defaultViduCredits[key] = credits
+    }
+    // Q2-turbo 图生/首尾帧
+    for sec := 1; sec <= 8; sec++ {
+        // 540p：6起，每秒+2 → 缩放后 0.6 + 0.2*(n-1)
+        turbo540 := 0.6 + 0.2*float64(sec-1)
+        // 720p：1s=0.8；2s=1.0；>=3s：1.0 + 1.0*(n-2)
+        var turbo720 float64
+        if sec == 1 {
+            turbo720 = 0.8
+        } else if sec == 2 {
+            turbo720 = 1.0
+        } else {
+            turbo720 = 1.0 + float64(sec-2)
+        }
+        // 1080p：3.5 + 1.0*(n-1)
+        turbo1080 := 3.5 + 1.0*float64(sec-1)
+        for _, action := range []string{"img2video", "start-end2video"} {
+            add("viduq2-turbo", action, "540p", sec, turbo540)
+            add("viduq2-turbo", action, "720p", sec, turbo720)
+            add("viduq2-turbo", action, "1080p", sec, turbo1080)
+        }
+    }
+    // Q2-pro 图生/首尾帧
+    for sec := 1; sec <= 8; sec++ {
+        // 540p：1s=0.8；2s=1.0；>=3s：1.0 + 0.5*(n-2)
+        var pro540 float64
+        if sec == 1 {
+            pro540 = 0.8
+        } else if sec == 2 {
+            pro540 = 1.0
+        } else {
+            pro540 = 1.0 + 0.5*float64(sec-2)
+        }
+        // 720p：1.5 + 1.0*(n-1)
+        pro720 := 1.5 + 1.0*float64(sec-1)
+        // 1080p：5.5 + 1.5*(n-1)
+        pro1080 := 5.5 + 1.5*float64(sec-1)
+        for _, action := range []string{"img2video", "start-end2video"} {
+            add("viduq2-pro", action, "540p", sec, pro540)
+            add("viduq2-pro", action, "720p", sec, pro720)
+            add("viduq2-pro", action, "1080p", sec, pro1080)
+        }
+    }
+    // Q2 文生：540p 1.0 起，每秒 +0.2；720p 1.5 起，每秒 +0.5；1080p 2.0 起，每秒 +1.0
+    // 文档未区分 pro/turbo，故 pro/turbo 都生成一套
+    for sec := 1; sec <= 8; sec++ {
+        text540 := 1.0 + 0.2*float64(sec-1)
+        text720 := 1.5 + 0.5*float64(sec-1)
+        text1080 := 2.0 + 1.0*float64(sec-1)
+        for _, model := range []string{"viduq2-pro", "viduq2-turbo"} {
+            add(model, "text2video", "540p", sec, text540)
+            add(model, "text2video", "720p", sec, text720)
+            add(model, "text2video", "1080p", sec, text1080)
+        }
+    }
+    // Q2 参考生：540p 1.5 起，每秒 +0.5；720p 2.5 起，每秒 +0.5；1080p 7.5 起，每秒 +1.0
+    for sec := 1; sec <= 8; sec++ {
+        ref540 := 1.5 + 0.5*float64(sec-1)
+        ref720 := 2.5 + 0.5*float64(sec-1)
+        ref1080 := 7.5 + 1.0*float64(sec-1)
+        for _, model := range []string{"viduq2-pro", "viduq2-turbo"} {
+            add(model, "reference2video", "540p", sec, ref540)
+            add(model, "reference2video", "720p", sec, ref720)
+            add(model, "reference2video", "1080p", sec, ref1080)
+        }
+    }
+
+    // —— 生成错峰价（-offpeak 后缀，价格为正常价的一半，按文档规则向上取整后再缩放）——
+    // 若 normal_doc_credits = 10 * normal_scaled，则 offpeak_scaled = ceil(normal_doc_credits/2)/10 = ceil(5*normal_scaled)/10
+    for model, credits := range lo.Assign(defaultViduCredits) { // 复制一次 key 集避免遍历时修改 map
+        // 仅为视频任务模型生成错峰项（reference2image 跳过）
+        if strings.Contains(model, "reference2image") {
+            continue
+        }
+        // 跳过已是 offpeak 的
+        if strings.HasSuffix(model, "-offpeak") {
+            continue
+        }
+        // 计算错峰缩放积分
+        offScaled := math.Ceil(credits*5.0) / 10.0
+        defaultViduCredits[model+"-offpeak"] = offScaled
     }
 
     // NewAPI 渠道（按次计费，单位 USD/each）默认价
