@@ -67,48 +67,62 @@ func (t *ViduTask) Init() *base.TaskError {
 }
 
 func (t *ViduTask) SetProvider() *base.TaskError {
-    // 简化渠道选择：优先按“请求中的基础模型名”（文档模型）选渠道，而非计费用的 OriginalModel
-    // 回退：按 "vidu" 前缀尝试，便于使用通配符模型接入
-    var baseModel string
-    switch t.Action {
-    case viduProvider.ViduActionReference2Image:
-        if req, ok := t.Request.(*viduProvider.ViduReference2ImageRequest); ok {
-            baseModel = req.Model
-            if baseModel == "" {
-                baseModel = viduProvider.ViduModelQ1
-            }
-        }
-    default:
-        if req, ok := t.Request.(*viduProvider.ViduTaskRequest); ok {
-            baseModel = req.Model
-            if baseModel == "" {
-                // 与 actionValidate 中默认一致
-                baseModel = viduProvider.ViduModelQ1
-            }
-        }
-    }
+	// 简化渠道选择：优先按“请求中的基础模型名”（文档模型）选渠道，而非计费用的 OriginalModel
+	// 回退：按 "vidu" 前缀尝试，便于使用通配符模型接入
+	var baseModel string
+	switch t.Action {
+	case viduProvider.ViduActionReference2Image:
+		if req, ok := t.Request.(*viduProvider.ViduReference2ImageRequest); ok {
+			baseModel = req.Model
+			if baseModel == "" {
+				baseModel = viduProvider.ViduModelQ1
+			}
+		}
+	default:
+		if req, ok := t.Request.(*viduProvider.ViduTaskRequest); ok {
+			baseModel = req.Model
+			if baseModel == "" {
+				// 与 actionValidate 中默认一致
+				baseModel = viduProvider.ViduModelQ1
+			}
+		}
+	}
 
-    // 优先：按基础模型名取渠道
-    provider, mapped, fail := relay.GetProvider(t.C, baseModel)
-    if fail != nil || provider == nil {
-        // 回退：尝试通配前缀
-        provider, mapped, fail = relay.GetProvider(t.C, "vidu")
-        if fail != nil || provider == nil {
-            return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", "provider not found", true)
-        }
-    }
-    // 记录映射后的展示名（用于任务记录）
-    t.ModelName = mapped
+	// 预归一基础模型（容错 viduq2 -> viduq2-pro 等）
+	baseModel = normalizeBaseModel(baseModel)
+	// 优先：按基础模型名取渠道
+	provider, mapped, fail := relay.GetProvider(t.C, baseModel)
+	if fail != nil || provider == nil {
+		// 尝试按“vidu”通配
+		// 回退：尝试通配前缀
+		provider, mapped, fail = relay.GetProvider(t.C, "vidu")
+		if fail != nil || provider == nil {
+			return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", "provider not found", true)
+		}
+	}
+	// 记录映射后的展示名（用于任务记录）
+	t.ModelName = mapped
 
-    viduProvider, ok := provider.(*viduProvider.ViduProvider)
-    if !ok {
-        return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", "provider not found", true)
-    }
+	viduProvider, ok := provider.(*viduProvider.ViduProvider)
+	if !ok {
+		return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", "provider not found", true)
+	}
 
-    t.Provider = viduProvider
-    t.BaseProvider = provider
+	t.Provider = viduProvider
+	t.BaseProvider = provider
 
-    return nil
+	return nil
+}
+
+// 仅用于渠道选择的基础模型归一化（避免因别名导致选不到渠道）
+func normalizeBaseModel(m string) string {
+	s := strings.TrimSpace(strings.ToLower(m))
+	switch s {
+	case "viduq2", "vidu-q2", "q2":
+		return viduProvider.ViduModelQ2Pro
+	default:
+		return m
+	}
 }
 
 func (t *ViduTask) Relay() *base.TaskError {
@@ -135,8 +149,8 @@ func (t *ViduTask) Relay() *base.TaskError {
 func (t *ViduTask) actionValidate() error {
 	// 验证action是否为支持的类型
 	switch t.Action {
-    case viduProvider.ViduActionImg2Video:
-        req := t.Request.(*viduProvider.ViduTaskRequest)
+	case viduProvider.ViduActionImg2Video:
+		req := t.Request.(*viduProvider.ViduTaskRequest)
 		if len(req.Images) != 1 {
 			return fmt.Errorf("images must contain exactly 1 image for img2video")
 		}
@@ -151,14 +165,18 @@ func (t *ViduTask) actionValidate() error {
 		if req.Resolution == "" {
 			req.Resolution = getDefaultResolution(req.Model, *req.Duration)
 		}
-        // 构造详细的模型名称用于计费
-        t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
-        if req.OffPeak != nil && *req.OffPeak {
-            t.OriginalModel = t.OriginalModel + "-offpeak"
-        }
+		// 强制纠正不被上游支持的分辨率
+		req.Resolution = sanitizeResolutionByModel(req.Model, *req.Duration, req.Resolution)
+		// 归一模型名（例如 viduq2 -> viduq2-pro）
+		req.Model = normalizeBaseModel(req.Model)
+		// 构造详细的模型名称用于计费
+		t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
+		if req.OffPeak != nil && *req.OffPeak {
+			t.OriginalModel = t.OriginalModel + "-offpeak"
+		}
 
-    case viduProvider.ViduActionReference2Video:
-        req := t.Request.(*viduProvider.ViduTaskRequest)
+	case viduProvider.ViduActionReference2Video:
+		req := t.Request.(*viduProvider.ViduTaskRequest)
 		if len(req.Images) == 0 {
 			return fmt.Errorf("images is required for reference2video")
 		}
@@ -179,14 +197,17 @@ func (t *ViduTask) actionValidate() error {
 		if req.Resolution == "" {
 			req.Resolution = getDefaultResolution(req.Model, *req.Duration)
 		}
-        // 构造详细的模型名称用于计费
-        t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
-        if req.OffPeak != nil && *req.OffPeak {
-            t.OriginalModel = t.OriginalModel + "-offpeak"
-        }
+		req.Resolution = sanitizeResolutionByModel(req.Model, *req.Duration, req.Resolution)
+		// 归一模型名
+		req.Model = normalizeBaseModel(req.Model)
+		// 构造详细的模型名称用于计费
+		t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
+		if req.OffPeak != nil && *req.OffPeak {
+			t.OriginalModel = t.OriginalModel + "-offpeak"
+		}
 
-    case viduProvider.ViduActionStartEnd2Video:
-        req := t.Request.(*viduProvider.ViduTaskRequest)
+	case viduProvider.ViduActionStartEnd2Video:
+		req := t.Request.(*viduProvider.ViduTaskRequest)
 		if len(req.Images) != 2 {
 			return fmt.Errorf("exactly 2 images are required for start-end2video (start and end frames)")
 		}
@@ -201,14 +222,17 @@ func (t *ViduTask) actionValidate() error {
 		if req.Resolution == "" {
 			req.Resolution = getDefaultResolution(req.Model, *req.Duration)
 		}
-        // 构造详细的模型名称用于计费
-        t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
-        if req.OffPeak != nil && *req.OffPeak {
-            t.OriginalModel = t.OriginalModel + "-offpeak"
-        }
+		req.Resolution = sanitizeResolutionByModel(req.Model, *req.Duration, req.Resolution)
+		// 归一模型名
+		req.Model = normalizeBaseModel(req.Model)
+		// 构造详细的模型名称用于计费
+		t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, "")
+		if req.OffPeak != nil && *req.OffPeak {
+			t.OriginalModel = t.OriginalModel + "-offpeak"
+		}
 
-    case viduProvider.ViduActionText2Video:
-        req := t.Request.(*viduProvider.ViduTaskRequest)
+	case viduProvider.ViduActionText2Video:
+		req := t.Request.(*viduProvider.ViduTaskRequest)
 		if strings.TrimSpace(req.Prompt) == "" {
 			return fmt.Errorf("prompt is required for text2video")
 		}
@@ -226,11 +250,17 @@ func (t *ViduTask) actionValidate() error {
 		if req.Style == "" {
 			req.Style = "general"
 		}
-        // 构造详细的模型名称用于计费（包含风格）
-        t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, req.Style)
-        if req.OffPeak != nil && *req.OffPeak {
-            t.OriginalModel = t.OriginalModel + "-offpeak"
-        }
+		if req.Resolution == "" {
+			req.Resolution = getDefaultResolution(req.Model, *req.Duration)
+		}
+		req.Resolution = sanitizeResolutionByModel(req.Model, *req.Duration, req.Resolution)
+		// 归一模型名
+		req.Model = normalizeBaseModel(req.Model)
+		// 构造详细的模型名称用于计费（包含风格）
+		t.OriginalModel = buildDetailedModelName(t.Action, req.Model, *req.Duration, req.Resolution, req.Style)
+		if req.OffPeak != nil && *req.OffPeak {
+			t.OriginalModel = t.OriginalModel + "-offpeak"
+		}
 
 	case viduProvider.ViduActionReference2Image:
 		req := t.Request.(*viduProvider.ViduReference2ImageRequest)
@@ -258,6 +288,52 @@ func (t *ViduTask) actionValidate() error {
 	}
 
 	return nil
+}
+
+// 修正不被上游支持的分辨率，返回可用值
+func sanitizeResolutionByModel(model string, duration int, resolution string) string {
+	m := strings.TrimSpace(strings.ToLower(model))
+	r := strings.TrimSpace(strings.ToLower(resolution))
+	// 允许集合判断
+	in := func(x string, arr ...string) bool {
+		for _, a := range arr {
+			if x == a {
+				return true
+			}
+		}
+		return false
+	}
+	switch m {
+	case viduProvider.ViduModelQ1, viduProvider.ViduModelQ1Classic:
+		// Q1 系列仅支持 1080p
+		return "1080p"
+	case viduProvider.ViduModel20:
+		if duration == 8 {
+			return "720p" // 文档：8s 仅 720p
+		}
+		if in(r, "360p", "720p", "1080p") {
+			return resolution
+		}
+		return "360p"
+	case viduProvider.ViduModel15:
+		if duration == 8 {
+			return "720p" // 文档：8s 仅 720p
+		}
+		if in(r, "360p", "720p", "1080p") {
+			return resolution
+		}
+		return "360p"
+	case viduProvider.ViduModelQ2Pro, viduProvider.ViduModelQ2Turbo:
+		if in(r, "540p", "720p", "1080p") {
+			return resolution
+		}
+		return "720p"
+	default:
+		if r == "" {
+			return resolution
+		}
+		return resolution
+	}
 }
 
 // 获取模型默认时长

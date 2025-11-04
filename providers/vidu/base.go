@@ -35,10 +35,10 @@ func getConfig() base.ProviderConfig {
 }
 
 type ViduProvider struct {
-	base.BaseProvider
-	SubmitPath string
-	QueryPath  string
-	CancelPath string
+    base.BaseProvider
+    SubmitPath string
+    QueryPath  string
+    CancelPath string
 }
 
 func (p *ViduProvider) GetRequestHeaders() (headers map[string]string) {
@@ -66,7 +66,11 @@ func (p *ViduProvider) Submit(action string, request interface{}) (*ViduResponse
         if taskReq, ok := request.(*ViduTaskRequest); ok {
             // 规范化模型名称
             normalizedReq := *taskReq
-            normalizedReq.Model = normalizeModelName(taskReq.Model)
+            // 先进行通用模型规范化
+            model := normalizeModelName(taskReq.Model)
+            // 再根据 action 做兼容修正：例如 text2video 的 Q2 家族需用通用 "viduq2"
+            model = normalizeModelByAction(action, model)
+            normalizedReq.Model = model
             reqBody = &normalizedReq
         } else {
             reqBody = request
@@ -169,6 +173,9 @@ func ErrorHandle(err *ViduErrorResponse) *types.OpenAIError {
 func normalizeModelName(model string) string {
     m := strings.TrimSpace(strings.ToLower(model))
     switch m {
+    // 简写/别名：无后缀的 q2 归一为 q2-pro
+    case "viduq2", "vidu-q2", "q2":
+        return ViduModelQ2Pro
     // 新模型
     case "viduq2-pro":
         return ViduModelQ2Pro
@@ -200,4 +207,29 @@ func normalizeModelName(model string) string {
         // 其他输入保持原样，避免阻断新模型接入
         return model
     }
+}
+
+// 根据 action 做模型的兼容修正
+// 目前已知：text2video 在 Q2 家族下，上游更倾向使用通用 "viduq2"（而非 "viduq2-pro"/"viduq2-turbo"）
+func normalizeModelByAction(action, model string) string {
+    m := strings.TrimSpace(strings.ToLower(model))
+    if action == ViduActionText2Video {
+        if strings.HasPrefix(m, "viduq2-") || m == "viduq2" || m == "q2" || m == "vidu-q2" {
+            return "viduq2"
+        }
+    }
+    return model
+}
+
+// GetModelList 仅返回文档中的基础模型列表，用于“创建渠道-模型自动填充/获取可用模型”
+// 不返回任何精确计费变体，避免给运营带来维护成本。
+func (p *ViduProvider) GetModelList() ([]string, error) {
+    return []string{
+        ViduModelQ2Pro,
+        ViduModelQ2Turbo,
+        ViduModelQ1,
+        ViduModelQ1Classic,
+        ViduModel20,
+        ViduModel15,
+    }, nil
 }

@@ -66,6 +66,19 @@
         ]
       },
       {
+        "tab": "Vidu",
+        "groups": [
+          {
+            "group": "Vidu",
+            "pages": [
+              "vidu/overview",
+              "vidu/video-generation",
+              "vidu/video-query"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Gemini",
         "groups": [
           {

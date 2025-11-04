@@ -225,6 +225,13 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
   };
 
   const basicModels = (channelType) => {
+    // Vidu：仅返回基础模型，避免自动填充变种模型
+    if (channelType === 57) {
+      const group = typeConfig[channelType]?.modelGroup || 'Vidu';
+      const bases = ['viduq2-pro', 'viduq2-turbo', 'viduq1', 'viduq1-classic', 'vidu2.0', 'vidu1.5'];
+      return bases.map((id) => ({ id, group }));
+    }
+
     let modelGroup = typeConfig[channelType]?.modelGroup || defaultConfig.modelGroup;
     // 循环 modelOptions，找到 modelGroup 对应的模型
     let modelList = [];
@@ -992,11 +999,12 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                       renderTags={(value, getTagProps) =>
                         value.map((option, index) => {
                           const tagProps = getTagProps({ index });
+                          const { key, ...chipProps } = tagProps || {};
                           return (
                             <Chip
-                              key={index}
+                              key={key || option.id || index}
                               label={option.id}
-                              {...tagProps}
+                              {...chipProps}
                               onClick={() => copy(option.id)}
                               sx={{
                                 maxWidth: '100%',

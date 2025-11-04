@@ -225,6 +225,13 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
   };
 
   const basicModels = (channelType) => {
+    // Vidu：仅返回基础模型，避免自动填充变种模型
+    if (channelType === 57) {
+      const group = typeConfig[channelType]?.modelGroup || 'Vidu';
+      const bases = ['viduq2-pro', 'viduq2-turbo', 'viduq1', 'viduq1-classic', 'vidu2.0', 'vidu1.5'];
+      return bases.map((id) => ({ id, group }));
+    }
+
     let modelGroup = typeConfig[channelType]?.modelGroup || defaultConfig.modelGroup;
     // 循环 modelOptions，找到 modelGroup 对应的模型
     let modelList = [];
@@ -992,11 +999,12 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                       renderTags={(value, getTagProps) =>
                         value.map((option, index) => {
                           const tagProps = getTagProps({ index });
+                          const { key, ...chipProps } = tagProps || {};
                           return (
                             <Chip
-                              key={index}
+                              key={key || option.id || index}
                               label={option.id}
-                              {...tagProps}
+                              {...chipProps}
                               onClick={() => copy(option.id)}
                               sx={{
                                 maxWidth: '100%',
@@ -1118,7 +1126,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                       {errors.key}
                     </FormHelperText>
                   ) : (
-                    <FormHelperText id="helper-tex-channel-key-label">
+                    <FormHelperText id="helper-tex-channel-key-label" component="div">
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>{customizeT(inputPrompt.key)}</span>
                         {channelId === 0 && (
@@ -1128,7 +1136,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                               checked={Boolean(batchAdd)} 
                               onChange={(e) => setBatchAdd(e.target.checked)} 
                             />
-                            <Typography variant="body2">{t('channel_edit.batchAdd')}</Typography>
+                            <Typography variant="body2" component="span">{t('channel_edit.batchAdd')}</Typography>
                           </Box>
                         )}
                       </Box>
@@ -1380,8 +1388,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                   Object.keys(pluginList[values.type]).map((pluginId) => {
                     const plugin = pluginList[values.type][pluginId];
                     return (
-                      <>
-                        <Box
+                        <Box key={pluginId}
                           sx={{
                             border: '1px solid #e0e0e0',
                             borderRadius: 2,
@@ -1400,7 +1407,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                           >
                             <Box sx={{ flex: 1 }}>
                               <Typography variant="h3">{customizeT(plugin.name)}</Typography>
-                              <Typography variant="caption">{customizeT(plugin.description)}</Typography>
+                              <Typography variant="caption" component="span">{customizeT(plugin.description)}</Typography>
                             </Box>
                             <Button
                               onClick={() => setExpanded(!expanded)}
@@ -1461,7 +1468,6 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                             </Box>
                           </Collapse>
                         </Box>
-                      </>
                     );
                   })}
                 <DialogActions>
