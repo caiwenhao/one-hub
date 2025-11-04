@@ -643,6 +643,58 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                   </FormControl>
                 )}
 
+                {/* Vidu 专用：上游供应商选择（官方 / Pollo.ai） */}
+                {!isTag && values.type === 57 && (
+                  <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
+                    <InputLabel id="vidu-upstream-label">上游供应商</InputLabel>
+                    <Select
+                      labelId="vidu-upstream-label"
+                      id="vidu-upstream"
+                      name="vidu_upstream"
+                      value={values.vidu_upstream || ''}
+                      label="上游供应商"
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setFieldValue('vidu_upstream', next);
+
+                        const group = typeConfig[57]?.modelGroup || 'Vidu';
+                        const officialModels = ['viduq2-pro','viduq2-turbo','viduq1','viduq1-classic','vidu2.0','vidu1.5'].map(id => ({ id, group }));
+                        const polloModels = ['viduq2-pro','viduq2-turbo','viduq1'].map(id => ({ id, group }));
+
+                        if (next === 'pollo') {
+                          // 切换到 Pollo 上游
+                          setFieldValue('base_url', 'https://pollo.ai/api/platform');
+                          // 写入 custom_parameter 顶层 upstream=pollo 便于后端识别
+                          try {
+                            const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};
+                            obj.upstream = 'pollo';
+                            setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
+                          } catch (_) {}
+                          // 自动填充 Pollo 支持的基础模型
+                          setFieldValue('models', polloModels);
+                        } else {
+                          // 官方直连
+                          setFieldValue('base_url', 'https://api.vidu.cn');
+                          try {
+                            const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};
+                            if (obj && typeof obj === 'object' && 'upstream' in obj) delete obj.upstream;
+                            setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
+                          } catch (_) {}
+                          // 自动填充官方基础模型
+                          setFieldValue('models', officialModels);
+                        }
+                      }}
+                    >
+                      <MenuItem value="">默认（官方）</MenuItem>
+                      <MenuItem value="official">官方（直连）</MenuItem>
+                      <MenuItem value="pollo">Pollo.ai</MenuItem>
+                    </Select>
+                    <FormHelperText id="helper-tex-vidu-upstream-label">
+                      默认直连官方；选择 Pollo.ai 将自动切换认证与路径，模型仅需基础名（系统会自动映射计费组合）。
+                    </FormHelperText>
+                  </FormControl>
+                )}
+
                 {/* OpenAI 专用：上游供应商选择（顶层 upstream） */}
                 {!isTag && values.type === 1 && (
                   <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
