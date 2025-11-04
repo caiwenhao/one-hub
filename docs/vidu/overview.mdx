@@ -1,0 +1,66 @@
+---
+title: "Vidu · 概览"
+description: "快速上手与使用指南（非 API 规范）"
+---
+
+核心说明
+
+- 路由前缀：统一使用 `/vidu`。
+- 认证：`Authorization: Token <Your Vidu Key>`（与官网一致）。
+- 模型名简化：仅需填写文档中的基础模型名（`viduq2-pro`、`viduq2-turbo`、`viduq1`、`viduq1-classic`、`vidu2.0`、`vidu1.5`）。
+  - 平台会根据 action（如 `img2video`/`text2video`）、分辨率、时长、风格与是否错峰（`off_peak`）自动映射到精确计费模型，无需手动拼接诸如 `vidu-img2video-...` 的变体。
+
+常用路径
+
+- 提交任务：`POST /vidu/ent/v2/{action}`
+  - `action` 取值：`img2video`（图生视频）、`reference2video`（参考生视频）、`start-end2video`（首尾帧）、`text2video`（文生视频）
+- 查询任务：`GET /vidu/ent/v2/tasks/{task_id}/creations`
+- 取消任务：`POST /vidu/ent/v2/tasks/{task_id}/cancel`
+
+快速上手
+
+```bash
+# 1) 文生视频（text2video）
+curl -X POST "https://models.kapon.cloud/vidu/ent/v2/text2video" \
+  -H "Authorization: Token $VIDU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "viduq2-pro",
+    "prompt": "Sunset beach, cinematic style.",
+    "duration": 4,
+    "resolution": "720p",
+    "style": "general",
+    "off_peak": false
+  }'
+
+# 2) 图生视频（img2video）- 仅传 1 张图
+curl -X POST "https://models.kapon.cloud/vidu/ent/v2/img2video" \
+  -H "Authorization: Token $VIDU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "vidu1.5",
+    "images": ["https://your.cdn.com/first_frame.png"],
+    "duration": 4,
+    "resolution": "720p",
+    "off_peak": true
+  }'
+
+# 3) 任务查询（creations）
+curl "https://models.kapon.cloud/vidu/ent/v2/tasks/$TASK_ID/creations" \
+  -H "Authorization: Token $VIDU_TOKEN"
+```
+
+实用提示
+
+- 错峰模式：`off_peak=true` 时自动按半价计费（官方规则“半价且积分向上取整”已内置）。
+- 水印：可用 `watermark`、`wm_position`（1-4）、`wm_url` 控制。
+- 文生风格：`style` 支持 `general`、`anime`。
+- 仅需基础模型名：提交时不需要带分辨率/时长在 `model` 内，系统会自动映射计费变体。
+
+页面导航
+
+<CardGroup>
+  <Card title="视频生成" href="/vidu/video-generation" icon="film" />
+  <Card title="任务查询" href="/vidu/video-query" icon="magnifying-glass" />
+</CardGroup>
+
