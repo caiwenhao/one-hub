@@ -529,8 +529,9 @@ func ExportUserLogsCSV(c *gin.Context) {
 		return
 	}
 
-	w := csv.NewWriter(c.Writer)
-	header := []string{"时间", "用户", "渠道", "模型", "令牌"}
+    w := csv.NewWriter(c.Writer)
+    // 非管理员导出：去掉“渠道”列
+    header := []string{"时间", "用户", "模型", "令牌"}
 	if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
 		header = append(header, "金额(货币)")
 	}
@@ -548,24 +549,20 @@ func ExportUserLogsCSV(c *gin.Context) {
 		if len(rows) == 0 {
 			break
 		}
-		for _, r := range rows {
-			createdAt := time.Unix(r.CreatedAt, 0).In(time.Local).Format("2006-01-02 15:04:05")
-			channel := ""
-			if r.Channel != nil {
-				channel = r.Channel.Name
-			}
-			isStream := "否"
-			if r.IsStream {
-				isStream = "是"
-			}
-			_, quotaCurrency := quotaValuesForCSV(r.Quota)
-			rec := []string{
-				createdAt,
-				r.Username,
-				channel,
-				r.ModelName,
-				r.TokenName,
-			}
+        for _, r := range rows {
+            createdAt := time.Unix(r.CreatedAt, 0).In(time.Local).Format("2006-01-02 15:04:05")
+            isStream := "否"
+            if r.IsStream {
+                isStream = "是"
+            }
+            _, quotaCurrency := quotaValuesForCSV(r.Quota)
+            // 非管理员导出记录：不包含“渠道”
+            rec := []string{
+                createdAt,
+                r.Username,
+                r.ModelName,
+                r.TokenName,
+            }
 			if quotaCurrency != "" {
 				rec = append(rec, quotaCurrency)
 			}
