@@ -10,6 +10,7 @@ import (
 	"one-api/model"
 	"one-api/providers"
 	viduProvider "one-api/providers/vidu"
+	"one-api/relay"
 	"one-api/relay/task/base"
 	"one-api/types"
 	"sort"
@@ -66,21 +67,48 @@ func (t *ViduTask) Init() *base.TaskError {
 }
 
 func (t *ViduTask) SetProvider() *base.TaskError {
-	// 通过模型查询渠道
-	provider, err := t.GetProviderByModel()
-	if err != nil {
-		return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", err.Error(), true)
-	}
+    // 简化渠道选择：优先按“请求中的基础模型名”（文档模型）选渠道，而非计费用的 OriginalModel
+    // 回退：按 "vidu" 前缀尝试，便于使用通配符模型接入
+    var baseModel string
+    switch t.Action {
+    case viduProvider.ViduActionReference2Image:
+        if req, ok := t.Request.(*viduProvider.ViduReference2ImageRequest); ok {
+            baseModel = req.Model
+            if baseModel == "" {
+                baseModel = viduProvider.ViduModelQ1
+            }
+        }
+    default:
+        if req, ok := t.Request.(*viduProvider.ViduTaskRequest); ok {
+            baseModel = req.Model
+            if baseModel == "" {
+                // 与 actionValidate 中默认一致
+                baseModel = viduProvider.ViduModelQ1
+            }
+        }
+    }
 
-	viduProvider, ok := provider.(*viduProvider.ViduProvider)
-	if !ok {
-		return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", "provider not found", true)
-	}
+    // 优先：按基础模型名取渠道
+    provider, mapped, fail := relay.GetProvider(t.C, baseModel)
+    if fail != nil || provider == nil {
+        // 回退：尝试通配前缀
+        provider, mapped, fail = relay.GetProvider(t.C, "vidu")
+        if fail != nil || provider == nil {
+            return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", "provider not found", true)
+        }
+    }
+    // 记录映射后的展示名（用于任务记录）
+    t.ModelName = mapped
 
-	t.Provider = viduProvider
-	t.BaseProvider = provider
+    viduProvider, ok := provider.(*viduProvider.ViduProvider)
+    if !ok {
+        return base.StringTaskError(http.StatusServiceUnavailable, "provider_not_found", "provider not found", true)
+    }
 
-	return nil
+    t.Provider = viduProvider
+    t.BaseProvider = provider
+
+    return nil
 }
 
 func (t *ViduTask) Relay() *base.TaskError {
@@ -221,6 +249,12 @@ func (t *ViduTask) actionValidate() error {
 
 	default:
 		return fmt.Errorf("unsupported action: %s", t.Action)
+	}
+
+	// 计费按 OriginalModel 精确匹配
+	if t.OriginalModel != "" {
+		// 强制使用 OriginalModel 参与计费，以便启用 offpeak 与细化的价档
+		t.C.Set("billing_original_model", true)
 	}
 
 	return nil
