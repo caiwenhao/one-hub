@@ -12,6 +12,7 @@ import (
     "one-api/providers/base"
     "one-api/providers/openai"
     "one-api/types"
+    "strconv"
     "strings"
 )
 
@@ -202,6 +203,46 @@ func (p *GeminiProvider) detectVeoVendor() string {
     return "google"
 }
 
+// deduceSize 将官方的 aspectRatio 与 resolution 推导为 sutui 上游所需的像素尺寸
+// 约定：
+// - 720p + 16:9 => 1280x720
+// - 720p + 9:16 => 720x1280
+// - 1080p + 16:9 => 1920x1080
+// - 1080p + 9:16 => 1080x1920
+// - 缺省回退：
+//   - 仅 AR 给出：16:9 => 1600x900，9:16 => 900x1600，1:1 => 720x720
+func deduceSize(aspectRatio, resolution string) string {
+    ar := strings.TrimSpace(aspectRatio)
+    res := strings.TrimSpace(strings.ToLower(resolution))
+    switch res {
+    case "720p":
+        switch ar {
+        case "16:9":
+            return "1280x720"
+        case "9:16":
+            return "720x1280"
+        }
+    case "1080p":
+        switch ar {
+        case "16:9":
+            return "1920x1080"
+        case "9:16":
+            return "1080x1920"
+        }
+    }
+    // 回退：仅根据 AR 推断
+    switch ar {
+    case "16:9":
+        return "1600x900"
+    case "9:16":
+        return "900x1600"
+    case "1:1":
+        return "720x720"
+    }
+    if strings.Contains(ar, "x") { return ar }
+    return ""
+}
+
 // 将 Veo :predictLongRunning 初始化映射到 sutui 的 /v1/videos
 func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any, *types.OpenAIErrorWithStatusCode) {
     base := strings.TrimSuffix(p.GetBaseURL(), "/")
@@ -225,7 +266,14 @@ func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any,
         if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
         httpReq = r
     } else {
-        // JSON 映射：input.prompt → prompt；config.durationSeconds → seconds；config.aspectRatio → size
+        // JSON 映射（与官方文档对齐，支持两种入参形态）：
+        // 1) 官方形态：
+        //    {
+        //      "instances": [{ "prompt": "..." }],
+        //      "parameters": { "durationSeconds": "8", "aspectRatio": "16:9", "resolution": "720p" }
+        //    }
+        // 2) 兼容旧形态：
+        //    { "input": {"prompt": "..."}, "config": {"durationSeconds": 8, "aspectRatio": "16:9"} }
         raw, ok := p.GetRawBody()
         if !ok {
             return nil, common.StringErrorWrapperLocal("request body not found", "request_body_not_found", http.StatusInternalServerError)
@@ -235,22 +283,51 @@ func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any,
         var prompt string
         var seconds int
         var size string
-        if in, ok := m["input"].(map[string]any); ok {
-            if s, ok2 := in["prompt"].(string); ok2 { prompt = s }
+
+        // 优先解析官方形态
+        if inst, ok := m["instances"].([]any); ok && len(inst) > 0 {
+            if first, ok2 := inst[0].(map[string]any); ok2 {
+                if s, ok3 := first["prompt"].(string); ok3 { prompt = s }
+            }
         }
-        if cfg, ok := m["config"].(map[string]any); ok {
-            if f, ok2 := cfg["durationSeconds"].(float64); ok2 { seconds = int(f) }
-            if s, ok2 := cfg["aspectRatio"].(string); ok2 {
-                s = strings.TrimSpace(s)
-                switch s {
-                case "16:9": size = "1600x900"
-                case "9:16": size = "900x1600"
-                case "1:1": size = "720x720"
-                default:
-                    if strings.Contains(s, "x") { size = s }
+        if params, ok := m["parameters"].(map[string]any); ok {
+            // durationSeconds 可能为字符串或数字
+            if v, ok2 := params["durationSeconds"]; ok2 {
+                switch t := v.(type) {
+                case string:
+                    if n, err := strconv.Atoi(strings.TrimSpace(t)); err == nil { seconds = n }
+                case float64:
+                    seconds = int(t)
+                case int:
+                    seconds = t
+                }
+            }
+            var ar, res string
+            if s, ok2 := params["aspectRatio"].(string); ok2 { ar = strings.TrimSpace(s) }
+            if s, ok2 := params["resolution"].(string); ok2 { res = strings.TrimSpace(s) }
+            if size == "" {
+                size = deduceSize(ar, res)
+            }
+        }
+
+        // 兼容旧形态 input/config
+        if prompt == "" {
+            if in, ok := m["input"].(map[string]any); ok {
+                if s, ok2 := in["prompt"].(string); ok2 { prompt = s }
+            }
+        }
+        if seconds == 0 || size == "" {
+            if cfg, ok := m["config"].(map[string]any); ok {
+                if seconds == 0 {
+                    if f, ok2 := cfg["durationSeconds"].(float64); ok2 { seconds = int(f) }
+                }
+                if s, ok2 := cfg["aspectRatio"].(string); ok2 {
+                    s = strings.TrimSpace(s)
+                    if size == "" { size = deduceSize(s, "") }
                 }
             }
         }
+
         body := map[string]any{}
         if modelName != "" { body["model"] = modelName }
         if prompt != "" { body["prompt"] = prompt }
