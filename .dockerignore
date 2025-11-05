@@ -1,0 +1,13 @@
+.git
+.gocache
+.gocache-mod
+logs
+tmp
+cache
+node_modules
+web/node_modules
+web-grouplay/node_modules
+one-api.db
+*.local.*
+*.log
+*.DS_Store
