@@ -67,7 +67,10 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          build-args: |
+            # 使用国内 npm 镜像缓解 yarn 安装超时（如无需求可删除本行改回官方源）
+            NPM_REGISTRY=https://registry.npmmirror.com
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: ${{ steps.meta.outputs.tags }}
