@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { Tabs, Tab, Box, Card, CardHeader, CardContent, Divider, Stack } from '@mui/material';
 import { IconWorldCog, IconCpu, IconServerCog } from '@tabler/icons-react';
 import OperationSetting from './component/OperationSetting';
+import ImageMirrorSetting from './component/ImageMirrorSetting';
 import SystemSetting from './component/SystemSetting';
 import OtherSetting from './component/OtherSetting';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -45,7 +46,8 @@ const Setting = () => {
     () => ({
       operation: 0,
       system: 1,
-      other: 2
+      mirror: 2,
+      other: 3
     }),
     []
   );
@@ -104,8 +106,14 @@ const Setting = () => {
                 iconPosition="start"
               />
               <Tab
-                label={t('setting_index.otherSettings.title')}
+                label={t('setting_index.imageMirrorSettings.title')}
                 {...a11yProps(2)}
+                icon={<IconWorldCog size={18} />}
+                iconPosition="start"
+              />
+              <Tab
+                label={t('setting_index.otherSettings.title')}
+                {...a11yProps(3)}
                 icon={<IconWorldCog size={18} />}
                 iconPosition="start"
               />
@@ -131,6 +139,9 @@ const Setting = () => {
             <SystemSetting />
           </CustomTabPanel>
           <CustomTabPanel value={value} index={2}>
+            <ImageMirrorSetting />
+          </CustomTabPanel>
+          <CustomTabPanel value={value} index={3}>
             <OtherSetting />
           </CustomTabPanel>
         </CardContent>

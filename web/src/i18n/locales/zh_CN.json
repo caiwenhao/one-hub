@@ -697,6 +697,12 @@
     }
   },
   "setting_index": {
+    "imageMirrorSettings": {
+      "title": "图片镜像与存储",
+      "mirrorTitle": "镜像策略",
+      "storageTitle": "对象存储（S3/R2）",
+      "saveButton": "保存镜像与存储设置"
+    },
     "operationSettings": {
       "title": "运营设置",
       "generalSettings": {
@@ -750,6 +756,20 @@
           "label": "Cloudflare Worker 图片代理",
           "key": "Cloudflare Worker 图片代理key,如果没有配置请忽略",
           "alert": "这里是Cloudflare Worker的图片代理地址，你可以通过部署https://github.com/MartialBE/get-image-by-cf，来使用，它和图片检测代理可以只设置其中一个。注意有些图片链接可能会拒绝CF的访问导致检测失败。"
+        },
+        "imageMirror": {
+          "enabled": "启用图片结果镜像到对象存储",
+          "allowedHostsLabel": "允许的上游域名（逗号分隔）",
+          "allowedHostsPlaceholder": "例如 upload.apimart.ai,example.com"
+        },
+        "s3r2": {
+          "title": "S3/R2 存储（用于图片镜像）",
+          "endpoint": "S3/R2 Endpoint（如 https://xxxxxx.r2.cloudflarestorage.com）",
+          "cdnurl": "CDN 公网域名（未填默认用 Endpoint）",
+          "bucketName": "Bucket 名称",
+          "accessKeyId": "Access Key ID",
+          "accessKeySecret": "Access Key Secret",
+          "expirationDays": "过期天数（可选）"
         },
         "saveButton": "保存其他设置"
       },

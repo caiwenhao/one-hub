@@ -791,6 +791,12 @@
   },
   "setting": "設定",
   "setting_index": {
+    "imageMirrorSettings": {
+      "title": "圖片鏡像與存儲",
+      "mirrorTitle": "鏡像策略",
+      "storageTitle": "對象存儲（S3/R2）",
+      "saveButton": "保存鏡像與存儲設置"
+    },
     "operationSettings": {
       "chatLinkSettings": {
         "info": "配置聊天鏈接，該配置在令牌中的聊天生效以及首頁的 Playground 中的聊天生效. <br />鏈接中可以使&#123;key&#125;替換用戶的令牌，&#123;server&#125;替換伺服器地址。例如：{'https://chat.oneapi.pro/#/?settings={\"key\":\"sk-{key}\",\"url\":\"{server}\"}'}<br />如果未配置，會默認配置以下4個鏈接：<br />ChatGPT Next ： {'https://chat.oneapi.pro/#/?settings={\"key\":\"{key}\",\"url\":\"{server}\"}'}<br />chatgpt-web-midjourney-proxy ： {'https://vercel.ddaiai.com/#/?settings={\"key\":\"{key}\",\"url\":\"{server}\"}'}<br />AMA 問天 ： {'ama://set-api-key?server={server}&key={key}'}<br />opencat ： {'opencat://team/join?domain={server}&token={key}'}<br />排序規則：值越大越靠前，值相同則按照配置順序",
@@ -856,6 +862,20 @@
           "alert": "這裡是 Cloudflare Worker 的圖片代理地址，你可以通過部署 https://github.com/MartialBE/get-image-by-cf，來使用，它和圖片檢測代理可以只設置其中一個。注意有些圖片鏈接可能會拒絕 CF 的訪問導致檢測失敗。",
           "key": "Cloudflare Worker 圖片代理 key, 如果沒有配置請忽略",
           "label": "Cloudflare Worker 圖片代理"
+        },
+        "imageMirror": {
+          "enabled": "啟用將生成圖片鏈接鏡像到對象存儲",
+          "allowedHostsLabel": "允許的上游域名（逗號分隔）",
+          "allowedHostsPlaceholder": "例如 upload.apimart.ai,example.com"
+        },
+        "s3r2": {
+          "title": "S3/R2 存儲（用於圖片鏡像）",
+          "endpoint": "S3/R2 Endpoint（如 https://xxxxxx.r2.cloudflarestorage.com）",
+          "cdnurl": "CDN 公網域名（未填則用 Endpoint）",
+          "bucketName": "Bucket 名稱",
+          "accessKeyId": "Access Key ID",
+          "accessKeySecret": "Access Key Secret",
+          "expirationDays": "過期天數（可選）"
         },
         "alert": "當用戶使用 vision 模型並提供了圖片鏈接時，我們的伺服器需要下載這些圖片並計算 tokens。為了在下載圖片時保護伺服器的 IP 地址不被洩露，可以在下方配置一個代理。這個代理配置使用的是 HTTP 或 SOCKS5 代理。如果你是個人用戶，這個配置可以不用理會。代理格式為 http://127.0.0.1:1080 或 socks5://127.0.0.1:1080",
         "chatImageRequestProxy": {

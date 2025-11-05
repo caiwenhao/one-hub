@@ -192,6 +192,21 @@ var RetryCooldownSeconds = 5
 var CFWorkerImageUrl = ""
 var CFWorkerImageKey = ""
 
+// --- NewAPI Image Mirror (panel configurable) ---
+// 将供应商返回的图片 URL 镜像到本地存储并改写
+var NewAPIMirrorImageToStorage = false
+// 允许镜像的上游资源域名（逗号或选项自定义解析）
+var NewAPIAllowedAssetHosts = []string{}
+
+// --- S3/R2 Storage (panel configurable) ---
+// 若通过面板配置了以下字段，将优先生效；否则回退到 viper 配置 storage.s3.*
+var S3Endpoint = ""
+var S3CDNURL = ""
+var S3BucketName = ""
+var S3AccessKeyId = ""
+var S3AccessKeySecret = ""
+var S3ExpirationDays = 0
+
 var RootUserEmail = ""
 
 var IsMasterNode = true

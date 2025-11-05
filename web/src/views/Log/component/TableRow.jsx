@@ -97,9 +97,12 @@ export default function LogTableRow({ item, userIsAdmin, userGroup, columnVisibi
       <TableRow tabIndex={item.id}>
         {columnVisibility.created_at && <TableCell sx={{ p: '10px 8px' }}>{timestamp2string(item.created_at)}</TableCell>}
 
-        {userIsAdmin && columnVisibility.channel_id && (
+        {columnVisibility.channel_id && (
           <TableCell sx={{ p: '10px 8px' }}>
-            {(item.channel_id || '') + ' ' + (item.channel?.name ? '(' + item.channel.name + ')' : '')}
+            {/* 渠道字段：管理员显示完整标识（id + 名称），非管理员仅显示 id */}
+            {userIsAdmin
+              ? (item.channel_id || '') + ' ' + (item.channel?.name ? '(' + item.channel.name + ')' : '')
+              : item.channel_id || ''}
           </TableCell>
         )}
         {userIsAdmin && columnVisibility.user_id && (

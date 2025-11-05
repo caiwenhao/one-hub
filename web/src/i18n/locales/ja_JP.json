@@ -790,6 +790,12 @@
   },
   "setting": "設定",
   "setting_index": {
+    "imageMirrorSettings": {
+      "title": "画像ミラー & ストレージ",
+      "mirrorTitle": "ミラーリングポリシー",
+      "storageTitle": "オブジェクトストレージ（S3/R2）",
+      "saveButton": "ミラー・ストレージ設定を保存"
+    },
     "operationSettings": {
       "chatLinkSettings": {
         "info": "チャットリンクを構成します。この設定は、トークン内のチャットやホームページのPlaygroundのチャットで有効です。 <br />リンクでは、&#123;key&#125;がユーザーのトークンを、&#123;server&#125;がサーバーアドレスを置き換えることができます。例えば：{'https://chat.oneapi.pro/#/?settings={\"key\":\"sk-{key}\",\"url\":\"{server}\"}'}<br />構成されていない場合、次の4つのリンクがデフォルトで構成されます：<br />ChatGPT Next ： {'https://chat.oneapi.pro/#/?settings={\"key\":\"{key}\",\"url\":\"{server}\"}'}<br />chatgpt-web-midjourney-proxy ： {'https://vercel.ddaiai.com/#/?settings={\"key\":\"{key}\",\"url\":\"{server}\"}'}<br />AMA ： {'ama://set-api-key?server={server}&key={key}'}<br />opencat ： {'opencat://team/join?domain={server}&token={key}'}<br />並べ替えルール：値が大きいほど順位が高く、同じ値の場合は構成順に並べられます",
@@ -855,6 +861,20 @@
           "alert": "Cloudflare Workerのイメージプロキシアドレスはこちら https://github.com/MartialBE/get-image-by-cf とイメージ検出プロキシのどちらか一方のみを設定することで利用できます。\n一部のイメージ リンクは CF アクセスを拒否し、検出エラーを引き起こす可能性があることに注意してください。",
           "key": "Cloudflare Worker イメージ プロキシ キー、設定されていない場合は無視してください",
           "label": "Cloudflareワーカーイメージプロキシ"
+        },
+        "imageMirror": {
+          "enabled": "生成画像の URL をオブジェクトストレージへミラーし返却する",
+          "allowedHostsLabel": "許可する上流ホスト（カンマ区切り）",
+          "allowedHostsPlaceholder": "例: upload.apimart.ai,example.com"
+        },
+        "s3r2": {
+          "title": "S3/R2 ストレージ（画像ミラー用）",
+          "endpoint": "S3/R2 Endpoint（例: https://xxxxxx.r2.cloudflarestorage.com）",
+          "cdnurl": "公開 CDN ドメイン（未設定なら Endpoint を使用）",
+          "bucketName": "Bucket 名",
+          "accessKeyId": "Access Key ID",
+          "accessKeySecret": "Access Key Secret",
+          "expirationDays": "有効期限（日数・任意）"
         },
         "alert": "ユーザーがvisionモデルを使用して画像リンクを提供した場合、サーバーはこれらの画像をダウンロードしてトークンを計算する必要があります。画像をダウンロードする際にサーバーのIPアドレスが漏洩しないように、以下にプロキシを設定できます。このプロキシ設定はHTTPまたはSOCKS5プロキシを使用します。個人ユーザーの場合、この設定は無視できます。プロキシ形式はhttp://127.0.0.1:1080またはsocks5://127.0.0.1:1080です",
         "chatImageRequestProxy": {

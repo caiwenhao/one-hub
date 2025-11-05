@@ -823,6 +823,12 @@
   },
   "setting": "Setting",
   "setting_index": {
+    "imageMirrorSettings": {
+      "title": "Image Mirror & Storage",
+      "mirrorTitle": "Mirroring Policy",
+      "storageTitle": "Object Storage (S3/R2)",
+      "saveButton": "Save Mirror & Storage"
+    },
     "operationSettings": {
       "chatLinkSettings": {
         "info": "Configure chat links, which take effect in the chat of the token and in the chat of the Playground on the homepage. <br />In the link, &#123;key&#125; can replace the user's token, and &#123;server&#125; can replace the server address. For example: {'https://chat.oneapi.pro/#/?settings={\"key\":\"sk-{key}\",\"url\":\"{server}\"}'}<br />If not configured, the following 4 links will be configured by default:<br />ChatGPT Next ： {'https://chat.oneapi.pro/#/?settings={\"key\":\"{key}\",\"url\":\"{server}\"}'}<br />chatgpt-web-midjourney-proxy ： {'https://vercel.ddaiai.com/#/?settings={\"key\":\"{key}\",\"url\":\"{server}\"}'}<br />AMA ： {'ama://set-api-key?server={server}&key={key}'}<br />opencat ： {'opencat://team/join?domain={server}&token={key}'}<br />Sorting rules: The larger the value, the higher the ranking, and the same value is sorted according to the configuration order",
@@ -888,6 +894,20 @@
           "alert": "Here is the image proxy address of Cloudflare Worker. You can use it by deploying https://github.com/MartialBE/get-image-by-cf. You can set only one of it and the image detection proxy. \nNote that some image links may deny CF access and cause detection failure.",
           "key": "Cloudflare Worker image proxy key, please ignore if not configured",
           "label": "Cloudflare Worker Image Proxy"
+        },
+        "imageMirror": {
+          "enabled": "Enable mirroring generated image URLs to object storage",
+          "allowedHostsLabel": "Allowed upstream hosts (comma separated)",
+          "allowedHostsPlaceholder": "e.g. upload.apimart.ai,example.com"
+        },
+        "s3r2": {
+          "title": "S3/R2 Storage (for image mirroring)",
+          "endpoint": "S3/R2 Endpoint (e.g. https://xxxxxx.r2.cloudflarestorage.com)",
+          "cdnurl": "Public CDN domain (fallback to endpoint)",
+          "bucketName": "Bucket Name",
+          "accessKeyId": "Access Key ID",
+          "accessKeySecret": "Access Key Secret",
+          "expirationDays": "Expiration days (optional)"
         },
         "alert": "When users use the vision model and provide an image link, our server needs to download these images and calculate tokens. To protect the server's IP address from being exposed when downloading images, you can configure a proxy below. This proxy configuration uses HTTP or SOCKS5 proxy. If you are an individual user, you can ignore this configuration. The proxy format is http://127.0.0.1:1080 or socks5://127.0.0.1:1080",
         "chatImageRequestProxy": {

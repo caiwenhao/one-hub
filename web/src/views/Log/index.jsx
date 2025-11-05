@@ -321,7 +321,7 @@ export default function Log() {
               </MenuItem>
               {[
                 { id: 'created_at', label: t('logPage.timeLabel') },
-                { id: 'channel_id', label: t('logPage.channelLabel'), adminOnly: true },
+                { id: 'channel_id', label: t('logPage.channelLabel') },
                 { id: 'user_id', label: t('logPage.userLabel'), adminOnly: true },
                 { id: 'group', label: t('logPage.groupLabel') },
                 { id: 'token_name', label: t('logPage.tokenLabel') },
@@ -363,7 +363,7 @@ export default function Log() {
                     id: 'channel_id',
                     label: t('logPage.channelLabel'),
                     disableSort: false,
-                    hide: !columnVisibility.channel_id || !userIsAdmin
+                    hide: !columnVisibility.channel_id
                   },
                   {
                     id: 'user_id',

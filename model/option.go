@@ -104,6 +104,34 @@ func InitOptionMap() {
 
 	config.GlobalOption.RegisterString("CFWorkerImageUrl", &config.CFWorkerImageUrl)
 	config.GlobalOption.RegisterString("CFWorkerImageKey", &config.CFWorkerImageKey)
+
+	// NewAPI 图片镜像到存储（面板配置）
+	config.GlobalOption.RegisterBool("NewAPIMirrorImageToStorage", &config.NewAPIMirrorImageToStorage)
+	config.GlobalOption.RegisterCustom("NewAPIAllowedAssetHosts", func() string {
+		return strings.Join(config.NewAPIAllowedAssetHosts, ",")
+	}, func(value string) error {
+		// 允许逗号或空格分隔
+		value = strings.ReplaceAll(value, "\n", ",")
+		value = strings.ReplaceAll(value, " ", ",")
+		parts := strings.Split(value, ",")
+		filtered := make([]string, 0, len(parts))
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				filtered = append(filtered, p)
+			}
+		}
+		config.NewAPIAllowedAssetHosts = filtered
+		return nil
+	}, "")
+
+	// S3/R2 存储（面板配置）
+	config.GlobalOption.RegisterString("S3Endpoint", &config.S3Endpoint)
+	config.GlobalOption.RegisterString("S3CDNURL", &config.S3CDNURL)
+	config.GlobalOption.RegisterString("S3BucketName", &config.S3BucketName)
+	config.GlobalOption.RegisterString("S3AccessKeyId", &config.S3AccessKeyId)
+	config.GlobalOption.RegisterString("S3AccessKeySecret", &config.S3AccessKeySecret)
+	config.GlobalOption.RegisterInt("S3ExpirationDays", &config.S3ExpirationDays)
 	config.GlobalOption.RegisterInt("OldTokenMaxId", &config.OldTokenMaxId)
 	config.GlobalOption.RegisterBool("GitHubOldIdCloseEnabled", &config.GitHubOldIdCloseEnabled)
 

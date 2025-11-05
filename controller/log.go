@@ -530,8 +530,8 @@ func ExportUserLogsCSV(c *gin.Context) {
 	}
 
     w := csv.NewWriter(c.Writer)
-    // 非管理员导出：去掉“渠道”列
-    header := []string{"时间", "用户", "模型", "令牌"}
+    // 非管理员导出：包含“渠道”列，但仅输出 channel_id
+    header := []string{"时间", "用户", "渠道", "模型", "令牌"}
 	if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
 		header = append(header, "金额(货币)")
 	}
@@ -556,10 +556,15 @@ func ExportUserLogsCSV(c *gin.Context) {
                 isStream = "是"
             }
             _, quotaCurrency := quotaValuesForCSV(r.Quota)
-            // 非管理员导出记录：不包含“渠道”
+            // 非管理员导出记录：渠道仅输出 channel_id（无 id 时留空）
+            channelIDStr := ""
+            if r.ChannelId > 0 {
+                channelIDStr = strconv.Itoa(r.ChannelId)
+            }
             rec := []string{
                 createdAt,
                 r.Username,
+                channelIDStr,
                 r.ModelName,
                 r.TokenName,
             }
