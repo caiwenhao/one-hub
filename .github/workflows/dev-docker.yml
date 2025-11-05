@@ -31,11 +31,14 @@ jobs:
       - name: Compute Docker Hub image name (lowercase)
         id: image
         run: |
-          ns="${DOCKERHUB_NAMESPACE:-${GITHUB_REPOSITORY_OWNER}}"
+          # 优先使用变量 DOCKERHUB_NAMESPACE，其次回退到 Secret: DOCKERHUB_USERNAME，最后用 GitHub 仓库 owner
+          ns="${DOCKERHUB_NAMESPACE:-${{ secrets.DOCKERHUB_USERNAME }}}"
+          if [ -z "$ns" ]; then ns="${GITHUB_REPOSITORY_OWNER}"; fi
           repo_only="${DOCKERHUB_REPO:-${GITHUB_REPOSITORY##*/}}"
           ns=$(echo "$ns" | tr '[:upper:]' '[:lower:]')
           repo_only=$(echo "$repo_only" | tr '[:upper:]' '[:lower:]')
           echo "name=$ns/$repo_only" >> $GITHUB_OUTPUT
+          echo "Using Docker Hub image: $ns/$repo_only"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
