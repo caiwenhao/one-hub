@@ -350,9 +350,9 @@ func GeminiOperations(c *gin.Context) {
             video := s.VideoURL
             if video == "" && s.Result != nil { video = s.Result.VideoURL }
 
-            // 组装 operations 响应
+            // 组装 operations 响应（与官方文档对齐：generatedSamples[].video.uri）
             sample := map[string]any{}
-            if video != "" { sample["uri"] = video }
+            if video != "" { sample["video"] = map[string]any{"uri": video} }
             meta := map[string]any{}
             if s.Seconds > 0 { meta["durationSeconds"] = s.Seconds }
             if strings.TrimSpace(s.Size) != "" { meta["size"] = s.Size }
