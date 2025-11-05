@@ -6,6 +6,7 @@ import (
     "one-api/common"
     "one-api/common/config"
     "one-api/common/logger"
+    "one-api/model"
     providersBase "one-api/providers/base"
     "one-api/types"
     "strings"
@@ -58,6 +59,15 @@ func (r *relayImageGenerations) getPromptTokens() (int, error) {
 func (r *relayImageGenerations) send() (err *types.OpenAIErrorWithStatusCode, done bool) {
     // 若为 NewAPI 渠道：直透上游 JSON（供应商风格：{code,data:[{status,task_id}]})
     if r.provider != nil && r.provider.GetChannel() != nil && r.provider.GetChannel().Type == config.ChannelTypeNewAPI {
+        // 与官方计费对齐：若该模型在价格表为 tokens 计费，则按每张 1290 image tokens 计入输出
+        // 说明：NewAPI 路由为异步任务风格，无法在响应体拿到最终图片张数，此处按请求的 n 补记
+        if price := model.PricingInstance.GetPrice(r.modelName); price != nil && price.Type == model.TokensPriceType {
+            if u := r.provider.GetUsage(); u != nil {
+                u.CompletionTokens += r.request.N * 1290
+                u.TotalTokens = u.PromptTokens + u.CompletionTokens
+            }
+        }
+
         base := strings.TrimSuffix(r.provider.GetChannel().GetBaseURL(), "/")
         if base == "" {
             base = "https://api.openai.com" // 兜底，通常 NewAPI 会配置第三方域名

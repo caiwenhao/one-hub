@@ -1201,13 +1201,12 @@ var defaultMiniMaxVideoPrice = map[string]float64{
 
     // NewAPI 渠道（按次计费，单位 USD/each）默认价
     // 需求：视频与图片模型均按次计费
+    // 说明：gemini-2.5-flash-image-preview 改为与官方一致的 tokens 计费，故不再在 NewAPI 下提供“按次”默认价
     var defaultNewAPITimesPriceUSD = map[string]float64{
         // 视频
-        "sora-2":          0.025,
-        "veo3.1-fast":     0.083,
-        "veo3.1-quality":  0.600,
-        // 图片
-        "gemini-2.5-flash-image-preview": 0.008,
+        "sora-2":         0.025,
+        "veo3.1-fast":    0.083,
+        "veo3.1-quality": 0.600,
     }
     for modelName, usd := range defaultNewAPITimesPriceUSD {
         base := usd / DollarRate

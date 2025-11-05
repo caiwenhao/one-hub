@@ -621,7 +621,7 @@
   - `sora-2`：$0.025 / 次
   - `veo3.1-fast`：$0.083 / 次
   - `veo3.1-quality`：$0.600 / 次
-  - `gemini-2.5-flash-image-preview`：$0.008 / 次
+  - `gemini-2.5-flash-image-preview`：按官方 tokens 计费（输入 $0.30/M 文本 tokens；输出每张固定 1290 image tokens，按 $30/M image tokens 计费）
 
 说明：
 - `/v1/videos/generations` 已内置预/后扣逻辑（按次）。
