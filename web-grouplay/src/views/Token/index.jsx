@@ -171,6 +171,9 @@ export default function Token() {
     }
   };
 
+  // 前端访问域名（优先使用前端实际访问的域名）
+  const displayServer = (typeof window !== 'undefined' && window.location && window.location.origin) || siteInfo.server_address || '';
+
   return (
     <>
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
@@ -209,9 +212,9 @@ export default function Token() {
                 backgroundColor: 'rgba(0, 0, 0, 0.12)'
               }
             }}
-            onClick={() => copy(siteInfo.server_address, 'API地址')}
+            onClick={() => copy(displayServer, 'API地址')}
           >
-            <b>{siteInfo.server_address}</b>
+            <b>{displayServer}</b>
             <Icon icon="solar:copy-line-duotone" style={{ marginLeft: '8px', fontSize: '18px' }} />
           </Box>
           {t('token_index.replaceApiAddress2')}
