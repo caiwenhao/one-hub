@@ -1,16 +1,20 @@
 package openai
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"net/url"
-	"one-api/common"
-	"one-api/common/config"
-	"one-api/types"
-	"strconv"
-	"strings"
-	"time"
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "io"
+    "mime"
+    "mime/multipart"
+    "net/http"
+    "net/url"
+    "one-api/common"
+    "one-api/common/config"
+    "one-api/types"
+    "strconv"
+    "strings"
+    "time"
 )
 
 const (
@@ -242,9 +246,9 @@ func (p *OpenAIProvider) detectSoraVendor() string {
 	if base != "" && strings.Contains(base, "mountsea") {
 		return soraVendorMountSea
 	}
-	if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai")) {
-		return soraVendorSutui
-	}
+    if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai") || strings.Contains(base, "sora2.pub")) {
+        return soraVendorSutui
+    }
 	if base != "" && strings.Contains(base, "apimart") {
 		return soraVendorApimart
 	}
@@ -960,14 +964,14 @@ func anyToFloat(v any) float64 {
 }
 
 func (p *OpenAIProvider) createSutuiVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-	// 构造 URL
-	urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
-	if errWithCode != nil {
-		return nil, errWithCode
-	}
-	fullURL := p.GetFullRequestURL(urlPath, request.Model)
+    // 构造 URL
+    urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
+    if errWithCode != nil {
+        return nil, errWithCode
+    }
+    fullURL := p.GetFullRequestURL(urlPath, request.Model)
 
-	// 透传原始 Content-Type，尤其是 multipart 边界
+    // 透传原始 Content-Type，尤其是 multipart 边界
 	headers := p.GetRequestHeaders()
 	contentType := ""
 	if p.Context != nil && p.Context.Request != nil {
@@ -982,26 +986,60 @@ func (p *OpenAIProvider) createSutuiVideo(request *types.VideoCreateRequest) (*t
 	p.Requester.IsOpenAI = false
 	defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
 
-	var httpReq *http.Request
-	if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
-		raw, ok := p.GetRawBody()
-		if !ok {
-			return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
-		}
-		req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
-		if err != nil {
-			return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
-		}
-		httpReq = req
-	} else {
-		// JSON 方式尽量沿用统一的构造（支持自定义参数合并）
-		reqCopy := *request
-		req, errWith := p.GetRequestTextBody(config.RelayModeOpenAIVideo, reqCopy.Model, &reqCopy)
-		if errWith != nil {
-			return nil, errWith
-		}
-		httpReq = req
-	}
+    var httpReq *http.Request
+    // 根据“宽松秒数策略”与 size 推断供应商 SKU（仅在 JSON 模式可安全改写入参）
+    originalModel := strings.ToLower(strings.TrimSpace(p.GetOriginalModel()))
+    if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
+        raw, ok := p.GetRawBody()
+        if !ok {
+            return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
+        }
+        // 对 multipart 进行改写：应用宽松秒数策略，动态选择 sutui SKU，并保持文件字段透传
+        bodyReader, newCT, err := p.rewriteMultipartForSutui(raw, headers["Content-Type"], originalModel)
+        if err == nil && bodyReader != nil && strings.TrimSpace(newCT) != "" {
+            headers["Content-Type"] = newCT
+            req, e2 := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(bodyReader), p.Requester.WithHeader(headers))
+            if e2 != nil {
+                return nil, common.ErrorWrapper(e2, "new_request_failed", http.StatusInternalServerError)
+            }
+            httpReq = req
+        } else {
+            // 回退：原样透传
+            req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
+            if err != nil {
+                return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+            }
+            httpReq = req
+        }
+    } else {
+        // JSON 输入：为保证与 Sutui 上游兼容，改造为 multipart/form-data 后转发
+        reqCopy := *request
+        if originalModel == "sora-2" || originalModel == "sora-2-pro" {
+            sku, slotSec := pickSutuiSKU(originalModel, strings.TrimSpace(reqCopy.Size), reqCopy.Seconds)
+            if sku != "" {
+                reqCopy.Model = sku
+                if slotSec > 0 {
+                    reqCopy.Seconds = slotSec
+                }
+            }
+        }
+        // 构建 multipart（仅文本字段）
+        var buf bytes.Buffer
+        builder := p.Requester.CreateFormBuilder(&buf)
+        // 必填
+        _ = builder.WriteField("model", strings.TrimSpace(reqCopy.Model))
+        if strings.TrimSpace(reqCopy.Prompt) != "" { _ = builder.WriteField("prompt", reqCopy.Prompt) }
+        if reqCopy.Seconds > 0 { _ = builder.WriteField("seconds", strconv.Itoa(reqCopy.Seconds)) }
+        if strings.TrimSpace(reqCopy.Size) != "" { _ = builder.WriteField("size", reqCopy.Size) }
+        // 其它可选参数（若将来 Sutui 支持可扩展）
+        _ = builder.Close()
+        headers["Content-Type"] = builder.FormDataContentType()
+        req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(&buf), p.Requester.WithHeader(headers))
+        if err != nil {
+            return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+        }
+        httpReq = req
+    }
 	if httpReq.Body != nil {
 		defer httpReq.Body.Close()
 	}
@@ -1012,24 +1050,204 @@ func (p *OpenAIProvider) createSutuiVideo(request *types.VideoCreateRequest) (*t
 		return nil, errWith
 	}
 
-	job := &types.VideoJob{
-		ID:        respObj.ID,
-		Object:    respObj.Object,
-		CreatedAt: respObj.CreatedAt,
-		Status:    respObj.Status,
-		Model:     request.Model,
-		Progress:  anyToFloat(respObj.Progress),
-		Seconds:   respObj.Seconds,
-		Size:      respObj.Size,
-		Quality:   "standard",
-	}
+    job := &types.VideoJob{
+        ID:        respObj.ID,
+        Object:    respObj.Object,
+        CreatedAt: respObj.CreatedAt,
+        Status:    respObj.Status,
+        // 对外只暴露官方模型名
+        Model:     p.GetOriginalModel(),
+        Progress:  anyToFloat(respObj.Progress),
+        Seconds:   respObj.Seconds,
+        Size:      respObj.Size,
+        Quality:   "standard",
+    }
 	if job.Object == "" {
 		job.Object = "video"
 	}
-	if job.CreatedAt == 0 {
-		job.CreatedAt = time.Now().Unix()
-	}
-	return job, nil
+    if job.CreatedAt == 0 {
+        job.CreatedAt = time.Now().Unix()
+    }
+    // 若上游返回 720x720（Sutui SD 默认尺寸），根据请求 size 推断并覆盖为官方分辨率
+    if strings.TrimSpace(job.Size) == "" || strings.TrimSpace(job.Size) == "720x720" {
+        info := normalizeSoraSize(request.Size)
+        if strings.TrimSpace(info.Resolution) != "" {
+            job.Size = info.Resolution
+        }
+    }
+    return job, nil
+}
+
+// rewriteMultipartForSutui 解析并重建 multipart/form-data，请求体中动态改写 model/seconds，保持其余字段与文件不变
+func (p *OpenAIProvider) rewriteMultipartForSutui(raw []byte, contentType string, originalModel string) (io.Reader, string, error) {
+    mediaType, params, err := mime.ParseMediaType(contentType)
+    if err != nil || !strings.HasPrefix(strings.ToLower(mediaType), "multipart/") {
+        return nil, "", fmt.Errorf("invalid multipart content-type")
+    }
+    boundary := params["boundary"]
+    if strings.TrimSpace(boundary) == "" {
+        return nil, "", fmt.Errorf("missing boundary")
+    }
+
+    // 解析原始 multipart
+    mr := multipart.NewReader(bytes.NewReader(raw), boundary)
+    // 暂存字段与文件
+    type filePart struct {
+        field string
+        filename string
+        data []byte
+    }
+    fields := map[string][]string{}
+    files := []filePart{}
+    for {
+        part, e := mr.NextPart()
+        if e == io.EOF {
+            break
+        }
+        if e != nil {
+            return nil, "", e
+        }
+        name := part.FormName()
+        if name == "" {
+            // 跳过无名字段
+            _ = part.Close()
+            continue
+        }
+        if fn := part.FileName(); fn != "" {
+            b, e2 := io.ReadAll(part)
+            _ = part.Close()
+            if e2 != nil {
+                return nil, "", e2
+            }
+            files = append(files, filePart{field: name, filename: fn, data: b})
+            continue
+        }
+        b, e3 := io.ReadAll(part)
+        _ = part.Close()
+        if e3 != nil {
+            return nil, "", e3
+        }
+        fields[name] = append(fields[name], string(b))
+    }
+
+    // 读取外部字段
+    size := ""
+    if arr, ok := fields["size"]; ok && len(arr) > 0 {
+        size = strings.TrimSpace(arr[0])
+    }
+    seconds := 0
+    if arr, ok := fields["seconds"]; ok && len(arr) > 0 {
+        if v, err := strconv.Atoi(strings.TrimSpace(arr[0])); err == nil {
+            seconds = v
+        }
+    }
+
+    // 决策 SKU（宽松策略）
+    sku, slotSec := pickSutuiSKU(originalModel, size, seconds)
+    if strings.TrimSpace(sku) == "" {
+        // 找不到合适 SKU，保持原样
+        sku = originalModel
+    }
+
+    // 重建 multipart
+    var buf bytes.Buffer
+    builder := p.Requester.CreateFormBuilder(&buf)
+
+    // 回写文本字段：覆盖 model/seconds，其它保持
+    wroteModel := false
+    wroteSeconds := false
+    for k, vals := range fields {
+        switch strings.ToLower(k) {
+        case "model":
+            if err := builder.WriteField(k, sku); err != nil { return nil, "", err }
+            wroteModel = true
+        case "seconds":
+            if slotSec > 0 {
+                if err := builder.WriteField(k, strconv.Itoa(slotSec)); err != nil { return nil, "", err }
+                wroteSeconds = true
+            } else {
+                // 原样
+                for _, v := range vals { if err := builder.WriteField(k, v); err != nil { return nil, "", err } }
+                wroteSeconds = true
+            }
+        default:
+            for _, v := range vals {
+                if err := builder.WriteField(k, v); err != nil { return nil, "", err }
+            }
+        }
+    }
+    if !wroteModel {
+        if err := builder.WriteField("model", sku); err != nil { return nil, "", err }
+    }
+    if !wroteSeconds && slotSec > 0 {
+        if err := builder.WriteField("seconds", strconv.Itoa(slotSec)); err != nil { return nil, "", err }
+    }
+
+    // 文件字段
+    for _, fp := range files {
+        if err := builder.CreateFormFileReader(fp.field, bytes.NewReader(fp.data), fp.filename); err != nil {
+            return nil, "", err
+        }
+    }
+
+    if err := builder.Close(); err != nil {
+        return nil, "", err
+    }
+    return &buf, builder.FormDataContentType(), nil
+}
+
+// pickSutuiSKU 根据官方模型 + 分辨率 + 秒数（宽松策略）映射到 sutui 的 sku 与秒数档位
+// 规则：
+// - 方向：由 size 推断，缺省 portrait
+// - sora-2（SD）：<=10s -> 基础；>10s -> 15s
+// - sora-2-pro（HD）：<=15s -> 15s；>15s -> 25s
+func pickSutuiSKU(originalModel string, size string, seconds int) (sku string, slotSec int) {
+    // 方向
+    orientation := "portrait"
+    s := strings.ReplaceAll(strings.ToLower(strings.TrimSpace(size)), " ", "")
+    if strings.Contains(s, "x") {
+        parts := strings.Split(s, "x")
+        if len(parts) == 2 {
+            w, _ := strconv.Atoi(parts[0])
+            h, _ := strconv.Atoi(parts[1])
+            if w >= h {
+                orientation = "landscape"
+            }
+        }
+    }
+    // 秒数默认
+    if seconds <= 0 {
+        seconds = 4
+    }
+    isPro := strings.EqualFold(strings.TrimSpace(originalModel), "sora-2-pro")
+
+    base := "sora_video2"
+    // 清晰度/时长档位
+    if isPro {
+        // HD 档
+        if orientation == "portrait" {
+            if seconds <= 15 {
+                return base + "-portrait-hd-15s", 15
+            }
+            return base + "-portrait-hd-25s", 25
+        } else {
+            if seconds <= 15 {
+                return base + "-landscape-hd-15s", 15
+            }
+            return base + "-landscape-hd-25s", 25
+        }
+    }
+    // SD 档（sora-2）
+    if orientation == "portrait" {
+        if seconds <= 10 {
+            return base + "-portrait", 10
+        }
+        return base + "-portrait-15s", 15
+    }
+    if seconds <= 10 {
+        return base + "-landscape", 10
+    }
+    return base + "-landscape-15s", 15
 }
 
 func (p *OpenAIProvider) retrieveSutuiVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
@@ -1054,25 +1272,35 @@ func (p *OpenAIProvider) retrieveSutuiVideo(videoID string) (*types.VideoJob, *t
 		return nil, errWith
 	}
 
-	job := &types.VideoJob{
-		ID:          respObj.ID,
-		Object:      respObj.Object,
-		CreatedAt:   respObj.CreatedAt,
-		CompletedAt: respObj.CompletedAt,
-		Status:      respObj.Status,
-		Model:       respObj.Model,
-		Progress:    anyToFloat(respObj.Progress),
-		Seconds:     respObj.Seconds,
-		Size:        respObj.Size,
-		Quality:     "standard",
-	}
+    job := &types.VideoJob{
+        ID:          respObj.ID,
+        Object:      respObj.Object,
+        CreatedAt:   respObj.CreatedAt,
+        CompletedAt: respObj.CompletedAt,
+        Status:      respObj.Status,
+        Model:       respObj.Model,
+        Progress:    anyToFloat(respObj.Progress),
+        Seconds:     respObj.Seconds,
+        Size:        respObj.Size,
+        Quality:     "standard",
+    }
 	if job.Object == "" {
 		job.Object = "video"
 	}
-	if job.Result == nil && strings.TrimSpace(respObj.VideoURL) != "" {
-		job.Result = &types.VideoJobResult{VideoURL: respObj.VideoURL}
-	}
-	return job, nil
+    // 覆盖非官方分辨率：若上游返回 720x720，按模型后缀推断方向并赋值官方分辨率
+    if strings.TrimSpace(job.Size) == "720x720" {
+        m := strings.ToLower(strings.TrimSpace(respObj.Model))
+        if strings.Contains(m, "-landscape") {
+            job.Size = "1280x720"
+        } else if strings.Contains(m, "-portrait") {
+            job.Size = "720x1280"
+        }
+    }
+
+    if job.Result == nil && strings.TrimSpace(respObj.VideoURL) != "" {
+        job.Result = &types.VideoJobResult{VideoURL: respObj.VideoURL}
+    }
+    return job, nil
 }
 
 func (p *OpenAIProvider) downloadSutuiVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode) {

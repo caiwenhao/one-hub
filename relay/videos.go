@@ -59,17 +59,23 @@ type soraVideoList struct {
 }
 
 func VideoCreate(c *gin.Context) {
-	var req types.VideoCreateRequest
-	if err := common.UnmarshalBodyReusable(c, &req); err != nil {
-		common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
-		return
-	}
+    var req types.VideoCreateRequest
+    if err := common.UnmarshalBodyReusable(c, &req); err != nil {
+        common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
+        return
+    }
 
-	originalModel := strings.TrimSpace(req.Model)
-	if originalModel == "" {
-		// 官方默认模型 sora-2
-		originalModel = "sora-2"
-	}
+    originalModel := strings.TrimSpace(req.Model)
+    if originalModel == "" {
+        // 官方默认模型 sora-2
+        originalModel = "sora-2"
+    }
+
+    // 仅对外暴露官方模型：sora-2 / sora-2-pro
+    if m := strings.ToLower(originalModel); m != "sora-2" && m != "sora-2-pro" {
+        common.AbortWithMessage(c, http.StatusBadRequest, "invalid model: only 'sora-2' or 'sora-2-pro' are allowed")
+        return
+    }
 
 	normalize := normalizeSoraSizeInfo(req.Size)
 	if req.Seconds <= 0 {
@@ -204,18 +210,19 @@ func VideoRetrieve(c *gin.Context) {
 		return
 	}
 
-	if job.Object == "" {
-		job.Object = "video"
-	}
-	if job.Model == "" {
-		if props.Model != "" {
-			job.Model = props.Model
-		} else if mappedModel != "" {
-			job.Model = mappedModel
-		} else {
-			job.Model = "sora-2"
-		}
-	}
+    if job.Object == "" {
+        job.Object = "video"
+    }
+    // 始终优先使用本地任务保存的官方模型名，避免上游内部 SKU 外泄
+    if strings.TrimSpace(props.Model) != "" {
+        job.Model = props.Model
+    } else if strings.TrimSpace(job.Model) == "" {
+        if mappedModel != "" {
+            job.Model = mappedModel
+        } else {
+            job.Model = "sora-2"
+        }
+    }
 	if job.Size == "" {
 		if props.Resolution != "" {
 			job.Size = props.Resolution
