@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -16,6 +17,7 @@ const (
 	soraVendorOfficial = "official"
 	soraVendorMountSea = "mountsea"
 	soraVendorSutui    = "sutui"
+	soraVendorApimart  = "apimart"
 )
 
 type openAIVideoResponse struct {
@@ -78,6 +80,106 @@ type soraSizeInfo struct {
 	SizeLabel   string
 }
 
+type apimartCreateRequest struct {
+	Model       string   `json:"model"`
+	Prompt      string   `json:"prompt"`
+	Duration    int      `json:"duration,omitempty"`
+	AspectRatio string   `json:"aspect_ratio,omitempty"`
+	ImageURLs   []string `json:"image_urls,omitempty"`
+	Watermark   *bool    `json:"watermark,omitempty"`
+}
+
+type apimartCreateResponse struct {
+	Code  int               `json:"code"`
+	Data  []apimartTaskInfo `json:"data"`
+	Error *apimartError     `json:"error"`
+}
+
+type apimartTaskInfo struct {
+	Status string `json:"status"`
+	TaskID string `json:"task_id"`
+}
+
+type apimartError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Type    string `json:"type"`
+}
+
+type apimartTaskResponse struct {
+	Code  int              `json:"code"`
+	Data  *apimartTaskData `json:"data"`
+	Error *apimartError    `json:"error"`
+}
+
+type apimartTaskData struct {
+	ID            string             `json:"id"`
+	Status        string             `json:"status"`
+	Progress      any                `json:"progress"`
+	Result        *apimartTaskResult `json:"result"`
+	Created       int64              `json:"created"`
+	Completed     int64              `json:"completed"`
+	EstimatedTime int64              `json:"estimated_time"`
+	ActualTime    int64              `json:"actual_time"`
+	Model         string             `json:"model"`
+	Type          string             `json:"type"`
+	TaskInfo      map[string]any     `json:"task_info"`
+	Usage         map[string]any     `json:"usage"`
+	Error         *apimartError      `json:"error"`
+}
+
+type apimartTaskResult struct {
+	Videos []apimartTaskVideo `json:"videos"`
+	Images []any              `json:"images"`
+}
+
+type apimartTaskVideo struct {
+	URL        stringOrArray `json:"url"`
+	Variant    string        `json:"variant"`
+	Quality    string        `json:"quality"`
+	Cover      string        `json:"cover"`
+	ExpiresAt  int64         `json:"expires_at"`
+	Resolution string        `json:"resolution"`
+	Seconds    int           `json:"seconds"`
+}
+
+type stringOrArray string
+
+func (s *stringOrArray) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 {
+		*s = ""
+		return nil
+	}
+	first := data[0]
+	switch first {
+	case '[':
+		var arr []string
+		if err := json.Unmarshal(data, &arr); err != nil {
+			return err
+		}
+		if len(arr) > 0 {
+			*s = stringOrArray(arr[0])
+		} else {
+			*s = ""
+		}
+		return nil
+	case 'n': // null
+		*s = ""
+		return nil
+	default:
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
+			return err
+		}
+		*s = stringOrArray(str)
+		return nil
+	}
+}
+
+func (s stringOrArray) String() string {
+	return string(s)
+}
+
 func (p *OpenAIProvider) CreateVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
 	// NewAPI 渠道：将 OpenAI 标准 /v1/videos 请求映射为供应商 /v1/videos/generations
 	if p.Channel != nil && p.Channel.Type == config.ChannelTypeNewAPI {
@@ -89,6 +191,8 @@ func (p *OpenAIProvider) CreateVideo(request *types.VideoCreateRequest) (*types.
 		return p.createMountSeaVideo(request)
 	case soraVendorSutui:
 		return p.createSutuiVideo(request)
+	case soraVendorApimart:
+		return p.createApimartVideo(request)
 	default:
 		// 统一遵循 OpenAI 标准视频路由：/v1/videos
 		return p.createOfficialVideo(request)
@@ -101,6 +205,8 @@ func (p *OpenAIProvider) RetrieveVideo(videoID string) (*types.VideoJob, *types.
 		return p.retrieveMountSeaVideo(videoID)
 	case soraVendorSutui:
 		return p.retrieveSutuiVideo(videoID)
+	case soraVendorApimart:
+		return p.retrieveApimartVideo(videoID)
 	default:
 		// 统一遵循 OpenAI 标准视频路由：/v1/videos
 		return p.retrieveOfficialVideo(videoID)
@@ -113,6 +219,8 @@ func (p *OpenAIProvider) DownloadVideo(videoID string, variant string) (*http.Re
 		return p.downloadMountSeaVideo(videoID, variant)
 	case soraVendorSutui:
 		return p.downloadSutuiVideo(videoID, variant)
+	case soraVendorApimart:
+		return p.downloadApimartVideo(videoID, variant)
 	default:
 		// 统一遵循 OpenAI 标准视频路由：/v1/videos
 		return p.downloadOfficialVideo(videoID, variant)
@@ -136,6 +244,9 @@ func (p *OpenAIProvider) detectSoraVendor() string {
 	}
 	if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai")) {
 		return soraVendorSutui
+	}
+	if base != "" && strings.Contains(base, "apimart") {
+		return soraVendorApimart
 	}
 
 	return soraVendorOfficial
@@ -408,6 +519,8 @@ func (p *OpenAIProvider) RemixVideo(videoID string, prompt string) (*types.Video
 		// 通过 create + RemixVideoID 实现
 		req := &types.VideoCreateRequest{RemixVideoID: videoID, Prompt: prompt, Model: p.GetOriginalModel()}
 		return p.createSutuiVideo(req)
+	case soraVendorApimart:
+		return p.remixApimartVideo(videoID, prompt)
 	default:
 		// 官方路径
 		basePath := strings.TrimSuffix(p.Config.Videos, "/")
@@ -713,6 +826,82 @@ func (p *OpenAIProvider) downloadMountSeaVideo(videoID string, variant string) (
 	return resp, nil
 }
 
+func (p *OpenAIProvider) createApimartVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
+	body := &apimartCreateRequest{
+		Model:  request.Model,
+		Prompt: request.Prompt,
+	}
+	if request.Seconds > 0 {
+		body.Duration = request.Seconds
+	}
+	if ar := buildApimartAspectRatio(request.Size); ar != "" {
+		body.AspectRatio = ar
+	}
+	if len(request.InputImages) > 0 {
+		body.ImageURLs = append(body.ImageURLs, request.InputImages...)
+	}
+	if strings.TrimSpace(request.InputImage) != "" {
+		body.ImageURLs = append(body.ImageURLs, request.InputImage)
+	}
+	if request.RemoveWatermark {
+		f := false
+		body.Watermark = &f
+	}
+
+	headers := p.GetRequestHeaders()
+	if headers == nil {
+		headers = map[string]string{}
+	}
+	headers["Content-Type"] = "application/json"
+
+	fullURL := strings.TrimSuffix(p.GetBaseURL(), "/") + "/v1/videos/generations"
+	req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	defer req.Body.Close()
+
+	originalOpenAIFlag := p.Requester.IsOpenAI
+	p.Requester.IsOpenAI = false
+	defer func() {
+		p.Requester.IsOpenAI = originalOpenAIFlag
+	}()
+
+	resp := &apimartCreateResponse{}
+	if _, errWith := p.Requester.SendRequest(req, resp, false); errWith != nil {
+		return nil, errWith
+	}
+	if resp.Code != http.StatusOK {
+		return nil, apimartErrorToOpenAI(resp.Error, resp.Code)
+	}
+	if len(resp.Data) == 0 || strings.TrimSpace(resp.Data[0].TaskID) == "" {
+		return nil, common.StringErrorWrapperLocal("invalid apimart response", "bad_upstream", http.StatusBadGateway)
+	}
+
+	task := resp.Data[0]
+	job := &types.VideoJob{
+		ID:        task.TaskID,
+		Object:    "video",
+		Model:     request.Model,
+		Status:    mapApimartStatus(task.Status),
+		Progress:  0,
+		Seconds:   request.Seconds,
+		Size:      request.Size,
+		Quality:   "standard",
+		CreatedAt: time.Now().Unix(),
+		Prompt:    request.Prompt,
+	}
+	if job.Status == "" {
+		job.Status = "queued"
+	}
+	if job.Size == "" {
+		if info := normalizeSoraSize(request.Size); info.Resolution != "" {
+			job.Size = info.Resolution
+		}
+	}
+	return job, nil
+}
+
 // --- Sutui (速推) upstream adapter ---
 
 type sutuiCreateResponse struct {
@@ -913,6 +1102,247 @@ func (p *OpenAIProvider) downloadSutuiVideo(videoID string, variant string) (*ht
 		return nil, errWithCode
 	}
 	return resp, nil
+}
+
+func (p *OpenAIProvider) remixApimartVideo(videoID string, prompt string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
+	modelName := strings.TrimSpace(p.GetOriginalModel())
+	if modelName == "" {
+		modelName = "sora-2"
+	}
+	body := map[string]any{
+		"prompt": prompt,
+		"model":  modelName,
+	}
+	headers := p.GetRequestHeaders()
+	if headers == nil {
+		headers = map[string]string{}
+	}
+	headers["Content-Type"] = "application/json"
+	fullURL := fmt.Sprintf("%s/v1/videos/%s/remix", strings.TrimSuffix(p.GetBaseURL(), "/"), url.PathEscape(videoID))
+	req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	defer req.Body.Close()
+
+	originalOpenAIFlag := p.Requester.IsOpenAI
+	p.Requester.IsOpenAI = false
+	defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+
+	resp := &apimartCreateResponse{}
+	if _, errWith := p.Requester.SendRequest(req, resp, false); errWith != nil {
+		return nil, errWith
+	}
+	if resp.Code != http.StatusOK {
+		return nil, apimartErrorToOpenAI(resp.Error, resp.Code)
+	}
+	if len(resp.Data) == 0 || strings.TrimSpace(resp.Data[0].TaskID) == "" {
+		return nil, common.StringErrorWrapperLocal("invalid apimart response", "bad_upstream", http.StatusBadGateway)
+	}
+	job := &types.VideoJob{
+		ID:                 resp.Data[0].TaskID,
+		Object:             "video",
+		Model:              modelName,
+		Status:             mapApimartStatus(resp.Data[0].Status),
+		Progress:           0,
+		Quality:            "standard",
+		CreatedAt:          time.Now().Unix(),
+		Prompt:             prompt,
+		RemixedFromVideoID: videoID,
+	}
+	if job.Status == "" {
+		job.Status = "queued"
+	}
+	return job, nil
+}
+
+func (p *OpenAIProvider) retrieveApimartVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
+	data, errWith := p.getApimartTask(videoID)
+	if errWith != nil {
+		return nil, errWith
+	}
+	job := p.apimartTaskDataToVideoJob(videoID, data)
+	return job, nil
+}
+
+func (p *OpenAIProvider) downloadApimartVideo(videoID string, variant string) (*http.Response, *types.OpenAIErrorWithStatusCode) {
+	data, errWith := p.getApimartTask(videoID)
+	if errWith != nil {
+		return nil, errWith
+	}
+	if data.Result == nil || len(data.Result.Videos) == 0 {
+		return nil, common.StringErrorWrapperLocal("video not ready", "video_not_ready", http.StatusAccepted)
+	}
+	video := selectApimartVideo(data.Result.Videos, variant)
+	urlStr := ""
+	if video != nil {
+		urlStr = video.URL.String()
+	}
+	if video == nil || strings.TrimSpace(urlStr) == "" {
+		return nil, common.StringErrorWrapperLocal("variant not available", "unsupported_variant", http.StatusNotImplemented)
+	}
+
+	originalOpenAIFlag := p.Requester.IsOpenAI
+	p.Requester.IsOpenAI = false
+	defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+
+	req, err := p.Requester.NewRequest(http.MethodGet, urlStr, p.Requester.WithHeader(map[string]string{}))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	resp, errWith := p.Requester.SendRequest(req, nil, true)
+	if errWith != nil {
+		return nil, errWith
+	}
+	return resp, nil
+}
+
+func (p *OpenAIProvider) getApimartTask(videoID string) (*apimartTaskData, *types.OpenAIErrorWithStatusCode) {
+	fullURL := strings.TrimSuffix(p.GetBaseURL(), "/") + "/v1/tasks/" + url.PathEscape(videoID)
+	headers := p.GetRequestHeaders()
+	req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(headers))
+	if err != nil {
+		return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
+	}
+	if req.Body != nil {
+		defer req.Body.Close()
+	}
+
+	originalOpenAIFlag := p.Requester.IsOpenAI
+	p.Requester.IsOpenAI = false
+	defer func() { p.Requester.IsOpenAI = originalOpenAIFlag }()
+
+	resp := &apimartTaskResponse{}
+	if _, errWith := p.Requester.SendRequest(req, resp, false); errWith != nil {
+		return nil, errWith
+	}
+	if resp.Code != http.StatusOK {
+		return nil, apimartErrorToOpenAI(resp.Error, resp.Code)
+	}
+	if resp.Data == nil {
+		return nil, common.StringErrorWrapperLocal("missing task data", "bad_upstream", http.StatusBadGateway)
+	}
+	return resp.Data, nil
+}
+
+func (p *OpenAIProvider) apimartTaskDataToVideoJob(fallbackID string, data *apimartTaskData) *types.VideoJob {
+	job := &types.VideoJob{
+		ID:          data.ID,
+		Object:      "video",
+		Status:      mapApimartStatus(data.Status),
+		Progress:    anyToFloat(data.Progress),
+		CreatedAt:   data.Created,
+		CompletedAt: data.Completed,
+		Model:       data.Model,
+		Quality:     "standard",
+	}
+	if job.ID == "" {
+		job.ID = fallbackID
+	}
+	if job.Model == "" {
+		job.Model = p.GetOriginalModel()
+	}
+	if job.Status == "" {
+		job.Status = "in_progress"
+	}
+	if data.TaskInfo != nil {
+		job.Metadata = data.TaskInfo
+	}
+	if data.Error != nil {
+		job.Error = &types.VideoJobError{
+			Code:    data.Error.Code,
+			Message: data.Error.Message,
+		}
+	}
+	if data.Result != nil && len(data.Result.Videos) > 0 {
+		video := data.Result.Videos[0]
+		videoURL := video.URL.String()
+		job.Result = &types.VideoJobResult{
+			VideoURL:      videoURL,
+			ThumbnailURL:  video.Cover,
+			Variant:       video.Variant,
+			DownloadURL:   videoURL,
+			AdditionalRaw: data.Result,
+		}
+		if video.ExpiresAt > 0 {
+			job.ExpiresAt = video.ExpiresAt
+		}
+		if video.Seconds > 0 && job.Seconds == 0 {
+			job.Seconds = video.Seconds
+		}
+		if video.Resolution != "" && job.Size == "" {
+			job.Size = video.Resolution
+		}
+	}
+	return job
+}
+
+func selectApimartVideo(videos []apimartTaskVideo, variant string) *apimartTaskVideo {
+	if len(videos) == 0 {
+		return nil
+	}
+	cleanVariant := strings.ToLower(strings.TrimSpace(variant))
+	if cleanVariant == "" || cleanVariant == "video" || cleanVariant == "mp4" {
+		return &videos[0]
+	}
+	for i := range videos {
+		if strings.ToLower(strings.TrimSpace(videos[i].Variant)) == cleanVariant ||
+			strings.ToLower(strings.TrimSpace(videos[i].Quality)) == cleanVariant {
+			return &videos[i]
+		}
+	}
+	return nil
+}
+
+func buildApimartAspectRatio(size string) string {
+	info := normalizeSoraSize(size)
+	if info.Orientation == "portrait" {
+		return "9:16"
+	}
+	if info.Orientation == "landscape" {
+		return "16:9"
+	}
+	return ""
+}
+
+func mapApimartStatus(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "submitted", "pending":
+		return "queued"
+	case "processing":
+		return "in_progress"
+	case "completed", "success", "succeeded":
+		return "completed"
+	case "failed", "error":
+		return "failed"
+	case "cancelled", "canceled":
+		return "failed"
+	default:
+		return status
+	}
+}
+
+func apimartErrorToOpenAI(err *apimartError, code int) *types.OpenAIErrorWithStatusCode {
+	if err == nil {
+		err = &apimartError{
+			Code:    code,
+			Message: "apimart upstream error",
+			Type:    "apimart_error",
+		}
+	}
+	statusCode := code
+	if statusCode < 400 || statusCode > 599 {
+		statusCode = http.StatusBadGateway
+	}
+	return &types.OpenAIErrorWithStatusCode{
+		OpenAIError: types.OpenAIError{
+			Message: err.Message,
+			Code:    fmt.Sprintf("%d", err.Code),
+			Type:    err.Type,
+		},
+		StatusCode: statusCode,
+		LocalError: true,
+	}
 }
 
 func normalizeSoraSize(size string) soraSizeInfo {

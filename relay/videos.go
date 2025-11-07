@@ -29,6 +29,33 @@ type soraTaskProperties struct {
 	Orientation  string `json:"orientation"`
 	SizeLabel    string `json:"size_label"`
 	BillingModel string `json:"billing_model"`
+	Prompt       string `json:"prompt,omitempty"`
+}
+
+type soraVideoResponse struct {
+	ID                 string          `json:"id"`
+	Object             string          `json:"object"`
+	CreatedAt          int64           `json:"created_at,omitempty"`
+	CompletedAt        int64           `json:"completed_at,omitempty"`
+	ExpiresAt          int64           `json:"expires_at,omitempty"`
+	Status             string          `json:"status"`
+	Model              string          `json:"model,omitempty"`
+	Prompt             string          `json:"prompt,omitempty"`
+	Progress           int             `json:"progress"`
+	Seconds            string          `json:"seconds,omitempty"`
+	Size               string          `json:"size,omitempty"`
+	RemixedFromVideoID string          `json:"remixed_from_video_id,omitempty"`
+	Error              *soraVideoError `json:"error,omitempty"`
+}
+
+type soraVideoError struct {
+	Code    string `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+type soraVideoList struct {
+	Object string               `json:"object"`
+	Data   []*soraVideoResponse `json:"data"`
 }
 
 func VideoCreate(c *gin.Context) {
@@ -119,10 +146,11 @@ func VideoCreate(c *gin.Context) {
 		Orientation:  normalize.Orientation,
 		SizeLabel:    normalize.SizeLabel,
 		BillingModel: billingModel,
+		Prompt:       req.Prompt,
 	}
 	saveSoraTask(c, provider.GetChannel().Id, job, props)
 
-	c.JSON(http.StatusOK, job)
+	c.JSON(http.StatusOK, newSoraVideoResponse(job))
 }
 
 func VideoRetrieve(c *gin.Context) {
@@ -202,12 +230,15 @@ func VideoRetrieve(c *gin.Context) {
 			job.Seconds = defaultSoraDuration()
 		}
 	}
+	if strings.TrimSpace(job.Prompt) == "" && strings.TrimSpace(props.Prompt) != "" {
+		job.Prompt = props.Prompt
+	}
 
 	if task != nil {
 		updateSoraTask(task, job)
 	}
 
-	c.JSON(http.StatusOK, job)
+	c.JSON(http.StatusOK, newSoraVideoResponse(job))
 }
 
 func VideoDownload(c *gin.Context) {
@@ -358,12 +389,18 @@ func VideoRemix(c *gin.Context) {
 		props = soraTaskProperties{
 			Model: mappedModel, Resolution: normalize.Resolution, Seconds: seconds,
 			Orientation: normalize.Orientation, SizeLabel: normalize.SizeLabel,
-			BillingModel: billingModel,
+			BillingModel: billingModel, Prompt: req.Prompt,
 		}
+	} else if strings.TrimSpace(props.Prompt) == "" {
+		props.Prompt = req.Prompt
+	}
+
+	if props.Prompt == "" {
+		props.Prompt = req.Prompt
 	}
 
 	saveSoraTask(c, provider.GetChannel().Id, job, props)
-	c.JSON(http.StatusOK, job)
+	c.JSON(http.StatusOK, newSoraVideoResponse(job))
 }
 
 // VideoList 实现 /v1/videos（官方上游列表）。
@@ -397,10 +434,17 @@ func VideoList(c *gin.Context) {
 		relayResponseWithOpenAIErr(c, &newErr)
 		return
 	}
-	if list == nil {
-		list = &types.VideoList{Object: "list", Data: []types.VideoJob{}}
+	resp := &soraVideoList{
+		Object: "list",
+		Data:   []*soraVideoResponse{},
 	}
-	c.JSON(http.StatusOK, list)
+	if list != nil {
+		for i := range list.Data {
+			job := list.Data[i]
+			resp.Data = append(resp.Data, newSoraVideoResponse(&job))
+		}
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // VideoDelete 实现 DELETE /v1/videos/{id}
@@ -437,12 +481,15 @@ func VideoDelete(c *gin.Context) {
 	if job == nil {
 		job = &types.VideoJob{ID: videoID, Object: "video"}
 	}
-	c.JSON(http.StatusOK, job)
+	c.JSON(http.StatusOK, newSoraVideoResponse(job))
 }
 
 func saveSoraTask(c *gin.Context, channelID int, job *types.VideoJob, props soraTaskProperties) {
 	if job == nil || job.ID == "" {
 		return
+	}
+	if props.Prompt == "" && job.Prompt != "" {
+		props.Prompt = job.Prompt
 	}
 
 	task := &model.Task{
@@ -621,4 +668,90 @@ func submitTimeFromJob(job *types.VideoJob) int64 {
 func defaultSoraDuration() int {
 	// 官方默认 4 秒
 	return 4
+}
+
+func newSoraVideoResponse(job *types.VideoJob) *soraVideoResponse {
+	if job == nil {
+		return nil
+	}
+	resp := &soraVideoResponse{
+		ID:                 strings.TrimSpace(job.ID),
+		Object:             strings.TrimSpace(job.Object),
+		CreatedAt:          job.CreatedAt,
+		CompletedAt:        job.CompletedAt,
+		ExpiresAt:          job.ExpiresAt,
+		Status:             strings.TrimSpace(job.Status),
+		Model:              strings.TrimSpace(job.Model),
+		Prompt:             job.Prompt,
+		RemixedFromVideoID: strings.TrimSpace(job.RemixedFromVideoID),
+	}
+	if resp.ID == "" {
+		resp.ID = job.ID
+	}
+	if resp.Object == "" {
+		resp.Object = "video"
+	}
+	if resp.Status == "" {
+		resp.Status = "queued"
+	}
+	resp.Progress = clampSoraProgress(int(math.Round(job.Progress)))
+
+	seconds := job.Seconds
+	if seconds <= 0 {
+		seconds = defaultSoraDuration()
+	}
+	resp.Seconds = strconv.Itoa(seconds)
+
+	size := strings.TrimSpace(job.Size)
+	if size == "" {
+		size = normalizeSoraSizeInfo("").Resolution
+	}
+	resp.Size = size
+
+	resp.Error = convertSoraVideoError(job.Error)
+	return resp
+}
+
+func convertSoraVideoError(err *types.VideoJobError) *soraVideoError {
+	if err == nil {
+		return nil
+	}
+	code := stringifySoraErrorCode(err.Code)
+	if code == "" && strings.TrimSpace(err.Message) == "" {
+		return nil
+	}
+	return &soraVideoError{
+		Code:    code,
+		Message: err.Message,
+	}
+}
+
+func stringifySoraErrorCode(code any) string {
+	switch v := code.(type) {
+	case nil:
+		return ""
+	case string:
+		return v
+	case fmt.Stringer:
+		return v.String()
+	case int:
+		return strconv.Itoa(v)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func clampSoraProgress(val int) int {
+	switch {
+	case val < 0:
+		return 0
+	case val > 100:
+		return 100
+	default:
+		return val
+	}
 }

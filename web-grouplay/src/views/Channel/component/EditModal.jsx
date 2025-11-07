@@ -87,7 +87,8 @@ const OPENAI_UPSTREAM_OPTIONS = [
   { value: 'official', label: '官方（OpenAI）' },
   { value: 'openrouter', label: 'OpenRouter（聚合）' },
   { value: 'mountsea', label: 'MountSea' },
-  { value: 'sutui', label: '速推 Sutui' }
+  { value: 'sutui', label: '速推 Sutui' },
+  { value: 'apimart', label: 'Apimart（Sora 聚合）' }
 ];
 
 // Gemini 上游供应商选项（官方原生 / 官方 OpenAI 兼容 / 第三方 OpenAI 兼容）
@@ -711,6 +712,8 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                         } else if (next === 'sutui') {
                           // Sutui 速推：请替换为你的实际端点
                           setFieldValue('base_url', 'https://api.sutui.ai');
+                        } else if (next === 'apimart') {
+                          setFieldValue('base_url', 'https://api.apimart.ai');
                         } else if (next === 'official' || next === '') {
                           setFieldValue('base_url', 'https://api.openai.com');
                         }
@@ -759,6 +762,17 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                               if (!values.test_model) setFieldValue('test_model', 'sora_video2');
                             }
                           } catch (_) {}
+                        } else if (next === 'apimart') {
+                          setFieldValue('plugin.sora.vendor', 'apimart');
+                          try {
+                            const apimartVideoModels = ['sora-2', 'sora-2-pro'];
+                            const current = Array.isArray(values.models) ? values.models : [];
+                            if (current.length === 0) {
+                              const prefill = apimartVideoModels.map((id) => ({ id, group: 'OpenAI Video (Apimart)' }));
+                              setFieldValue('models', prefill);
+                              if (!values.test_model) setFieldValue('test_model', 'sora-2');
+                            }
+                          } catch (_) {}
                         } else {
                           // 清理避免误判
                           setFieldValue('plugin.sora.vendor', '');
@@ -772,7 +786,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                       ))}
                     </Select>
                     <FormHelperText id="helper-tex-openai-upstream-label">
-                      可选官方 / OpenRouter / MountSea。选择 OpenRouter/MountSea 将自动切换基础地址与 custom_parameter.upstream；如使用 MountSea，请确认 API 基础地址为你的 MountSea 端点。
+                      可选官方 / OpenRouter / MountSea / Sutui / Apimart。选择第三方后将自动切换基础地址与 custom_parameter.upstream；如使用 Sutui/Apimart，请确认 base_url 为实际端点。
                     </FormHelperText>
                   </FormControl>
                 )}

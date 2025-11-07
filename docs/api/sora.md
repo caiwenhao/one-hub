@@ -225,6 +225,9 @@ console.log(response);
 
 const content = await response.blob();
 console.log(content);
+
+
+==================================
 Video job
 Structured information describing a generated video job.
 
@@ -245,6 +248,83 @@ Error payload that explains why generation failed, if applicable.
 
 
 Show properties
+expires_at
+integer
+
+Unix timestamp (seconds) for when the downloadable assets expire, if set.
+
+id
+string
+
+Unique identifier for the video job.
+
+model
+string
+
+The video generation model that produced the job.
+
+object
+string
+
+The object type, which is always video.
+
+progress
+integer
+
+Approximate completion percentage for the generation task.
+
+prompt
+string
+
+The prompt that was used to generate the video.
+
+remixed_from_video_id
+string
+
+Identifier of the source video if this video is a remix.
+
+seconds
+string
+
+Duration of the generated clip in seconds.
+
+size
+string
+
+The resolution of the generated video.
+
+status
+string
+
+Current lifecycle status of the video job.
+
+
+Video job
+Structured information describing a generated video job.
+
+completed_at
+integer
+
+Unix timestamp (seconds) for when the job completed, if finished.
+
+created_at
+integer
+
+Unix timestamp (seconds) for when the job was created.
+
+error
+object
+
+Error payload that explains why generation failed, if applicable.
+
+
+Hide properties
+code
+string
+
+message
+string
+
 expires_at
 integer
 
