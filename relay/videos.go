@@ -95,6 +95,9 @@ func VideoCreate(c *gin.Context) {
 		job.Object = "video"
 	}
 	job.Model = originalModel
+	if job.Prompt == "" {
+		job.Prompt = req.Prompt
+	}
 	if job.Seconds == 0 {
 		job.Seconds = req.Seconds
 	}
@@ -134,21 +137,30 @@ func VideoRetrieve(c *gin.Context) {
 		common.AbortWithMessage(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if task == nil {
-		common.AbortWithMessage(c, http.StatusNotFound, "video task not found")
-		return
+
+	var (
+		props       soraTaskProperties
+		provider    providersBase.ProviderInterface
+		mappedModel string
+	)
+
+	modelName := ""
+	if task != nil {
+		props = parseSoraTaskProperties(task.Properties)
+		c.Set("specific_channel_id", task.ChannelId)
+		modelName = strings.TrimSpace(props.Model)
+	}
+	if modelName == "" {
+		modelName = "sora-2"
 	}
 
-	props := parseSoraTaskProperties(task.Properties)
-
-	c.Set("specific_channel_id", task.ChannelId)
-	provider, mappedModel, err := GetProvider(c, props.Model)
+	provider, mappedModel, err = GetProvider(c, modelName)
 	if err != nil {
 		common.AbortWithMessage(c, http.StatusServiceUnavailable, err.Error())
 		return
 	}
 	if mappedModel == "" {
-		mappedModel = props.Model
+		mappedModel = modelName
 	}
 
 	videoProvider, ok := provider.(providersBase.VideoInterface)
@@ -168,16 +180,32 @@ func VideoRetrieve(c *gin.Context) {
 		job.Object = "video"
 	}
 	if job.Model == "" {
-		job.Model = props.Model
+		if props.Model != "" {
+			job.Model = props.Model
+		} else if mappedModel != "" {
+			job.Model = mappedModel
+		} else {
+			job.Model = "sora-2"
+		}
 	}
-	if job.Size == "" && props.Resolution != "" {
-		job.Size = props.Resolution
+	if job.Size == "" {
+		if props.Resolution != "" {
+			job.Size = props.Resolution
+		} else {
+			job.Size = normalizeSoraSizeInfo("").Resolution
+		}
 	}
-	if job.Seconds == 0 && props.Seconds > 0 {
-		job.Seconds = props.Seconds
+	if job.Seconds == 0 {
+		if props.Seconds > 0 {
+			job.Seconds = props.Seconds
+		} else {
+			job.Seconds = defaultSoraDuration()
+		}
 	}
 
-	updateSoraTask(task, job)
+	if task != nil {
+		updateSoraTask(task, job)
+	}
 
 	c.JSON(http.StatusOK, job)
 }
@@ -194,14 +222,18 @@ func VideoDownload(c *gin.Context) {
 		common.AbortWithMessage(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if task == nil {
-		common.AbortWithMessage(c, http.StatusNotFound, "video task not found")
-		return
+
+	modelName := ""
+	if task != nil {
+		props := parseSoraTaskProperties(task.Properties)
+		modelName = strings.TrimSpace(props.Model)
+		c.Set("specific_channel_id", task.ChannelId)
+	}
+	if modelName == "" {
+		modelName = "sora-2"
 	}
 
-	props := parseSoraTaskProperties(task.Properties)
-	c.Set("specific_channel_id", task.ChannelId)
-	provider, _, err := GetProvider(c, props.Model)
+	provider, _, err := GetProvider(c, modelName)
 	if err != nil {
 		common.AbortWithMessage(c, http.StatusServiceUnavailable, err.Error())
 		return

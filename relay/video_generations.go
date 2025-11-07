@@ -27,6 +27,12 @@ type videoGenerationsRequest struct {
 // VideoGenerationsCreate 兼容 /v1/videos/generations（Apimart 风格）
 // 仅限 ChannelTypeNewAPI 渠道，其他类型返回不支持
 func VideoGenerationsCreate(c *gin.Context) {
+	// 对非 NewAPI 渠道，作为官方 /v1/videos 的别名直接复用标准处理逻辑
+	if c.GetInt("channel_type") != config.ChannelTypeNewAPI {
+		VideoCreate(c)
+		return
+	}
+
 	// 仅允许 newapi 渠道
 	c.Set("allow_channel_type", []int{config.ChannelTypeNewAPI})
 
