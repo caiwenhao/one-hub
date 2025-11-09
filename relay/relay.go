@@ -4,6 +4,7 @@ import (
     "net/http"
     "one-api/common"
     "one-api/common/config"
+    videoutil "one-api/common/video"
     "one-api/model"
     "one-api/providers/azure"
     "one-api/providers/openai"
@@ -153,6 +154,11 @@ func handleFilesRetrieveCompat(c *gin.Context) bool {
             return true
         }
         if c.Request.URL.Path == "/v1/files/retrieve" {
+            // 改写下载直链为代理 URL
+            dl := strings.TrimSpace(a.DownloadURL)
+            if dl != "" {
+                dl = videoutil.ProxyVideoURL(dl, fileID)
+            }
             payload := map[string]interface{}{
                 "file": map[string]interface{}{
                     "file_id":      fileID,
@@ -160,7 +166,7 @@ func handleFilesRetrieveCompat(c *gin.Context) bool {
                     "created_at":   time.Now().Unix(),
                     "filename":     "video.mp4",
                     "purpose":      "video",
-                    "download_url": a.DownloadURL,
+                    "download_url": dl,
                 },
                 "base_resp": map[string]interface{}{"status_code": 0, "status_msg": "success"},
             }
@@ -219,12 +225,16 @@ func handleFilesRetrieveCompat(c *gin.Context) bool {
                     TTLAt:        0,
                 })
             }
+            // 代理 JSON 中的 download_url
+            if respObj != nil && strings.TrimSpace(respObj.File.DownloadURL) != "" {
+                respObj.File.DownloadURL = videoutil.ProxyVideoURL(respObj.File.DownloadURL, fileID)
+            }
             c.JSON(http.StatusOK, respObj)
             recordFilesConsumeLog(c, channel.Id)
             return true
         }
 
-        // OpenAI/Azure 走直透
+        // OpenAI/Azure：拦截 JSON 并改写 download_url 为代理 URL
         var baseURL string
         if p, ok := provider.(*openai.OpenAIProvider); ok {
             baseURL = p.GetFullRequestURL("/v1/files/retrieve", "")
@@ -256,20 +266,18 @@ func handleFilesRetrieveCompat(c *gin.Context) bool {
             common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
             return true
         }
-        resp, errWith := requester.SendRequestRaw(req)
-        if errWith != nil {
+        var data map[string]any
+        if _, errWith := requester.SendRequest(req, &data, false); errWith != nil {
             relayResponseWithOpenAIErr(c, errWith)
             return true
         }
-        defer resp.Body.Close()
-        // 透传 JSON 响应
-        if ct := resp.Header.Get("Content-Type"); ct != "" {
-            c.Header("Content-Type", ct)
-        } else {
-            c.Header("Content-Type", "application/json")
+        // 改写 file.download_url 为代理 URL
+        if fileObj, ok := data["file"].(map[string]any); ok {
+            if dl, ok2 := fileObj["download_url"].(string); ok2 && strings.TrimSpace(dl) != "" {
+                fileObj["download_url"] = videoutil.ProxyVideoURL(dl, fileID)
+            }
         }
-        c.Status(resp.StatusCode)
-        io.Copy(c.Writer, resp.Body)
+        c.JSON(http.StatusOK, data)
         recordFilesConsumeLog(c, channel.Id)
         return true
     }

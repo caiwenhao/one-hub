@@ -895,6 +895,11 @@
           "key": "Cloudflare Worker image proxy key, please ignore if not configured",
           "label": "Cloudflare Worker Image Proxy"
         },
+        "CFWorkerVideoUrl": {
+          "label": "Cloudflare Worker Video Proxy",
+          "key": "Cloudflare Worker video proxy secret (must match Worker API_KEY)",
+          "alert": "Hide upstream video URLs via Cloudflare Worker (Proxy mode only). Fill your Worker domain (e.g. https://video-proxy.xxx.workers.dev) and secret. Returned links look like /v/<token>.mp4."
+        },
         "imageMirror": {
           "enabled": "Enable mirroring generated image URLs to object storage",
           "allowedHostsLabel": "Allowed upstream hosts (comma separated)",

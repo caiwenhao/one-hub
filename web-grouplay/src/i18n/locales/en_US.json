@@ -890,10 +890,11 @@
         "title": "Monitoring Settings"
       },
       "otherSettings": {
-        "CFWorkerImageUrl": {
-          "alert": "Here is the image proxy address of Cloudflare Worker. You can use it by deploying https://github.com/MartialBE/get-image-by-cf. You can set only one of it and the image detection proxy. \nNote that some image links may deny CF access and cause detection failure.",
-          "key": "Cloudflare Worker image proxy key, please ignore if not configured",
-          "label": "Cloudflare Worker Image Proxy"
+        
+        "CFWorkerVideoUrl": {
+          "label": "Cloudflare Worker Video Proxy",
+          "key": "Cloudflare Worker video proxy secret (must match Worker API_KEY)",
+          "alert": "Hide upstream video URLs via Cloudflare Worker (Proxy mode only). Fill your Worker domain (e.g. https://video-proxy.xxx.workers.dev) and secret. Returned links look like /v/<token>.mp4."
         },
         "imageMirror": {
           "enabled": "Enable mirroring generated image URLs to object storage",

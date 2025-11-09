@@ -58,6 +58,8 @@ const OperationSetting = () => {
     RechargeDiscount: '',
     CFWorkerImageUrl: '',
     CFWorkerImageKey: '',
+    CFWorkerVideoUrl: '',
+    CFWorkerVideoKey: '',
     ClaudeAPIEnabled: '',
     GeminiAPIEnabled: '',
     DisableChannelKeywords: '',
@@ -271,6 +273,14 @@ const OperationSetting = () => {
 
           if (originInputs['CFWorkerImageKey'] !== inputs.CFWorkerImageKey) {
             await updateOption('CFWorkerImageKey', inputs.CFWorkerImageKey);
+          }
+
+          if (originInputs['CFWorkerVideoUrl'] !== inputs.CFWorkerVideoUrl) {
+            await updateOption('CFWorkerVideoUrl', inputs.CFWorkerVideoUrl);
+          }
+
+          if (originInputs['CFWorkerVideoKey'] !== inputs.CFWorkerVideoKey) {
+            await updateOption('CFWorkerVideoKey', inputs.CFWorkerVideoKey);
           }
 
           break;
@@ -587,7 +597,38 @@ const OperationSetting = () => {
                 value={inputs.CFWorkerImageKey}
                 onChange={handleInputChange}
                 label={t('setting_index.operationSettings.otherSettings.CFWorkerImageUrl.key')}
-                placeholder={t('setting_index.operationSettings.otherSettings.CFWorkerImageUrl.key')}
+              placeholder={t('setting_index.operationSettings.otherSettings.CFWorkerImageUrl.key')}
+              disabled={loading}
+            />
+          </FormControl>
+          </Stack>
+
+          <Stack spacing={2}>
+            <Alert severity="info">{t('setting_index.operationSettings.otherSettings.CFWorkerVideoUrl.alert')}</Alert>
+            <FormControl>
+              <InputLabel htmlFor="CFWorkerVideoUrl">
+                {t('setting_index.operationSettings.otherSettings.CFWorkerVideoUrl.label')}
+              </InputLabel>
+              <OutlinedInput
+                id="CFWorkerVideoUrl"
+                name="CFWorkerVideoUrl"
+                value={inputs.CFWorkerVideoUrl}
+                onChange={handleInputChange}
+                label={t('setting_index.operationSettings.otherSettings.CFWorkerVideoUrl.label')}
+                placeholder={t('setting_index.operationSettings.otherSettings.CFWorkerVideoUrl.label')}
+                disabled={loading}
+              />
+            </FormControl>
+
+            <FormControl>
+              <InputLabel htmlFor="CFWorkerVideoKey">{t('setting_index.operationSettings.otherSettings.CFWorkerVideoUrl.key')}</InputLabel>
+              <OutlinedInput
+                id="CFWorkerVideoKey"
+                name="CFWorkerVideoKey"
+                value={inputs.CFWorkerVideoKey}
+                onChange={handleInputChange}
+                label={t('setting_index.operationSettings.otherSettings.CFWorkerVideoUrl.key')}
+                placeholder={t('setting_index.operationSettings.otherSettings.CFWorkerVideoUrl.key')}
                 disabled={loading}
               />
             </FormControl>

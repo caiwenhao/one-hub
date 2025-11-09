@@ -105,6 +105,10 @@ func InitOptionMap() {
 	config.GlobalOption.RegisterString("CFWorkerImageUrl", &config.CFWorkerImageUrl)
 	config.GlobalOption.RegisterString("CFWorkerImageKey", &config.CFWorkerImageKey)
 
+    // CF Worker 视频代理配置（仅 Proxy 模式）
+    config.GlobalOption.RegisterString("CFWorkerVideoUrl", &config.CFWorkerVideoUrl)
+    config.GlobalOption.RegisterString("CFWorkerVideoKey", &config.CFWorkerVideoKey)
+
 	// NewAPI 图片镜像到存储（面板配置）
 	config.GlobalOption.RegisterBool("NewAPIMirrorImageToStorage", &config.NewAPIMirrorImageToStorage)
 	config.GlobalOption.RegisterCustom("NewAPIAllowedAssetHosts", func() string {

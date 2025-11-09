@@ -10,6 +10,7 @@ import (
 	"one-api/common"
 	"one-api/common/config"
 	"one-api/common/logger"
+	"one-api/common/video"
 	"one-api/model"
 	providersBase "one-api/providers/base"
 	"one-api/relay/relay_util"
@@ -33,19 +34,20 @@ type soraTaskProperties struct {
 }
 
 type soraVideoResponse struct {
-	ID                 string          `json:"id"`
-	Object             string          `json:"object"`
-	CreatedAt          int64           `json:"created_at,omitempty"`
-	CompletedAt        int64           `json:"completed_at,omitempty"`
-	ExpiresAt          int64           `json:"expires_at,omitempty"`
-	Status             string          `json:"status"`
-	Model              string          `json:"model,omitempty"`
-	Prompt             string          `json:"prompt,omitempty"`
-	Progress           int             `json:"progress"`
-	Seconds            string          `json:"seconds,omitempty"`
-	Size               string          `json:"size,omitempty"`
-	RemixedFromVideoID string          `json:"remixed_from_video_id,omitempty"`
-	Error              *soraVideoError `json:"error,omitempty"`
+    ID                 string          `json:"id"`
+    Object             string          `json:"object"`
+    CreatedAt          int64           `json:"created_at,omitempty"`
+    CompletedAt        int64           `json:"completed_at,omitempty"`
+    ExpiresAt          int64           `json:"expires_at,omitempty"`
+    Status             string          `json:"status"`
+    Model              string          `json:"model,omitempty"`
+    Prompt             string          `json:"prompt,omitempty"`
+    Progress           int             `json:"progress"`
+    Seconds            string          `json:"seconds,omitempty"`
+    Size               string          `json:"size,omitempty"`
+    RemixedFromVideoID string          `json:"remixed_from_video_id,omitempty"`
+    Error              *soraVideoError `json:"error,omitempty"`
+    VideoURL           string          `json:"video_url,omitempty"`
 }
 
 type soraVideoError struct {
@@ -156,6 +158,9 @@ func VideoCreate(c *gin.Context) {
 	}
 	saveSoraTask(c, provider.GetChannel().Id, job, props)
 
+	// 代理视频URL（隐藏真实供应商域名）
+	proxyVideoURLs(job)
+
 	c.JSON(http.StatusOK, newSoraVideoResponse(job))
 }
 
@@ -244,6 +249,9 @@ func VideoRetrieve(c *gin.Context) {
 	if task != nil {
 		updateSoraTask(task, job)
 	}
+
+	// 代理视频URL（隐藏真实供应商域名）
+	proxyVideoURLs(job)
 
 	c.JSON(http.StatusOK, newSoraVideoResponse(job))
 }
@@ -407,6 +415,10 @@ func VideoRemix(c *gin.Context) {
 	}
 
 	saveSoraTask(c, provider.GetChannel().Id, job, props)
+	
+	// 代理视频URL（隐藏真实供应商域名）
+	proxyVideoURLs(job)
+	
 	c.JSON(http.StatusOK, newSoraVideoResponse(job))
 }
 
@@ -715,8 +727,12 @@ func newSoraVideoResponse(job *types.VideoJob) *soraVideoResponse {
 	}
 	resp.Size = size
 
-	resp.Error = convertSoraVideoError(job.Error)
-	return resp
+    resp.Error = convertSoraVideoError(job.Error)
+    // 附加 video_url（若上游已返回结果）
+    if job.Result != nil && strings.TrimSpace(job.Result.VideoURL) != "" {
+        resp.VideoURL = strings.TrimSpace(job.Result.VideoURL)
+    }
+    return resp
 }
 
 func convertSoraVideoError(err *types.VideoJobError) *soraVideoError {
@@ -760,5 +776,32 @@ func clampSoraProgress(val int) int {
 		return 100
 	default:
 		return val
+	}
+}
+
+// proxyVideoURLs 将视频结果中的真实URL替换为CF Workers代理URL
+func proxyVideoURLs(job *types.VideoJob) {
+	if job == nil || job.Result == nil {
+		return
+	}
+
+	// 代理主视频URL
+	if job.Result.VideoURL != "" {
+		job.Result.VideoURL = video.ProxyVideoURL(job.Result.VideoURL, job.ID)
+	}
+
+	// 代理缩略图URL
+	if job.Result.ThumbnailURL != "" {
+		job.Result.ThumbnailURL = video.ProxyVideoURL(job.Result.ThumbnailURL, job.ID)
+	}
+
+	// 代理下载URL
+	if job.Result.DownloadURL != "" {
+		job.Result.DownloadURL = video.ProxyVideoURL(job.Result.DownloadURL, job.ID)
+	}
+
+	// 代理精灵图URL
+	if job.Result.SpriteSheet != "" {
+		job.Result.SpriteSheet = video.ProxyVideoURL(job.Result.SpriteSheet, job.ID)
 	}
 }

@@ -862,6 +862,11 @@
           "key": "Cloudflare Worker イメージ プロキシ キー、設定されていない場合は無視してください",
           "label": "Cloudflareワーカーイメージプロキシ"
         },
+        "CFWorkerVideoUrl": {
+          "label": "Cloudflare Worker ビデオプロキシ",
+          "key": "Cloudflare Worker ビデオプロキシのシークレット（Worker の API_KEY と一致）",
+          "alert": "上流のビデオ URL を隠します（プロキシモードのみ）。Worker ドメイン（例：https://video-proxy.xxx.workers.dev）とシークレットを設定してください。返されるリンクは /v/<token>.mp4 の形式です。"
+        },
         "imageMirror": {
           "enabled": "生成画像の URL をオブジェクトストレージへミラーし返却する",
           "allowedHostsLabel": "許可する上流ホスト（カンマ区切り）",

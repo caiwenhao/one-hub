@@ -11,6 +11,7 @@ import (
     "one-api/relay/relay_util"
     "one-api/model"
     providersBase "one-api/providers/base"
+    video2 "one-api/common/video"
     "one-api/providers/gemini"
     "one-api/safty"
     "one-api/types"
@@ -349,6 +350,10 @@ func GeminiOperations(c *gin.Context) {
             // 取 videoURL
             video := s.VideoURL
             if video == "" && s.Result != nil { video = s.Result.VideoURL }
+            // 代理视频URL（隐藏真实供应商域名）
+            if strings.TrimSpace(video) != "" {
+                video = video2.ProxyVideoURL(video, id)
+            }
 
             // 组装 operations 响应（与官方文档对齐：generatedSamples[].video.uri）
             sample := map[string]any{}

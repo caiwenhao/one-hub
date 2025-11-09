@@ -863,6 +863,11 @@
           "key": "Cloudflare Worker 圖片代理 key, 如果沒有配置請忽略",
           "label": "Cloudflare Worker 圖片代理"
         },
+        "CFWorkerVideoUrl": {
+          "label": "Cloudflare Worker 視頻代理",
+          "key": "Cloudflare Worker 視頻代理密鑰（需與 Worker 的 API_KEY 一致）",
+          "alert": "用於隱藏上游視頻 URL（僅 Proxy 模式）。請填寫 Worker 域名（例如：https://video-proxy.xxx.workers.dev）與密鑰。返回鏈接會呈現為 /v/<token>.mp4。"
+        },
         "imageMirror": {
           "enabled": "啟用將生成圖片鏈接鏡像到對象存儲",
           "allowedHostsLabel": "允許的上游域名（逗號分隔）",

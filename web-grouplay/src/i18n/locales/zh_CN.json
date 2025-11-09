@@ -757,6 +757,11 @@
           "key": "Cloudflare Worker 图片代理key,如果没有配置请忽略",
           "alert": "这里是Cloudflare Worker的图片代理地址，你可以通过部署https://github.com/MartialBE/get-image-by-cf，来使用，它和图片检测代理可以只设置其中一个。注意有些图片链接可能会拒绝CF的访问导致检测失败。"
         },
+        "CFWorkerVideoUrl": {
+          "label": "Cloudflare Worker 视频代理",
+          "key": "Cloudflare Worker 视频代理密钥（需与 Worker 的 API_KEY 一致）",
+          "alert": "用于隐藏上游视频URL，仅支持 Proxy 模式。请填写已部署的 Worker 访问域名（例如：https://video-proxy.xxx.workers.dev）与对应密钥。返回链接将显示为形如 /v/<token>.mp4 的视频直链。"
+        },
         "imageMirror": {
           "enabled": "启用图片结果镜像到对象存储",
           "allowedHostsLabel": "允许的上游域名（逗号分隔）",
