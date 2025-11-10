@@ -831,13 +831,36 @@ func (p *OpenAIProvider) downloadMountSeaVideo(videoID string, variant string) (
 }
 
 func (p *OpenAIProvider) createApimartVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-	body := &apimartCreateRequest{
-		Model:  request.Model,
-		Prompt: request.Prompt,
-	}
-	if request.Seconds > 0 {
-		body.Duration = request.Seconds
-	}
+    // 对上游可选秒数做“宽松适配”：接受官方默认与任意输入，内部映射为上游支持的档位
+    modelName := strings.ToLower(strings.TrimSpace(request.Model))
+    // 复制一份以便发送到上游时使用改写后的时长，但对外保持用户请求时长
+    vendorSeconds := request.Seconds
+    if vendorSeconds <= 0 {
+        // 官方默认 4 秒；上游不支持时取最接近的合法值
+        vendorSeconds = 10
+    }
+    switch modelName {
+    case "sora-2":
+        if vendorSeconds <= 10 {
+            vendorSeconds = 10
+        } else {
+            vendorSeconds = 15
+        }
+    case "sora-2-pro":
+        if vendorSeconds <= 15 {
+            vendorSeconds = 15
+        } else {
+            vendorSeconds = 25
+        }
+    }
+
+    body := &apimartCreateRequest{
+        Model:  request.Model,
+        Prompt: request.Prompt,
+    }
+    if vendorSeconds > 0 {
+        body.Duration = vendorSeconds
+    }
 	if ar := buildApimartAspectRatio(request.Size); ar != "" {
 		body.AspectRatio = ar
 	}
@@ -878,9 +901,9 @@ func (p *OpenAIProvider) createApimartVideo(request *types.VideoCreateRequest) (
 	if resp.Code != http.StatusOK {
 		return nil, apimartErrorToOpenAI(resp.Error, resp.Code)
 	}
-	if len(resp.Data) == 0 || strings.TrimSpace(resp.Data[0].TaskID) == "" {
-		return nil, common.StringErrorWrapperLocal("invalid apimart response", "bad_upstream", http.StatusBadGateway)
-	}
+    if len(resp.Data) == 0 || strings.TrimSpace(resp.Data[0].TaskID) == "" {
+        return nil, common.StringErrorWrapperLocal("invalid upstream response", "bad_upstream", http.StatusBadGateway)
+    }
 
 	task := resp.Data[0]
 	job := &types.VideoJob{
@@ -1364,9 +1387,9 @@ func (p *OpenAIProvider) remixApimartVideo(videoID string, prompt string) (*type
 	if resp.Code != http.StatusOK {
 		return nil, apimartErrorToOpenAI(resp.Error, resp.Code)
 	}
-	if len(resp.Data) == 0 || strings.TrimSpace(resp.Data[0].TaskID) == "" {
-		return nil, common.StringErrorWrapperLocal("invalid apimart response", "bad_upstream", http.StatusBadGateway)
-	}
+    if len(resp.Data) == 0 || strings.TrimSpace(resp.Data[0].TaskID) == "" {
+        return nil, common.StringErrorWrapperLocal("invalid upstream response", "bad_upstream", http.StatusBadGateway)
+    }
 	job := &types.VideoJob{
 		ID:                 resp.Data[0].TaskID,
 		Object:             "video",
@@ -1551,13 +1574,13 @@ func mapApimartStatus(status string) string {
 }
 
 func apimartErrorToOpenAI(err *apimartError, code int) *types.OpenAIErrorWithStatusCode {
-	if err == nil {
-		err = &apimartError{
-			Code:    code,
-			Message: "apimart upstream error",
-			Type:    "apimart_error",
-		}
-	}
+    if err == nil {
+        err = &apimartError{
+            Code:    code,
+            Message: "upstream error",
+            Type:    "upstream_error",
+        }
+    }
 	statusCode := code
 	if statusCode < 400 || statusCode > 599 {
 		statusCode = http.StatusBadGateway

@@ -1,0 +1,92 @@
+---
+title: "视频 Remix"
+description: "基于现有视频进行二次创作"
+openapi: "POST /v1/videos/{video_id}/remix"
+---
+
+Remix 功能允许你基于已生成的视频进行二次创作，通过新的提示词修改视频内容。
+
+## 创建 Remix 任务
+
+基于现有视频 ID 和新的提示词创建 Remix 任务：
+
+```bash
+curl -X POST "https://models.kapon.cloud/v1/videos/$VIDEO_ID/remix" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "prompt=在结尾添加品牌 Logo"
+```
+
+### 请求参数
+
+- `video_id`（路径参数）：原视频任务的唯一标识符
+- `prompt`（请求体）：Remix 的文本描述，最多 1000 个字符
+
+### 响应示例
+
+```json
+{
+  "id": "video_def456789abc012345678901234567890123456789",
+  "object": "video",
+  "created_at": 1762789902,
+  "status": "queued",
+  "model": "sora-2",
+  "prompt": "在结尾添加品牌 Logo",
+  "progress": 0,
+  "seconds": "10",
+  "size": "1280x720",
+  "parent_video_id": "video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737"
+}
+```
+
+## 使用场景
+
+Remix 功能适用于以下场景：
+
+- **添加元素**：在视频中添加 Logo、文字或其他视觉元素
+- **调整风格**：改变视频的色调、滤镜或艺术风格
+- **修改细节**：调整视频中的特定对象或场景
+- **延长内容**：在视频开头或结尾添加新的场景
+
+## 工作流程
+
+1. 首先创建一个基础视频任务
+2. 等待基础视频生成完成（status 为 `succeeded`）
+3. 使用基础视频的 ID 创建 Remix 任务
+4. 查询 Remix 任务状态，等待完成
+5. 下载 Remix 后的视频
+
+```bash
+# 1. 创建基础视频
+VIDEO_ID=$(curl -X POST "https://models.kapon.cloud/v1/videos" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "model=sora-2" \
+  -F "prompt=一个无人机从海滩升空" \
+  | jq -r '.id')
+
+# 2. 等待完成（轮询查询）
+while true; do
+  STATUS=$(curl "https://models.kapon.cloud/v1/videos/$VIDEO_ID" \
+    -H "Authorization: Bearer $TOKEN" | jq -r '.status')
+  if [ "$STATUS" = "completed" ]; then break; fi
+  sleep 5
+done
+
+# 3. 创建 Remix
+REMIX_ID=$(curl -X POST "https://models.kapon.cloud/v1/videos/$VIDEO_ID/remix" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "prompt=添加日落滤镜效果" \
+  | jq -r '.id')
+
+# 4. 下载 Remix 视频
+curl -L "https://models.kapon.cloud/v1/videos/$REMIX_ID/content" \
+  -H "Authorization: Bearer $TOKEN" \
+  --output "remix_$REMIX_ID.mp4"
+```
+
+<Callout type="info">
+Remix 任务会继承原视频的基本参数（如分辨率、时长），但会根据新的提示词进行内容调整。
+</Callout>
+
+<Callout type="warning">
+原视频必须处于 `completed` 状态才能进行 Remix。Remix 任务会消耗与创建新视频相同的配额。
+</Callout>

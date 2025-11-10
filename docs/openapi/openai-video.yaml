@@ -39,15 +39,18 @@ paths:
                   type: string
                   description: 视频生成的文本描述，最多 1000 个字符
                   maxLength: 1000
-                  example: 一个无人机从海滩升空拍摄夕阳
+                  example: 百事可乐宣传片
                 seconds:
                   type: integer
-                  description: 视频时长（秒）。sora-2 支持 10 或 15，默认 10；sora-2-pro 支持 15 或 25，默认 15
+                  description: 视频时长（秒）。sora-2 支持 4、8、10、12、15 秒，默认 10；sora-2-pro 支持 4、8、12、15、25 秒，默认 15
                   enum:
+                    - 4
+                    - 8
                     - 10
+                    - 12
                     - 15
                     - 25
-                  example: 10
+                  example: 4
                 size:
                   type: string
                   description: 视频分辨率
@@ -55,8 +58,9 @@ paths:
                     - "1280x720"
                     - "1920x1080"
                     - "720x1280"
+                    - "1080x1920"
                   default: "1280x720"
-                  example: "1280x720"
+                  example: "720x1280"
       responses:
         '200':
           description: 任务创建成功
@@ -64,6 +68,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VideoObject'
+              example:
+                id: video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737
+                object: video
+                created_at: 1762789802
+                status: queued
+                model: sora-2
+                prompt: 百事可乐宣传片
+                progress: 0
+                seconds: "4"
+                size: "720x1280"
         '400':
           description: 请求参数错误
           content:
@@ -105,6 +119,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VideoObject'
+              examples:
+                processing:
+                  summary: 处理中
+                  value:
+                    id: video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737
+                    object: video
+                    created_at: 1762789802
+                    status: processing
+                    model: sora-2
+                    prompt: 百事可乐宣传片
+                    progress: 45
+                    seconds: "4"
+                    size: "720x1280"
+                completed:
+                  summary: 已完成
+                  value:
+                    id: video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737
+                    object: video
+                    created_at: 1762789802
+                    completed_at: 1762789891
+                    expires_at: 1762793491
+                    status: completed
+                    model: sora-2
+                    prompt: 百事可乐宣传片
+                    progress: 100
+                    seconds: "4"
+                    size: "720x1280"
         '404':
           description: 视频任务不存在
           content:
@@ -136,13 +177,17 @@ paths:
                 properties:
                   id:
                     type: string
-                    example: video_abc123
+                    example: video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737
                   object:
                     type: string
                     example: video
                   deleted:
                     type: boolean
                     example: true
+              example:
+                id: video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737
+                object: video
+                deleted: true
         '404':
           description: 视频任务不存在
           content:
@@ -175,6 +220,12 @@ paths:
                 format: binary
         '404':
           description: 视频任务不存在或未完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: 视频已过期
           content:
             application/json:
               schema:
@@ -216,6 +267,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VideoObject'
+              example:
+                id: video_def456789abc012345678901234567890123456789
+                object: video
+                created_at: 1762789902
+                status: queued
+                model: sora-2
+                prompt: 在结尾添加品牌 Logo
+                progress: 0
+                seconds: "4"
+                size: "720x1280"
+                parent_video_id: video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737
         '404':
           description: 原视频任务不存在
           content:
@@ -238,17 +300,25 @@ components:
         id:
           type: string
           description: 视频任务的唯一标识符
-          example: video_abc123
+          example: video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737
         object:
           type: string
           description: 对象类型
           enum:
             - video
           example: video
-        created:
+        created_at:
           type: integer
           description: 创建时间戳（Unix 时间）
-          example: 1234567890
+          example: 1762789802
+        completed_at:
+          type: integer
+          description: 任务完成时间戳（仅在 completed 状态下存在）
+          example: 1762789891
+        expires_at:
+          type: integer
+          description: 视频过期时间戳（仅在 completed 状态下存在）
+          example: 1762793491
         model:
           type: string
           description: 使用的模型名称
@@ -259,32 +329,36 @@ components:
           enum:
             - queued
             - processing
-            - succeeded
+            - completed
             - failed
-          example: processing
+          example: queued
         prompt:
           type: string
           description: 生成视频的文本描述
           example: 一个无人机从海滩升空拍摄夕阳
-        seconds:
+        progress:
           type: integer
-          description: 视频时长
-          example: 10
+          description: 处理进度（0-100）
+          minimum: 0
+          maximum: 100
+          example: 0
+        seconds:
+          type: string
+          description: 视频时长（字符串格式）
+          example: "10"
         size:
           type: string
           description: 视频分辨率
           example: "1280x720"
-        progress:
-          type: integer
-          description: 处理进度（0-100），仅在 processing 状态下存在
-          minimum: 0
-          maximum: 100
-          example: 45
         assets:
           type: array
-          description: 生成的视频资源数组，仅在 succeeded 状态下存在
+          description: 生成的视频资源数组，仅在 completed 状态下存在（部分供应商可能不返回此字段，需通过 /content 端点下载）
           items:
             $ref: '#/components/schemas/VideoAsset'
+        parent_video_id:
+          type: string
+          description: 父视频 ID（仅 Remix 任务返回）
+          example: video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737
         error:
           type: object
           description: 错误信息，仅在 failed 状态下存在
@@ -302,7 +376,7 @@ components:
         url:
           type: string
           description: 视频文件 URL
-          example: https://cdn.example.com/video_abc123.mp4
+          example: https://cdn.example.com/video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737.mp4
         quality:
           type: string
           description: 视频质量/分辨率

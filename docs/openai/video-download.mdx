@@ -1,0 +1,131 @@
+---
+title: "视频下载"
+description: "下载生成的视频文件"
+openapi: "GET /v1/videos/{video_id}/content"
+---
+
+当视频生成任务完成后，你可以通过下载接口获取视频文件。
+
+## 下载视频文件
+
+使用视频 ID 直接下载生成的视频：
+
+```bash
+curl -L "https://models.kapon.cloud/v1/videos/$VIDEO_ID/content" \
+  -H "Authorization: Bearer $TOKEN" \
+  --output "$VIDEO_ID.mp4"
+```
+
+<Callout type="info">
+注意使用 `-L` 参数以支持重定向，视频文件可能托管在 CDN 上。
+</Callout>
+
+### 路径参数
+
+- `video_id`：视频任务的唯一标识符
+
+### 响应
+
+- **成功（200）**：返回 MP4 格式的视频文件流
+- **未找到（404）**：视频任务不存在或尚未完成
+
+## 获取视频 URL
+
+如果你需要获取视频的下载链接而不是直接下载，可以先查询任务状态：
+
+```bash
+curl "https://models.kapon.cloud/v1/videos/$VIDEO_ID" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+响应中的 `assets` 数组包含视频 URL：
+
+```json
+{
+  "id": "video_abc123",
+  "status": "succeeded",
+  "assets": [
+    {
+      "url": "https://cdn.example.com/video_abc123.mp4",
+      "quality": "1280x720",
+      "duration": 10,
+      "size_bytes": 5242880
+    }
+  ]
+}
+```
+
+## 批量下载
+
+如果需要下载多个视频，可以使用脚本批量处理：
+
+```bash
+#!/bin/bash
+
+# 视频 ID 列表
+VIDEO_IDS=("video_abc123" "video_def456" "video_ghi789")
+
+for VIDEO_ID in "${VIDEO_IDS[@]}"; do
+  echo "下载视频: $VIDEO_ID"
+  
+  # 检查状态
+  STATUS=$(curl -s "https://models.kapon.cloud/v1/videos/$VIDEO_ID" \
+    -H "Authorization: Bearer $TOKEN" | jq -r '.status')
+  
+  if [ "$STATUS" = "succeeded" ]; then
+    # 下载视频
+    curl -L "https://models.kapon.cloud/v1/videos/$VIDEO_ID/content" \
+      -H "Authorization: Bearer $TOKEN" \
+      --output "${VIDEO_ID}.mp4"
+    echo "✓ 下载完成: ${VIDEO_ID}.mp4"
+  else
+    echo "✗ 视频未完成: $VIDEO_ID (状态: $STATUS)"
+  fi
+done
+```
+
+## Python 示例
+
+使用 Python 下载视频：
+
+```python
+import requests
+import os
+
+TOKEN = "your_api_key"
+
+def download_video(video_id, output_dir="./videos"):
+    """下载视频文件"""
+    os.makedirs(output_dir, exist_ok=True)
+    
+    url = f"https://models.kapon.cloud/v1/videos/{video_id}/content"
+    headers = {"Authorization": f"Bearer {TOKEN}"}
+    
+    response = requests.get(url, headers=headers, stream=True)
+    
+    if response.status_code == 200:
+        output_path = os.path.join(output_dir, f"{video_id}.mp4")
+        with open(output_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print(f"✓ 下载完成: {output_path}")
+        return output_path
+    else:
+        print(f"✗ 下载失败: {response.status_code}")
+        return None
+
+# 使用示例
+video_id = "video_abc123"
+download_video(video_id)
+```
+
+## 注意事项
+
+- 视频文件仅在任务状态为 `completed` 时可下载
+- 视频文件会在 `expires_at` 时间后自动删除（通常为完成后 1 小时）
+- 下载不消耗额外配额，可以多次下载同一视频
+- 建议在下载后保存到本地存储，避免依赖临时链接
+
+<Callout type="warning">
+视频文件过期时间较短，请在任务完成后及时下载。视频 URL 可能包含临时访问令牌，请勿公开分享。
+</Callout>

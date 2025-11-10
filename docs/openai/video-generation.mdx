@@ -1,0 +1,111 @@
+---
+title: "视频生成"
+description: "通过 kapon 代理调用 OpenAI Sora 视频生成接口"
+openapi: "POST /v1/videos"
+---
+
+使用 OpenAI Sora 模型生成视频内容。kapon 支持完整的视频生成工作流，包括任务创建、状态查询和内容下载。
+
+## 创建视频任务
+
+通过提供文本提示词来生成视频：
+
+```bash
+curl -X POST "https://models.kapon.cloud/v1/videos" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "model=sora-2" \
+  -F "prompt=百事可乐宣传片" \
+  -F "seconds=4" \
+  -F "size=720x1280"
+```
+
+### 请求参数
+
+- `model`：模型名称，支持 `sora-2` 和 `sora-2-pro`
+- `prompt`：视频生成的文本描述
+- `seconds`：视频时长（秒）
+  - `sora-2`：支持 4、8、10、12 或 15 秒，默认 10 秒
+  - `sora-2-pro`：支持 4、8、12、15 或 25 秒，默认 15 秒
+- `size`：视频分辨率，如 `1280x720`、`1920x1080`
+
+<Callout type="tip">
+较短的视频时长（4、8、12 秒）可以更快生成，适合快速预览或短视频场景。
+</Callout>
+
+### 响应示例
+
+```json
+{
+  "id": "video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737",
+  "object": "video",
+  "created_at": 1762789802,
+  "status": "queued",
+  "model": "sora-2",
+  "prompt": "百事可乐宣传片",
+  "progress": 0,
+  "seconds": "4",
+  "size": "720x1280"
+}
+```
+
+## 状态说明
+
+任务创建后会经历以下状态：
+
+- `queued`：任务已排队，等待处理
+- `processing`：正在生成视频
+- `completed`：生成完成，可以下载视频
+- `failed`：生成失败
+
+<Callout type="info">
+任务完成后，响应会包含 `completed_at`（完成时间）和 `expires_at`（过期时间）字段。视频文件会在过期时间后自动删除。
+</Callout>
+
+## 完整示例
+
+创建任务并等待完成：
+
+```bash
+# 1. 创建视频任务
+RESPONSE=$(curl -X POST "https://models.kapon.cloud/v1/videos" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "model=sora-2" \
+  -F "prompt=百事可乐宣传片" \
+  -F "seconds=4" \
+  -F "size=720x1280")
+
+VIDEO_ID=$(echo $RESPONSE | jq -r '.id')
+echo "视频任务 ID: $VIDEO_ID"
+
+# 2. 轮询查询状态
+while true; do
+  RESPONSE=$(curl "https://models.kapon.cloud/v1/videos/$VIDEO_ID" \
+    -H "Authorization: Bearer $TOKEN")
+  
+  STATUS=$(echo $RESPONSE | jq -r '.status')
+  PROGRESS=$(echo $RESPONSE | jq -r '.progress')
+  
+  echo "当前状态: $STATUS (进度: $PROGRESS%)"
+  
+  if [ "$STATUS" = "completed" ]; then
+    echo "✓ 视频生成完成"
+    break
+  elif [ "$STATUS" = "failed" ]; then
+    echo "✗ 视频生成失败"
+    exit 1
+  fi
+  
+  sleep 5
+done
+
+# 3. 下载视频
+curl -L "https://models.kapon.cloud/v1/videos/$VIDEO_ID/content" \
+  -H "Authorization: Bearer $TOKEN" \
+  --output "${VIDEO_ID}.mp4"
+
+echo "✓ 视频已保存到 ${VIDEO_ID}.mp4"
+```
+
+<Callout type="info">
+kapon 会对不同供应商的返回结构进行统一封装，`status` 字段取值为 `queued`、`processing`、`completed`、`failed` 等。视频完成后会包含 `completed_at` 和 `expires_at` 时间戳。
+</Callout>

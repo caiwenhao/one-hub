@@ -30,18 +30,44 @@
         "tab": "OpenAI",
         "groups": [
           {
-            "group": "OpenAI",
+            "group": "概述",
             "pages": [
-              "openai/overview",
+              "openai/overview"
+            ]
+          },
+          {
+            "group": "文本生成",
+            "pages": [
               "openai/chat-completions",
-              "openai/responses",
-              "openai/embeddings",
-              "openai/moderations",
+              "openai/responses"
+            ]
+          },
+          {
+            "group": "音频",
+            "pages": [
               "openai/audio-speech",
               "openai/audio-transcriptions",
-              "openai/audio-translations",
-              "openai/images",
-              "openai/video",
+              "openai/audio-translations"
+            ]
+          },
+          {
+            "group": "图像",
+            "pages": [
+              "openai/images"
+            ]
+          },
+          {
+            "group": "视频",
+            "pages": [
+              "openai/video-generation",
+              "openai/video-query",
+              "openai/video-download",
+              "openai/video-remix"
+            ]
+          },
+          {
+            "group": "其他",
+            "pages": [
               "openai/models",
               "openai/realtime"
             ]
@@ -113,14 +139,7 @@
     "light": "https://models.kapon.cloud/logo.png",
     "dark": "https://models.kapon.cloud/logo.png"
   },
-  "api": {
-    "auth": {
-      "method": "bearer",
-      "name": "Authorization",
-      "inputPrefix": "Bearer "
-    },
-    "playground": { "display": "none" }
-  },
+  "openapi": "openapi/openai-video.yaml",
   "navbar": {
     "links": [
       {

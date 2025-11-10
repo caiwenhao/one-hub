@@ -1,0 +1,96 @@
+---
+title: "视频查询"
+description: "查询视频生成任务的状态和结果"
+openapi: "GET /v1/videos/{video_id}"
+---
+
+查询已创建的视频生成任务的当前状态、进度和结果。
+
+## 查询视频任务
+
+通过视频 ID 查询任务详情：
+
+```bash
+curl "https://models.kapon.cloud/v1/videos/$VIDEO_ID" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### 响应示例
+
+任务进行中：
+
+```json
+{
+  "id": "video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737",
+  "object": "video",
+  "created_at": 1762789802,
+  "status": "processing",
+  "model": "sora-2",
+  "prompt": "百事可乐宣传片",
+  "progress": 45,
+  "seconds": "4",
+  "size": "720x1280"
+}
+```
+
+任务完成：
+
+```json
+{
+  "id": "video_691209aab0a08198a4e78870277f7e3d0215e09cec47a737",
+  "object": "video",
+  "created_at": 1762789802,
+  "completed_at": 1762789891,
+  "expires_at": 1762793491,
+  "status": "completed",
+  "model": "sora-2",
+  "prompt": "百事可乐宣传片",
+  "progress": 100,
+  "seconds": "4",
+  "size": "720x1280"
+}
+```
+
+### 状态说明
+
+- `queued`：任务已排队，等待处理
+- `processing`：正在生成视频
+- `completed`：生成完成，可下载视频
+- `failed`：生成失败
+
+### 响应字段说明
+
+- `id`：视频任务的唯一标识符
+- `created_at`：任务创建时间戳
+- `completed_at`：任务完成时间戳（仅在 completed 状态下存在）
+- `expires_at`：视频过期时间戳（仅在 completed 状态下存在）
+- `progress`：处理进度（0-100）
+- `seconds`：视频时长（字符串格式）
+- `size`：视频分辨率
+
+## 下载视频内容
+
+直接下载生成的视频文件：
+
+```bash
+curl -L "https://models.kapon.cloud/v1/videos/$VIDEO_ID/content" \
+  -H "Authorization: Bearer $TOKEN" \
+  --output "$VIDEO_ID.mp4"
+```
+
+## 删除视频任务
+
+删除不再需要的视频任务：
+
+```bash
+curl -X DELETE "https://models.kapon.cloud/v1/videos/$VIDEO_ID" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+<Callout type="info">
+建议定期查询任务状态，直到 `status` 变为 `completed` 或 `failed`。推荐使用轮询间隔 5-10 秒。
+</Callout>
+
+<Callout type="warning">
+视频文件会在 `expires_at` 时间后自动删除，请及时下载保存。
+</Callout>
