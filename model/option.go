@@ -108,6 +108,9 @@ func InitOptionMap() {
     // CF Worker 视频代理配置（仅 Proxy 模式）
     config.GlobalOption.RegisterString("CFWorkerVideoUrl", &config.CFWorkerVideoUrl)
     config.GlobalOption.RegisterString("CFWorkerVideoKey", &config.CFWorkerVideoKey)
+    // KV 短链开关与长度
+    config.GlobalOption.RegisterBool("CFWorkerVideoKVEnabled", &config.CFWorkerVideoKVEnabled)
+    config.GlobalOption.RegisterInt("CFWorkerVideoShortLength", &config.CFWorkerVideoShortLength)
 
 	// NewAPI 图片镜像到存储（面板配置）
 	config.GlobalOption.RegisterBool("NewAPIMirrorImageToStorage", &config.NewAPIMirrorImageToStorage)

@@ -60,6 +60,8 @@ const OperationSetting = () => {
     CFWorkerImageKey: '',
     CFWorkerVideoUrl: '',
     CFWorkerVideoKey: '',
+    CFWorkerVideoKVEnabled: '',
+    CFWorkerVideoShortLength: 12,
     ClaudeAPIEnabled: '',
     GeminiAPIEnabled: '',
     DisableChannelKeywords: '',
@@ -281,6 +283,14 @@ const OperationSetting = () => {
 
           if (originInputs['CFWorkerVideoKey'] !== inputs.CFWorkerVideoKey) {
             await updateOption('CFWorkerVideoKey', inputs.CFWorkerVideoKey);
+          }
+
+          if (originInputs['CFWorkerVideoKVEnabled'] !== inputs.CFWorkerVideoKVEnabled) {
+            await updateOption('CFWorkerVideoKVEnabled', inputs.CFWorkerVideoKVEnabled);
+          }
+
+          if (originInputs['CFWorkerVideoShortLength'] !== inputs.CFWorkerVideoShortLength) {
+            await updateOption('CFWorkerVideoShortLength', inputs.CFWorkerVideoShortLength);
           }
 
           break;
@@ -629,6 +639,31 @@ const OperationSetting = () => {
                 onChange={handleInputChange}
                 label={t('setting_index.operationSettings.otherSettings.CFWorkerVideoUrl.key')}
                 placeholder={t('setting_index.operationSettings.otherSettings.CFWorkerVideoUrl.key')}
+                disabled={loading}
+              />
+            </FormControl>
+
+            <FormControlLabel
+              sx={{ marginLeft: '0px' }}
+              label={'CFWorkerVideoKVEnabled (短链KV)'}
+              control={
+                <Checkbox
+                  checked={inputs.CFWorkerVideoKVEnabled === 'true'}
+                  onChange={handleInputChange}
+                  name="CFWorkerVideoKVEnabled"
+                />
+              }
+            />
+            <FormControl>
+              <InputLabel htmlFor="CFWorkerVideoShortLength">短码长度（8-32）</InputLabel>
+              <OutlinedInput
+                id="CFWorkerVideoShortLength"
+                name="CFWorkerVideoShortLength"
+                type="number"
+                value={inputs.CFWorkerVideoShortLength}
+                onChange={handleInputChange}
+                label={'短码长度（8-32）'}
+                placeholder={'12'}
                 disabled={loading}
               />
             </FormControl>

@@ -21,13 +21,44 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
 
+// 说明：
+// - 该 Worker 采用 Service Worker 语法，KV 命名空间需在 CF 控制台绑定为全局变量名 VIDEO_KV
+// - 注册端点 /register 仅用于服务端写入短码映射，需携带 X-API-Key
 async function handleRequest(request) {
   // 只允许 GET 请求
-  if (request.method !== 'GET') {
-    return new Response('Method Not Allowed', { status: 405 })
-  }
-
   const url = new URL(request.url)
+
+  // 注册端点：POST /register
+  if (url.pathname === '/register') {
+    if (request.method !== 'POST') {
+      return new Response('Method Not Allowed', { status: 405 })
+    }
+    const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '')
+    if (!API_KEY || apiKey !== API_KEY) {
+      return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+    }
+    try {
+      const body = await request.json()
+      const slug = (body.slug || '').toString().trim()
+      const token = (body.token || '').toString().trim()
+      const ttl = Math.max(0, parseInt(body.ttl || 0, 10))
+      if (!slug || !token) {
+        return new Response(JSON.stringify({ error: 'slug/token required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+      }
+      if (typeof VIDEO_KV === 'undefined' || !VIDEO_KV) {
+        return new Response(JSON.stringify({ error: 'KV binding VIDEO_KV not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+      }
+      const key = 'v:' + slug
+      if (ttl > 0) {
+        await VIDEO_KV.put(key, token, { expirationTtl: ttl })
+      } else {
+        await VIDEO_KV.put(key, token)
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } })
+    } catch (e) {
+      return new Response(JSON.stringify({ error: 'bad request', message: e.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+  }
   
   // 健康检查端点
   if (url.pathname === '/health') {
@@ -50,7 +81,19 @@ async function handleRequest(request) {
     const seg = url.pathname.substring('/v/'.length)
     // 若查询参数携带 token，则优先使用（支持短文件名场景）
     const qpToken = url.searchParams.get('token')
-    const token = qpToken || seg.replace(/\.[^/.]+$/, '') // 去掉后缀（如 .mp4）
+    let token = qpToken || ''
+    if (!token) {
+      // 尝试将 seg 作为短码到 KV 查询
+      const slug = seg.replace(/\.[^/.]+$/, '')
+      if (typeof VIDEO_KV !== 'undefined' && VIDEO_KV) {
+        const kvToken = await VIDEO_KV.get('v:' + slug)
+        if (kvToken) {
+          token = kvToken
+        }
+      }
+      // KV 未命中则把 seg 视为长 token 直接使用（兼容旧行为）
+      if (!token) token = slug
+    }
     return handleVideoProxy(token)
   }
 

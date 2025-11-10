@@ -16,6 +16,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
@@ -100,9 +101,20 @@ func chooseDB() (*gorm.DB, error) {
 func InitDB() (err error) {
 	db, err := chooseDB()
 	if err == nil {
-		if config.Debug {
-			db = db.Debug()
+		// 独立控制 GORM SQL 日志级别（与业务日志解耦）
+		// 配置项：gorm_log_level = silent|error|warn|info（默认 warn）
+		gl := gormLogger.Warn
+		switch strings.ToLower(viper.GetString("gorm_log_level")) {
+		case "silent":
+			gl = gormLogger.Silent
+		case "error":
+			gl = gormLogger.Error
+		case "warn":
+			gl = gormLogger.Warn
+		case "info":
+			gl = gormLogger.Info
 		}
+		db = db.Session(&gorm.Session{Logger: gormLogger.Default.LogMode(gl)})
 		DB = db
 		sqlDB, err := DB.DB()
 		if err != nil {

@@ -195,6 +195,10 @@ var CFWorkerImageKey = ""
 // --- CF Worker Video Proxy (视频URL代理) ---
 var CFWorkerVideoUrl = "" // CF Workers 视频代理地址，例如：https://video-proxy.your-domain.workers.dev
 var CFWorkerVideoKey = "" // CF Workers 鉴权密钥（仅 Proxy 模式）
+// 是否启用 KV 短链模式（需要在 Worker 端绑定 KV 并实现 /register 接口）
+var CFWorkerVideoKVEnabled = false
+// 短链 slug 长度（建议 8-16，默认 12）
+var CFWorkerVideoShortLength = 12
 
 // --- NewAPI Image Mirror (panel configurable) ---
 // 将供应商返回的图片 URL 镜像到本地存储并改写
