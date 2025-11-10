@@ -671,7 +671,7 @@ const typeConfig = {
     inputLabel: {
       provider_models_list: '从OR获取模型列表'
     }
-  }
+  },
 };
 
 export { defaultConfig, typeConfig };
