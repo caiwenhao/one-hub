@@ -1,0 +1,336 @@
+openapi: 3.0.0
+info:
+  title: OpenAI Video API
+  description: OpenAI Sora 视频生成 API
+  version: 1.0.0
+servers:
+  - url: https://models.kapon.cloud
+    description: Kapon 生产环境
+
+security:
+  - BearerAuth: []
+
+paths:
+  /v1/videos:
+    post:
+      summary: 创建视频任务
+      description: 使用 OpenAI Sora 模型创建视频生成任务
+      operationId: createVideo
+      tags:
+        - Videos
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - model
+                - prompt
+              properties:
+                model:
+                  type: string
+                  description: 模型名称
+                  enum:
+                    - sora-2
+                    - sora-2-pro
+                  example: sora-2
+                prompt:
+                  type: string
+                  description: 视频生成的文本描述，最多 1000 个字符
+                  maxLength: 1000
+                  example: 一个无人机从海滩升空拍摄夕阳
+                seconds:
+                  type: integer
+                  description: 视频时长（秒）。sora-2 支持 10 或 15，默认 10；sora-2-pro 支持 15 或 25，默认 15
+                  enum:
+                    - 10
+                    - 15
+                    - 25
+                  example: 10
+                size:
+                  type: string
+                  description: 视频分辨率
+                  enum:
+                    - "1280x720"
+                    - "1920x1080"
+                    - "720x1280"
+                  default: "1280x720"
+                  example: "1280x720"
+      responses:
+        '200':
+          description: 任务创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoObject'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 认证失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: 请求频率超限
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/videos/{video_id}:
+    get:
+      summary: 查询视频任务
+      description: 查询指定视频任务的状态和结果
+      operationId: getVideo
+      tags:
+        - Videos
+      parameters:
+        - name: video_id
+          in: path
+          required: true
+          description: 视频任务的唯一标识符
+          schema:
+            type: string
+          example: video_abc123
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoObject'
+        '404':
+          description: 视频任务不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: 删除视频任务
+      description: 删除指定的视频任务及其资源
+      operationId: deleteVideo
+      tags:
+        - Videos
+      parameters:
+        - name: video_id
+          in: path
+          required: true
+          description: 视频任务的唯一标识符
+          schema:
+            type: string
+          example: video_abc123
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: video_abc123
+                  object:
+                    type: string
+                    example: video
+                  deleted:
+                    type: boolean
+                    example: true
+        '404':
+          description: 视频任务不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/videos/{video_id}/content:
+    get:
+      summary: 下载视频内容
+      description: 下载生成的视频文件
+      operationId: downloadVideo
+      tags:
+        - Videos
+      parameters:
+        - name: video_id
+          in: path
+          required: true
+          description: 视频任务的唯一标识符
+          schema:
+            type: string
+          example: video_abc123
+      responses:
+        '200':
+          description: 视频文件
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: 视频任务不存在或未完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/videos/{video_id}/remix:
+    post:
+      summary: Remix 视频
+      description: 基于现有视频进行二次创作
+      operationId: remixVideo
+      tags:
+        - Videos
+      parameters:
+        - name: video_id
+          in: path
+          required: true
+          description: 原视频任务的唯一标识符
+          schema:
+            type: string
+          example: video_abc123
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - prompt
+              properties:
+                prompt:
+                  type: string
+                  description: Remix 的文本描述
+                  maxLength: 1000
+                  example: 在结尾添加品牌 Logo
+      responses:
+        '200':
+          description: Remix 任务创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoObject'
+        '404':
+          description: 原视频任务不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 使用 API Key 作为 Bearer Token
+
+  schemas:
+    VideoObject:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 视频任务的唯一标识符
+          example: video_abc123
+        object:
+          type: string
+          description: 对象类型
+          enum:
+            - video
+          example: video
+        created:
+          type: integer
+          description: 创建时间戳（Unix 时间）
+          example: 1234567890
+        model:
+          type: string
+          description: 使用的模型名称
+          example: sora-2
+        status:
+          type: string
+          description: 任务状态
+          enum:
+            - queued
+            - processing
+            - succeeded
+            - failed
+          example: processing
+        prompt:
+          type: string
+          description: 生成视频的文本描述
+          example: 一个无人机从海滩升空拍摄夕阳
+        seconds:
+          type: integer
+          description: 视频时长
+          example: 10
+        size:
+          type: string
+          description: 视频分辨率
+          example: "1280x720"
+        progress:
+          type: integer
+          description: 处理进度（0-100），仅在 processing 状态下存在
+          minimum: 0
+          maximum: 100
+          example: 45
+        assets:
+          type: array
+          description: 生成的视频资源数组，仅在 succeeded 状态下存在
+          items:
+            $ref: '#/components/schemas/VideoAsset'
+        error:
+          type: object
+          description: 错误信息，仅在 failed 状态下存在
+          properties:
+            code:
+              type: string
+              example: generation_failed
+            message:
+              type: string
+              example: 视频生成失败，请重试
+
+    VideoAsset:
+      type: object
+      properties:
+        url:
+          type: string
+          description: 视频文件 URL
+          example: https://cdn.example.com/video_abc123.mp4
+        quality:
+          type: string
+          description: 视频质量/分辨率
+          example: "1280x720"
+        duration:
+          type: integer
+          description: 视频时长（秒）
+          example: 10
+        size_bytes:
+          type: integer
+          description: 文件大小（字节）
+          example: 5242880
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+              description: 错误描述
+              example: Invalid request parameters
+            type:
+              type: string
+              description: 错误类型
+              example: invalid_request_error
+            code:
+              type: string
+              description: 错误代码
+              example: invalid_parameters
