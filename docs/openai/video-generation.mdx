@@ -23,13 +23,11 @@ curl -X POST "https://models.kapon.cloud/v1/videos" \
 
 - `model`：模型名称，支持 `sora-2` 和 `sora-2-pro`
 - `prompt`：视频生成的文本描述
-- `seconds`：视频时长（秒）
-  - `sora-2`：支持 4、8、10、12 或 15 秒，默认 10 秒
-  - `sora-2-pro`：支持 4、8、12、15 或 25 秒，默认 15 秒
+- `seconds`：视频时长（秒，字符串传递更兼容），仅支持 `4`、`8`、`12`，默认 `4`
 - `size`：视频分辨率，如 `1280x720`、`1920x1080`
 
 <Callout type="tip">
-较短的视频时长（4、8、12 秒）可以更快生成，适合快速预览或短视频场景。
+仅支持 4/8/12 秒。较短的视频时长（4、8、12 秒）可以更快生成，适合快速预览或短视频场景。
 </Callout>
 
 ### 响应示例
@@ -109,6 +107,23 @@ echo "✓ 视频已保存到 ${VIDEO_ID}.mp4"
 <Callout type="info">
 kapon 会对不同供应商的返回结构进行统一封装，`status` 字段取值为 `queued`、`processing`、`completed`、`failed` 等。视频完成后会包含 `completed_at` 和 `expires_at` 时间戳。
 </Callout>
+
+### 脚本示例（Python，本地文件参考图）
+
+仓库提供了基于 openai Python SDK 的本地验证脚本，可通过 `input_reference` 上传参考图并自动轮询与下载：
+
+```bash
+export OPENAI_BASE_URL="https://models.kapon.cloud/v1"
+export OPENAI_API_KEY="$TOKEN"
+
+python3 scripts/sora2_image_to_video_sdk.py \
+  --prompt "百事可乐宣传片" \
+  --seconds 4 \
+  --size 720x1280 \
+  --image /absolute/path/to/ref.jpg \
+  --output sora_video.mp4
+```
+
 
 ## 参考图生视频（Image-to-Video）
 

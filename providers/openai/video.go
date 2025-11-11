@@ -12,7 +12,11 @@ import (
 	"one-api/common"
 	"one-api/common/config"
 	"one-api/common/logger"
+	"one-api/common/requester"
+	"one-api/common/storage"
+	"one-api/common/utils"
 	"one-api/types"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -894,24 +898,107 @@ func (p *OpenAIProvider) createApimartVideo(request *types.VideoCreateRequest) (
 		}
 	}
 
-	body := &apimartCreateRequest{
-		Model:  request.Model,
-		Prompt: request.Prompt,
-	}
-	body.Duration = secs
-	if ar := buildApimartAspectRatio(request.Size); ar != "" {
-		body.AspectRatio = ar
-	}
-	if len(request.InputImages) > 0 {
-		body.ImageURLs = append(body.ImageURLs, request.InputImages...)
-	}
-	if strings.TrimSpace(request.InputImage) != "" {
-		body.ImageURLs = append(body.ImageURLs, request.InputImage)
-	}
-	if request.RemoveWatermark {
-		f := false
-		body.Watermark = &f
-	}
+    // 收集参考图 URL：支持 JSON（input_image(s)）与 multipart 文件（input_reference/input_images）
+    collectedURLs := []string{}
+    // JSON 直传 URL
+    if len(request.InputImages) > 0 {
+        collectedURLs = append(collectedURLs, request.InputImages...)
+    }
+    if strings.TrimSpace(request.InputImage) != "" {
+        collectedURLs = append(collectedURLs, request.InputImage)
+    }
+
+    // 尝试解析 multipart（若为 multipart 则把文件上传到 S3 并生成 URL）
+    contentType := ""
+    if p.Context != nil && p.Context.Request != nil {
+        contentType = p.Context.Request.Header.Get("Content-Type")
+    }
+    var (
+        overrideModel   = ""
+        overridePrompt  = ""
+        overrideSeconds = 0
+        overrideSize    = ""
+        removeWatermark = request.RemoveWatermark
+    )
+    if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
+        raw, ok := p.GetRawBody()
+        if ok {
+            mediaType, params, err := mime.ParseMediaType(contentType)
+            if err == nil && strings.HasPrefix(strings.ToLower(mediaType), "multipart/") {
+                if boundary := strings.TrimSpace(params["boundary"]); boundary != "" {
+                    mr := multipart.NewReader(bytes.NewReader(raw), boundary)
+                    const maxImageSize = 10 * 1024 * 1024
+                    allowedExt := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
+                    for {
+                        part, e := mr.NextPart()
+                        if e == io.EOF { break }
+                        if e != nil { break }
+                        name := part.FormName()
+                        if name == "" { _ = part.Close(); continue }
+                        if fn := part.FileName(); fn != "" {
+                            // 仅处理 input_reference / input_images 文件
+                            low := strings.ToLower(name)
+                            if low == "input_reference" || low == "input_images" {
+                                b, e2 := io.ReadAll(part)
+                                _ = part.Close()
+                                if e2 != nil { continue }
+                                if len(b) == 0 || len(b) > maxImageSize { continue }
+                                ext := strings.ToLower(filepath.Ext(fn))
+                                if !allowedExt[ext] { ext = ".jpg" }
+                                key := utils.GetUUID() + ext
+                                if url := storage.Upload(b, key); strings.TrimSpace(url) != "" {
+                                    collectedURLs = append(collectedURLs, url)
+                                }
+                            } else {
+                                _ = part.Close()
+                            }
+                            continue
+                        }
+                        // 文本字段
+                        bv, _ := io.ReadAll(part)
+                        _ = part.Close()
+                        val := strings.TrimSpace(string(bv))
+                        switch strings.ToLower(name) {
+                        case "model":
+                            overrideModel = val
+                        case "prompt":
+                            overridePrompt = val
+                        case "seconds":
+                            if v, err := strconv.Atoi(val); err == nil { overrideSeconds = v }
+                        case "size":
+                            overrideSize = val
+                        case "input_image", "input_images":
+                            if val != "" { collectedURLs = append(collectedURLs, val) }
+                        case "remove_watermark":
+                            if strings.EqualFold(val, "true") || val == "1" { removeWatermark = true }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 应用覆盖字段
+    modelForUp := request.Model
+    if strings.TrimSpace(overrideModel) != "" { modelForUp = overrideModel }
+    promptForUp := request.Prompt
+    if strings.TrimSpace(overridePrompt) != "" { promptForUp = overridePrompt }
+    secondsForUp := secs
+    if overrideSeconds > 0 { secondsForUp = overrideSeconds }
+    sizeForUp := request.Size
+    if strings.TrimSpace(overrideSize) != "" { sizeForUp = overrideSize }
+
+    body := &apimartCreateRequest{
+        Model:  modelForUp,
+        Prompt: promptForUp,
+        Duration: secondsForUp,
+    }
+    if ar := buildApimartAspectRatio(sizeForUp); ar != "" { body.AspectRatio = ar }
+    if len(collectedURLs) > 0 { body.ImageURLs = append(body.ImageURLs, collectedURLs...) }
+    if removeWatermark { f := false; body.Watermark = &f }
+
+    // Debug：打印 apimart generations 关键入参（不打印具体 URL 以免泄漏）
+    logger.SysDebug(fmt.Sprintf("apimart.gen debug -> model=%s duration=%d ar=%s image_urls=%d", body.Model, body.Duration, body.AspectRatio, len(body.ImageURLs)))
 
 	headers := p.GetRequestHeaders()
 	if headers == nil {
@@ -1114,8 +1201,27 @@ func (p *OpenAIProvider) createSutuiVideo(request *types.VideoCreateRequest) (*t
 		if strings.TrimSpace(reqCopy.Size) != "" {
 			_ = builder.WriteField("size", reqCopy.Size)
 		}
+		// 参考图 URL：下载后作为文件字段追加（默认不镜像，直接直传）
+		const sutuiMaxImage = 10 * 1024 * 1024
+		urlFilesAppended := 0
+		appendURL := func(u string) {
+			u = strings.TrimSpace(u)
+			if u == "" { return }
+			if data, filename, e := fetchImageForSutui(u, sutuiMaxImage); e == nil && len(data) > 0 {
+				if err := builder.CreateFormFileReader("input_images", bytes.NewReader(data), filename); err == nil {
+					urlFilesAppended++
+				}
+			}
+		}
+		if len(request.InputImages) > 0 {
+			for _, u := range request.InputImages { appendURL(u) }
+		}
+		if strings.TrimSpace(request.InputImage) != "" { appendURL(request.InputImage) }
+
 		// 其它可选参数（若将来 Sutui 支持可扩展）
 		_ = builder.Close()
+		// Debug: 仅记录成功追加的 URL 文件数量
+		logger.SysDebug(fmt.Sprintf("sutui.gen debug -> url_files_appended=%d", urlFilesAppended))
 		headers["Content-Type"] = builder.FormDataContentType()
 		req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(&buf), p.Requester.WithHeader(headers))
 		if err != nil {
@@ -1182,6 +1288,7 @@ func (p *OpenAIProvider) rewriteMultipartForSutui(raw []byte, contentType string
 	}
 	fields := map[string][]string{}
 	files := []filePart{}
+	urlFilesAppended := 0
 	for {
 		part, e := mr.NextPart()
 		if e == io.EOF {
@@ -1225,7 +1332,27 @@ func (p *OpenAIProvider) rewriteMultipartForSutui(raw []byte, contentType string
 		}
 	}
 
+	// 将文本字段中的 URL 参考图下载为文件并追加
+	const maxImageSize = 10 * 1024 * 1024
+	appendURL := func(u string) {
+		u = strings.TrimSpace(u)
+		if u == "" { return }
+		if data, filename, e := fetchImageForSutui(u, maxImageSize); e == nil && len(data) > 0 {
+			files = append(files, filePart{field: "input_images", filename: filename, data: data})
+			urlFilesAppended++
+		}
+	}
+	if arr, ok := fields["input_image"]; ok {
+		for _, u := range arr { appendURL(u) }
+	}
+	if arr, ok := fields["input_images"]; ok {
+		for _, u := range arr { appendURL(u) }
+	}
+
 	// 决策 SKU（严格）：若秒数不合法将返回空 sku
+	// Debug: 记录从 URL 追加的文件数量
+	logger.SysDebug(fmt.Sprintf("sutui.rewrite debug -> url_files_appended=%d", urlFilesAppended))
+
 	sku, slotSec := pickSutuiSKU(originalModel, size, seconds)
 	if strings.TrimSpace(sku) == "" || slotSec == 0 {
 		return nil, "", fmt.Errorf("invalid seconds for sutui: allowed 10/15 for sora-2, 15/25 for sora-2-pro")
@@ -1403,6 +1530,61 @@ func pickSutuiSKU(originalModel string, size string, seconds int) (sku string, s
 		return base + "-landscape", 10
 	}
 	return base + "-landscape-15s", 15
+}
+
+// fetchImageForSutui 下载 URL 图片到内存并返回数据与建议文件名（带扩展名）。仅支持 http/https。
+func fetchImageForSutui(u string, maxSize int) ([]byte, string, error) {
+    if !(strings.HasPrefix(strings.ToLower(u), "http://") || strings.HasPrefix(strings.ToLower(u), "https://")) {
+        return nil, "", fmt.Errorf("unsupported image url")
+    }
+    client := requester.HTTPClient
+    if client == nil {
+        client = http.DefaultClient
+    }
+    req, err := http.NewRequest(http.MethodGet, u, nil)
+    if err != nil {
+        return nil, "", err
+    }
+    // 设置较小的超时保护（如全局未设置）
+    // 注意：requester.HTTPClient 可能已配置全局超时/代理
+    resp, err := client.Do(req)
+    if err != nil {
+        return nil, "", err
+    }
+    defer resp.Body.Close()
+    if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+        return nil, "", fmt.Errorf("bad status: %d", resp.StatusCode)
+    }
+    // 限流读取
+    lr := io.LimitReader(resp.Body, int64(maxSize)+1)
+    data, err := io.ReadAll(lr)
+    if err != nil {
+        return nil, "", err
+    }
+    if len(data) == 0 || len(data) > maxSize {
+        return nil, "", fmt.Errorf("image too large or empty")
+    }
+    // 推断扩展名
+    ext := ".jpg"
+    ct := strings.ToLower(strings.TrimSpace(resp.Header.Get("Content-Type")))
+    switch {
+    case strings.Contains(ct, "image/png"):
+        ext = ".png"
+    case strings.Contains(ct, "image/webp"):
+        ext = ".webp"
+    case strings.Contains(ct, "image/jpeg"), strings.Contains(ct, "image/jpg"):
+        ext = ".jpg"
+    default:
+        // 尝试从 URL 路径推断
+        if u2, err := url.Parse(u); err == nil {
+            if e := strings.ToLower(filepath.Ext(u2.Path)); e == ".png" || e == ".webp" || e == ".jpg" || e == ".jpeg" {
+                ext = e
+            }
+        }
+    }
+    // 生成文件名
+    filename := utils.GetUUID() + ext
+    return data, filename, nil
 }
 
 func (p *OpenAIProvider) retrieveSutuiVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {

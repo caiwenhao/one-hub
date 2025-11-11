@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"one-api/common"
+	"one-api/common/logger"
 	"one-api/common/utils"
 	"one-api/types"
 	"strconv"
@@ -57,27 +58,50 @@ func (r *HTTPRequester) setProxy() context.Context {
 
 // 创建请求
 func (r *HTTPRequester) NewRequest(method, url string, setters ...requestOption) (*http.Request, error) {
-	args := &requestOptions{
-		body:   nil,
-		header: make(http.Header),
-	}
-	for _, setter := range setters {
-		setter(args)
-	}
-	req, err := utils.RequestBuilder(r.setProxy(), method, url, args.body, args.header)
-	if err != nil {
-		return nil, err
-	}
+    args := &requestOptions{
+        body:   nil,
+        header: make(http.Header),
+    }
+    for _, setter := range setters {
+        setter(args)
+    }
+    req, err := utils.RequestBuilder(r.setProxy(), method, url, args.body, args.header)
+    if err != nil {
+        return nil, err
+    }
 
-	return req, nil
+    // Debug: 打印上游请求（方法、URL、Content-Type、部分请求体）
+    // 仅在 debug 等级下有效，由上层 logger 控制输出
+    ct := req.Header.Get("Content-Type")
+    bodyPreview := ""
+    switch b := args.body.(type) {
+    case nil:
+        // no body
+    case io.Reader:
+        // 避免读取消耗流，标记占位
+        bodyPreview = "<stream>"
+    case []byte:
+        if strings.Contains(strings.ToLower(ct), "multipart/") {
+            bodyPreview = fmt.Sprintf("<multipart len=%d>", len(b))
+        } else {
+            bodyPreview = truncateForLog(b, 4096)
+        }
+    default:
+        if jb, e := json.Marshal(b); e == nil {
+            bodyPreview = truncateForLog(jb, 4096)
+        }
+    }
+    logger.SysDebug(fmt.Sprintf("up.req -> %s %s ct=%s len=%d body=%s", method, url, ct, req.ContentLength, bodyPreview))
+
+    return req, nil
 }
 
 // 发送请求
 func (r *HTTPRequester) SendRequest(req *http.Request, response any, outputResp bool) (*http.Response, *types.OpenAIErrorWithStatusCode) {
-	resp, err := HTTPClient.Do(req)
-	if err != nil {
-		return nil, common.ErrorWrapper(err, "http_request_failed", http.StatusInternalServerError)
-	}
+    resp, err := HTTPClient.Do(req)
+    if err != nil {
+        return nil, common.ErrorWrapper(err, "http_request_failed", http.StatusInternalServerError)
+    }
 
 	if !outputResp {
 		defer resp.Body.Close()
@@ -88,27 +112,47 @@ func (r *HTTPRequester) SendRequest(req *http.Request, response any, outputResp 
 		return nil, HandleErrorResp(resp, r.ErrorHandler, r.IsOpenAI)
 	}
 
-	// 解析响应
-	if response == nil {
-		return resp, nil
-	}
+    // 解析响应，并在 debug 下打印响应体（JSON 场景会截断）
+    if response == nil {
+        return resp, nil
+    }
 
-	if outputResp {
-		var buf bytes.Buffer
-		tee := io.TeeReader(resp.Body, &buf)
-		err = DecodeResponse(tee, response)
+    if outputResp {
+        var buf bytes.Buffer
+        tee := io.TeeReader(resp.Body, &buf)
+        err = DecodeResponse(tee, response)
+        // 将响应体重新写入 resp.Body
+        resp.Body = io.NopCloser(&buf)
 
-		// 将响应体重新写入 resp.Body
-		resp.Body = io.NopCloser(&buf)
-	} else {
-		err = json.NewDecoder(resp.Body).Decode(response)
-	}
+        // Debug: 输出响应预览
+        logger.SysDebug(fmt.Sprintf("up.resp <- status=%d ct=%s len≈%d body=%s", resp.StatusCode, resp.Header.Get("Content-Type"), buf.Len(), truncateForLog(buf.Bytes(), 4096)))
+    } else {
+        // 如果是 JSON，先读再解，便于打印
+        ct := resp.Header.Get("Content-Type")
+        if strings.Contains(strings.ToLower(ct), "application/json") {
+            b, e := io.ReadAll(resp.Body)
+            if e != nil {
+                return nil, common.ErrorWrapper(e, "read_response_failed", http.StatusInternalServerError)
+            }
+            // 打印 debug
+            logger.SysDebug(fmt.Sprintf("up.resp <- status=%d ct=%s len=%d body=%s", resp.StatusCode, ct, len(b), truncateForLog(b, 4096)))
+            // decode
+            if err = json.Unmarshal(b, response); err != nil {
+                return nil, common.ErrorWrapper(err, "decode_response_failed", http.StatusInternalServerError)
+            }
+            // 重置 Body，供后续链路需要时读取
+            resp.Body = io.NopCloser(bytes.NewReader(b))
+        } else {
+            // 非 JSON，直接 decode（无法打印体积大的二进制）
+            err = json.NewDecoder(resp.Body).Decode(response)
+        }
+    }
 
-	if err != nil {
-		return nil, common.ErrorWrapper(err, "decode_response_failed", http.StatusInternalServerError)
-	}
+    if err != nil {
+        return nil, common.ErrorWrapper(err, "decode_response_failed", http.StatusInternalServerError)
+    }
 
-	return resp, nil
+    return resp, nil
 }
 
 // 发送请求 RAW
@@ -201,11 +245,11 @@ func HandleErrorResp(resp *http.Response, toOpenAIError HttpErrorHandler, isPref
 
 	defer resp.Body.Close()
 
-	if toOpenAIError != nil {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err == nil {
-			resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-			errorResponse := toOpenAIError(resp)
+    if toOpenAIError != nil {
+        bodyBytes, err := io.ReadAll(resp.Body)
+        if err == nil {
+            resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+            errorResponse := toOpenAIError(resp)
 
 			if errorResponse != nil && errorResponse.Message != "" {
 				if strings.HasPrefix(errorResponse.Message, "当前分组") {
@@ -218,12 +262,14 @@ func HandleErrorResp(resp *http.Response, toOpenAIError HttpErrorHandler, isPref
 				}
 			}
 
-			// 如果 errorResponse 为 nil，并且响应体为JSON，则将响应体转换为字符串
-			if errorResponse == nil && strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
-				openAIErrorWithStatusCode.OpenAIError.Message = string(bodyBytes)
-			}
-		}
-	}
+            // 如果 errorResponse 为 nil，并且响应体为JSON，则将响应体转换为字符串
+            if errorResponse == nil && strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
+                openAIErrorWithStatusCode.OpenAIError.Message = string(bodyBytes)
+            }
+            // Debug: 上游错误响应体
+            logger.SysDebug(fmt.Sprintf("up.resp(error) <- status=%d ct=%s len=%d body=%s", resp.StatusCode, resp.Header.Get("Content-Type"), len(bodyBytes), truncateForLog(bodyBytes, 4096)))
+        }
+    }
 
 	if openAIErrorWithStatusCode.OpenAIError.Message == "" {
 		if isPrefix {
@@ -234,6 +280,24 @@ func HandleErrorResp(resp *http.Response, toOpenAIError HttpErrorHandler, isPref
 	}
 
 	return openAIErrorWithStatusCode
+}
+
+// truncateForLog 将字节截断为安全的日志预览字符串（最多 n 字节），并去除换行以紧凑输出
+func truncateForLog(b []byte, n int) string {
+    if b == nil {
+        return ""
+    }
+    if n <= 0 || len(b) <= n {
+        return compact(string(b))
+    }
+    return compact(string(b[:n])) + "…(truncated)"
+}
+
+func compact(s string) string {
+    // 简单压缩，避免多行撑爆日志
+    s = strings.ReplaceAll(s, "\n", " ")
+    s = strings.ReplaceAll(s, "\r", " ")
+    return s
 }
 
 func SetEventStreamHeaders(c *gin.Context) {

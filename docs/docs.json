@@ -60,10 +60,10 @@
             "group": "视频",
             "pages": [
               "openai/video-generation",
+              "openai/video-generation-web",
               "openai/video-query",
               "openai/video-download",
-              "openai/video-remix",
-              "openai/python-sdk-example"
+              "openai/video-remix"
             ]
           },
           {
