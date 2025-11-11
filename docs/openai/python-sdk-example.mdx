@@ -1,0 +1,359 @@
+---
+title: "Python SDK 示例"
+description: "使用 Python 调用视频生成接口的完整示例（含 openai-python SDK 轮询与下载）"
+---
+
+本文档提供使用 Python 调用视频生成接口的完整示例代码。
+
+## 方案一：使用 openai-python SDK（推荐）
+
+### 依赖安装
+
+```bash
+pip install openai
+```
+
+### 完整示例代码（创建任务 + 轮询状态 + 下载视频）
+
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+使用 openai-python SDK 调用 /v1/videos：创建任务 + 轮询状态 + 下载视频
+
+注意：
+- 建议通过环境变量传入密钥/端点，避免把密钥写进代码：
+  - OPENAI_API_KEY
+  - OPENAI_BASE_URL（默认 https://models.kapon.cloud/v1）
+- 对接本项目的 Sora 通道时，sora-2 常见合法秒数：10 或 15（按上游供应商要求）。
+"""
+
+import os
+import sys
+import time
+from openai import OpenAI
+
+
+def main():
+    base_url = os.getenv("OPENAI_BASE_URL", "https://models.kapon.cloud/v1")
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("请设置 OPENAI_API_KEY 环境变量。", file=sys.stderr)
+        sys.exit(1)
+
+    client = OpenAI(base_url=base_url, api_key=api_key)
+
+    # 业务参数（可通过环境变量覆盖）
+    prompt = os.getenv("SORA_PROMPT", "A cat playing with a ball of yarn")
+    model = os.getenv("SORA_MODEL", "sora-2")
+    # 后端对 seconds 使用了 Go 的 `,string` 反序列化标签，需以字符串传递
+    seconds = os.getenv("SORA_SECONDS", "10")  # sora-2 常用 10 或 15
+    try:
+        seconds = str(int(seconds))
+    except Exception:
+        pass
+    size = os.getenv("SORA_SIZE", "720x1280")
+    output = os.getenv("SORA_OUTPUT", "sora_video.mp4")
+
+    print("🎬 提交生成任务…")
+    print(f"📝 prompt: {prompt}")
+    print(f"🎯 model:  {model}")
+    print(f"⏱️ seconds: {seconds}")
+    print(f"📐 size:    {size}")
+
+    # 1) 创建任务
+    try:
+        job = client.videos.create(
+            prompt=prompt,
+            model=model,
+            seconds=seconds,  # 以字符串形式传递
+            size=size,
+        )
+    except Exception as e:
+        print(f"❌ 创建任务失败: {e}", file=sys.stderr)
+        sys.exit(2)
+
+    print(f"📦 任务已创建: {job.id} | 状态: {job.status}")
+
+    # 2) 轮询状态（打印进度）
+    last_status = None
+    while True:
+        try:
+            cur = client.videos.retrieve(job.id)
+        except Exception as e:
+            print(f"⚠️  轮询失败，重试中: {e}")
+            time.sleep(2.0)
+            continue
+
+        status = cur.status
+        progress = getattr(cur, "progress", None)
+        if status != last_status or progress is not None:
+            if progress is not None:
+                print(f"⏳ 状态: {status} | 进度: {progress}%")
+            else:
+                print(f"⏳ 状态: {status}")
+            last_status = status
+
+        if status in ("completed", "failed"):
+            job = cur
+            break
+
+        time.sleep(2.0)
+
+    # 3) 下载视频内容
+    if job.status == "completed":
+        try:
+            print("📥 开始下载视频…")
+            content = client.videos.download_content(job.id)
+            content.write_to_file(output)
+            print(f"✅ 已保存到: {output}")
+        except Exception as e:
+            print(f"❌ 下载失败: {e}", file=sys.stderr)
+            sys.exit(3)
+    else:
+        err = getattr(job, "error", None)
+        print(f"❌ 任务失败: {err}", file=sys.stderr)
+        sys.exit(4)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### 使用说明
+
+```bash
+export OPENAI_API_KEY="your-api-key"
+export OPENAI_BASE_URL="https://models.kapon.cloud/v1"   # 可省略
+
+# 业务参数（可选）
+export SORA_PROMPT="A cat playing with a ball of yarn"
+export SORA_MODEL="sora-2"
+export SORA_SECONDS="10"          # sora-2 建议 10 或 15；以字符串传递
+export SORA_SIZE="720x1280"
+export SORA_OUTPUT="./my_video.mp4"
+
+python video_generation_sdk.py
+```
+
+注意事项
+- `seconds` 需以字符串形式传入（服务端使用 Go 的 `,string` 标签进行反序列化）。
+- 模型与秒数受上游供应商限制：
+  - `sora-2`：常见 10 或 15 秒
+  - `sora-2-pro`：常见 15 或 25 秒
+- 任务完成后也可以使用 `download_content(video_id, variant="thumbnail")` 获取缩略图等变体。
+- 完整脚本参考：`scripts/sora2_text_to_video_sdk.py`
+
+---
+
+## 方案二：使用 requests 直调（multipart/form-data）
+
+> 保留旧方案，适合需要完全控制 HTTP 报文或调试 multipart 的场景。
+
+### 依赖安装
+
+```bash
+pip install requests
+```
+
+### 完整示例代码
+
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+视频生成 API - Python 示例脚本
+使用 /v1/videos 接口创建视频生成任务，并轮询任务状态直至完成。
+"""
+
+import os
+import time
+import json
+from typing import Optional
+
+import requests
+
+
+def _get_attr(obj, name, default=None):
+    """安全读取属性/键，兼容对象或字典。"""
+    if obj is None:
+        return default
+    if hasattr(obj, name):
+        try:
+            return getattr(obj, name)
+        except Exception:
+            pass
+    if isinstance(obj, dict):
+        return obj.get(name, default)
+    return default
+
+
+def generate_video(
+    prompt: str,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    model: str = "sora-2",
+    seconds: int = 4,
+    size: str = "720x1280",
+    poll_interval_sec: float = 2.0,
+) -> Optional[str]:
+    """
+    创建视频生成任务并轮询直至完成。
+
+    参数:
+        prompt: 文本提示词
+        api_key: API Key（默认从 OPENAI_API_KEY 环境变量读取）
+        base_url: API 端点地址
+        model: 模型名称，默认 'sora-2'
+        seconds: 视频时长（秒），默认 4
+        size: 分辨率字符串，如 '720x1280'
+        poll_interval_sec: 轮询间隔秒数
+
+    返回:
+        成功: 视频 URL
+        失败: None
+    """
+    key = api_key or os.getenv("OPENAI_API_KEY")
+    if not key:
+        raise ValueError("请设置 OPENAI_API_KEY 环境变量或传入 api_key 参数")
+    
+    base = base_url or os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1"
+
+    print("🎬 开始提交生成任务...")
+    print(f"📝 提示词: {prompt}")
+    print(f"🎯 模型: {model}")
+    print(f"⏱️  时长: {seconds}s")
+    print(f"📐 分辨率: {size}")
+    print()
+
+    # 1) 创建视频生成任务
+    url_create = base.rstrip("/") + "/videos"
+    headers = {"Authorization": f"Bearer {key}"}
+    files = {
+        "model": (None, model),
+        "prompt": (None, prompt),
+        "seconds": (None, str(int(seconds))),
+        "size": (None, size),
+    }
+    
+    try:
+        resp = requests.post(url_create, headers=headers, files=files, timeout=60)
+        if resp.status_code >= 400:
+            print(f"❌ 创建任务失败: {resp.status_code} {resp.reason}")
+            try:
+                print(json.dumps(resp.json(), ensure_ascii=False, indent=2))
+            except Exception:
+                print(resp.text)
+            return None
+        job = resp.json()
+    except Exception as e:
+        print(f"❌ 创建任务失败: {e}")
+        return None
+
+    job_id = _get_attr(job, "id")
+    status = _get_attr(job, "status")
+    if not job_id:
+        print(f"❌ 创建响应缺少任务ID: {job}")
+        return None
+    print(f"📦 任务已创建: {job_id} (状态: {status})")
+
+    # 2) 轮询任务状态直至完成/失败
+    url_retrieve = base.rstrip("/") + f"/videos/{job_id}"
+    last_status = None
+    
+    while True:
+        try:
+            r = requests.get(url_retrieve, headers=headers, timeout=60)
+            if r.status_code >= 400:
+                print(f"⚠️  轮询失败: {r.status_code}")
+                time.sleep(max(1.0, poll_interval_sec))
+                continue
+            cur = r.json()
+        except Exception as e:
+            print(f"⚠️  轮询失败，稍后重试: {e}")
+            time.sleep(max(1.0, poll_interval_sec))
+            continue
+
+        status = (_get_attr(cur, "status") or "").lower()
+        progress = _get_attr(cur, "progress")
+        
+        if status != last_status or progress is not None:
+            msg = f"⏳ 状态: {status or 'unknown'}"
+            if progress is not None:
+                try:
+                    msg += f" | 进度: {int(progress)}%"
+                except Exception:
+                    msg += f" | 进度: {progress}"
+            print(msg)
+            last_status = status
+
+        if status in ("completed",):
+            video_url = _get_attr(cur, "video_url")
+            if video_url:
+                print("\n✅ 视频生成完成！")
+                print(f"🔗 视频链接: {video_url}")
+                return video_url
+            print("\n⚠️ 完成但未获取到视频链接。")
+            return None
+
+        if status in ("failed", "error"):
+            err = _get_attr(cur, "error")
+            print(f"\n❌ 任务失败: {err}")
+            return None
+
+        time.sleep(max(1.0, poll_interval_sec))
+
+
+def download_video(video_url: str, save_path: str = "./video.mp4") -> bool:
+    """
+    下载视频到本地
+
+    参数:
+        video_url: 视频 URL
+        save_path: 保存路径
+
+    返回:
+        True/False
+    """
+    try:
+        print("\n📥 开始下载视频...")
+        with requests.get(video_url, stream=True, timeout=300) as resp:
+            resp.raise_for_status()
+            with open(save_path, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+        print(f"✅ 视频已保存到: {save_path}")
+        return True
+    except Exception as e:
+        print(f"❌ 下载失败: {e}")
+        return False
+
+
+# 使用示例
+if __name__ == "__main__":
+    # 设置 API Key 和端点
+    API_KEY = os.getenv("OPENAI_API_KEY", "your-api-key")
+    BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+
+    # 生成视频
+    prompt = "A cat playing with a ball of yarn"
+    url = generate_video(
+        prompt,
+        api_key=API_KEY,
+        base_url=BASE_URL,
+        model="sora-2",
+        seconds=10,
+        size="720x1280",
+    )
+
+    # 下载视频
+    if url:
+        download_video(url, save_path="./my_video.mp4")
+```
+
+### 使用说明与注意事项
+
+- 环境变量同上，将 `OPENAI_BASE_URL` 指向你的端点（默认 `https://models.kapon.cloud/v1`）。
+- 该示例使用 `multipart/form-data` 提交（表单字段：`model/prompt/seconds/size`）。
+- 完整脚本参考：`scripts/sora2_text_to_video.py`
