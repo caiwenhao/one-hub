@@ -1,5 +1,5 @@
 ---
-title: "Python SDK 示例"
+title: "脚本示例"
 description: "使用 Python 调用视频生成接口的完整示例（含 openai-python SDK 轮询与下载）"
 ---
 
@@ -119,30 +119,6 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
-### 使用说明
-
-```bash
-export OPENAI_API_KEY="your-api-key"
-export OPENAI_BASE_URL="https://models.kapon.cloud/v1"   # 可省略
-
-# 业务参数（可选）
-export SORA_PROMPT="A cat playing with a ball of yarn"
-export SORA_MODEL="sora-2"
-export SORA_SECONDS="10"          # sora-2 建议 10 或 15；以字符串传递
-export SORA_SIZE="720x1280"
-export SORA_OUTPUT="./my_video.mp4"
-
-python video_generation_sdk.py
-```
-
-注意事项
-- `seconds` 需以字符串形式传入（服务端使用 Go 的 `,string` 标签进行反序列化）。
-- 模型与秒数受上游供应商限制：
-  - `sora-2`：常见 10 或 15 秒
-  - `sora-2-pro`：常见 15 或 25 秒
-- 任务完成后也可以使用 `download_content(video_id, variant="thumbnail")` 获取缩略图等变体。
-- 完整脚本参考：`scripts/sora2_text_to_video_sdk.py`
 
 ---
 

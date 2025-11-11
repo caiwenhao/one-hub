@@ -48,10 +48,4 @@ curl "$BASE_URL/v1/models" \
   </Card>
 </CardGroup>
 
-## 使用建议
-
-- 推荐将 Base URL 抽象为环境变量或配置项，方便在多个环境间切换。
-- 若需要流式响应，请在 cURL 中加入 `-N` 并处理分块；Python `requests` 可设置 `stream=True`。
-- 对于大文件上传（语音转写、图片编辑），优先使用 SDK 的流式上传能力以避免内存溢出。
-
 更多接口详情请通过左侧导航进入对应页面，或直接展开自动生成的 OpenAPI 参考。

@@ -3,7 +3,7 @@
 
 These instructions are for AI assistants working in this project.
 
-Always prioritize the use of mcp tools to assist with tasks.
+Always prioritize the use of built-in tools and MCP tools to assist with tasks.
 
 Always open `@/openspec/AGENTS.md` when the request:
 - Mentions planning or proposals (words like proposal, spec, change, plan)

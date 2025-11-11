@@ -62,7 +62,8 @@
               "openai/video-generation",
               "openai/video-query",
               "openai/video-download",
-              "openai/video-remix"
+              "openai/video-remix",
+              "openai/python-sdk-example"
             ]
           },
           {
