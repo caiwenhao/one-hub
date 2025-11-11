@@ -441,27 +441,93 @@ func processChannelRelayError(ctx context.Context, channelId int, channelName st
 }
 
 var (
-	requestIdRegex = regexp.MustCompile(`\(request id: [^\)]+\)`)
-	quotaKeywords  = []string{"余额", "额度", "quota", "无可用渠道", "令牌"}
+    requestIdRegex = regexp.MustCompile(`\(request id: [^\)]+\)`)
+    quotaKeywords  = []string{"余额", "额度", "quota", "无可用渠道", "令牌"}
 )
 
+// 需要在对外错误消息中隐藏的供应商标识（大小写不敏感）
+var providerKeywords = []string{
+    "apimart",
+    "sutui",
+    "openrouter",
+    "minimaxi",
+    "siliconflow",
+    "replicate",
+    "coze",
+    "cohere",
+    "groq",
+    "hunyuan",
+    "moonshot",
+    "lingyi",
+    "mistral",
+    "baichuan",
+    "baidu",
+    "xunfei",
+    "tencent",
+    "vertexai",
+    "palm",
+    "recraftai",
+    "stabilityai",
+    "suno",
+    "ollama",
+    "xai",
+    "zhipu",
+    "vidu",
+    "volcark",
+    "kling",
+}
+
+// sanitizeProviderMarks 移除错误消息中的供应商标识及多余括号/空格
+func sanitizeProviderMarks(msg string) string {
+    if msg == "" {
+        return msg
+    }
+    original := msg
+
+    // 去掉供应商关键词
+    for _, k := range providerKeywords {
+        if k == "" {
+            continue
+        }
+        re := regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(k) + `\b`)
+        msg = re.ReplaceAllString(msg, "")
+    }
+
+    // 规整 "for (xxx)" -> "for xxx"
+    reForParen := regexp.MustCompile(`(?i)\bfor\s*\(([^)]+)\)`)
+    msg = reForParen.ReplaceAllString(msg, "for $1")
+
+    // 删除空括号和多余空格
+    msg = regexp.MustCompile(`\(\s*\)`).ReplaceAllString(msg, "")
+    msg = strings.TrimSpace(regexp.MustCompile(`\s+`).ReplaceAllString(msg, " "))
+
+    if msg == "" {
+        return original
+    }
+    return msg
+}
+
 func FilterOpenAIErr(c *gin.Context, err *types.OpenAIErrorWithStatusCode) (errWithStatusCode types.OpenAIErrorWithStatusCode) {
-	newErr := types.OpenAIErrorWithStatusCode{}
-	if err != nil {
-		newErr = *err
-	}
+    newErr := types.OpenAIErrorWithStatusCode{}
+    if err != nil {
+        newErr = *err
+    }
 
 	if newErr.StatusCode == http.StatusTooManyRequests {
 		newErr.OpenAIError.Message = "当前分组上游负载已饱和，请稍后再试"
 	}
 
-	// 如果message中已经包含 request id: 则不再添加
-	if strings.Contains(newErr.Message, "(request id:") {
-		newErr.Message = requestIdRegex.ReplaceAllString(newErr.Message, "")
-	}
+    // 如果message中已经包含 request id: 则先移除旧的 request id
+    if strings.Contains(newErr.Message, "(request id:") {
+        newErr.Message = requestIdRegex.ReplaceAllString(newErr.Message, "")
+    }
 
-	requestId := c.GetString(logger.RequestIdKey)
-	newErr.OpenAIError.Message = utils.MessageWithRequestId(newErr.OpenAIError.Message, requestId)
+    // 清洗供应商标识，避免暴露上游名称
+    newErr.OpenAIError.Message = sanitizeProviderMarks(newErr.OpenAIError.Message)
+
+    // 追加新的 request id（便于排查）
+    requestId := c.GetString(logger.RequestIdKey)
+    newErr.OpenAIError.Message = utils.MessageWithRequestId(newErr.OpenAIError.Message, requestId)
 
 	if !newErr.LocalError && newErr.OpenAIError.Type == "one_hub_error" || strings.HasSuffix(newErr.OpenAIError.Type, "_api_error") {
 		newErr.OpenAIError.Type = "system_error"

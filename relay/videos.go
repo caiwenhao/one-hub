@@ -736,17 +736,22 @@ func newSoraVideoResponse(job *types.VideoJob) *soraVideoResponse {
 }
 
 func convertSoraVideoError(err *types.VideoJobError) *soraVideoError {
-	if err == nil {
-		return nil
-	}
-	code := stringifySoraErrorCode(err.Code)
-	if code == "" && strings.TrimSpace(err.Message) == "" {
-		return nil
-	}
-	return &soraVideoError{
-		Code:    code,
-		Message: err.Message,
-	}
+    if err == nil {
+        return nil
+    }
+    code := stringifySoraErrorCode(err.Code)
+    if code == "" && strings.TrimSpace(err.Message) == "" {
+        return nil
+    }
+    // 对外隐藏上游供应商标识
+    msg := err.Message
+    if msg != "" {
+        msg = sanitizeProviderMarks(msg)
+    }
+    return &soraVideoError{
+        Code:    code,
+        Message: msg,
+    }
 }
 
 func stringifySoraErrorCode(code any) string {
