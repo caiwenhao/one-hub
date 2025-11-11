@@ -109,3 +109,68 @@ echo "✓ 视频已保存到 ${VIDEO_ID}.mp4"
 <Callout type="info">
 kapon 会对不同供应商的返回结构进行统一封装，`status` 字段取值为 `queued`、`processing`、`completed`、`failed` 等。视频完成后会包含 `completed_at` 和 `expires_at` 时间戳。
 </Callout>
+
+## 参考图生视频（Image-to-Video）
+
+除纯文本生视频外，kapon 也支持“带参考图”的视频生成。按照 OpenAI Sora 的接口规范，在创建任务时以 multipart/form-data 方式上传参考图文件字段 `input_reference`。
+
+### curl 示例（multipart）
+
+```bash
+curl -X POST "https://models.kapon.cloud/v1/videos" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "model=sora-2" \
+  -F "prompt=百事可乐宣传片，都市街拍风，年轻活力，镜头运动丰富" \
+  -F "seconds=4" \
+  -F "size=720x1280" \
+  -F "input_reference=@/absolute/path/to/ref.jpg"
+```
+
+<Callout type="warning">
+部分上游（如 ezlinkai）对 `seconds` 有严格要求：必须是 4、8 或 12 且必须在 multipart 中显式出现。请确保 `-F seconds=4` 使用的是纯数字，不要加引号，也不要误用 Bash/Zsh 的保留变量 `SECONDS`。
+</Callout>
+
+### Python SDK 示例（openai-python）
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://models.kapon.cloud/v1",
+    api_key="$TOKEN",
+)
+
+with open("./ref.jpg", "rb") as f:
+    job = client.videos.create(
+        model="sora-2",
+        prompt="百事可乐宣传片，都市街拍风，年轻活力，镜头运动丰富",
+        seconds="4",          # 以字符串传递更兼容
+        size="720x1280",
+        input_reference=f,     # 关键：参考图文件
+    )
+
+print("任务ID:", job.id, "状态:", job.status)
+
+# 轮询
+import time
+while True:
+    cur = client.videos.retrieve(job.id)
+    print("状态:", cur.status, "进度:", getattr(cur, "progress", None))
+    if cur.status in ("completed", "failed"):
+        job = cur
+        break
+    time.sleep(2)
+
+if job.status == "completed":
+    content = client.videos.download_content(job.id)
+    content.write_to_file("output.mp4")
+    print("已保存到 output.mp4")
+else:
+    print("生成失败:", getattr(job, "error", None))
+```
+
+<Callout type="tip">
+本仓库已提供两个可执行脚本便于本地验证：
+- curl 版本：`scripts/validate_image2video.sh`（自动下载示例参考图、轮询并下载成片）
+- SDK 版本：`scripts/sora2_image_to_video_sdk.py`（基于 openai Python SDK，支持 `--image/--seconds/--size` 参数）
+</Callout>

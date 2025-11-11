@@ -83,6 +83,46 @@ func changeTokenKeyColumnType() *gormigrate.Migration {
 	}
 }
 
+// 扩容 tasks.task_id 字段，避免上游较长的 video_id 写库失败
+func changeTaskIDColumnType() *gormigrate.Migration {
+    return &gormigrate.Migration{
+        ID: "202511110001",
+        Migrate: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Task{}) {
+                return nil
+            }
+            dialect := tx.Dialector.Name()
+            var err error
+            switch dialect {
+            case "mysql":
+                err = tx.Exec("ALTER TABLE tasks MODIFY COLUMN `task_id` varchar(100)").Error
+            case "postgres":
+                err = tx.Exec("ALTER TABLE tasks ALTER COLUMN task_id TYPE varchar(100)").Error
+            case "sqlite":
+                return nil
+            }
+            if err != nil {
+                logger.SysLog("修改 tasks.task_id 字段类型失败: " + err.Error())
+                return err
+            }
+            return nil
+        },
+        Rollback: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Task{}) {
+                return nil
+            }
+            dialect := tx.Dialector.Name()
+            var err error
+            switch dialect {
+            case "mysql":
+                err = tx.Exec("ALTER TABLE tasks MODIFY COLUMN `task_id` varchar(50)").Error
+            case "postgres":
+                err = tx.Exec("ALTER TABLE tasks ALTER COLUMN task_id TYPE varchar(50)").Error
+            }
+            return err
+        },
+    }
+}
 func addOwnedByTypeToPrice() *gormigrate.Migration {
 	return &gormigrate.Migration{
 		ID: "202411300002",
@@ -126,12 +166,13 @@ func migrationBefore(db *gorm.DB) error {
 		return nil
 	}
 
-	m := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{
-		removeKeyIndexMigration(),
-		changeTokenKeyColumnType(),
-		addOwnedByTypeToPrice(),
-	})
-	return m.Migrate()
+    m := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{
+        removeKeyIndexMigration(),
+        changeTokenKeyColumnType(),
+        changeTaskIDColumnType(),
+        addOwnedByTypeToPrice(),
+    })
+    return m.Migrate()
 }
 
 func addStatistics() *gormigrate.Migration {

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"one-api/common"
 	"one-api/common/config"
+	"one-api/common/logger"
 	"one-api/types"
 	"strconv"
 	"strings"
@@ -275,12 +276,40 @@ func (p *OpenAIProvider) createOfficialVideo(request *types.VideoCreateRequest) 
 			return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
 		}
 		headers := p.GetRequestHeaders()
+
+		// 调试输出：解析 multipart 中的 seconds 字段，辅助定位上游严格校验失败
+		func() {
+			ct := headers["Content-Type"]
+			secondsVal := ""
+			if ct != "" {
+				if mt, params, e := mime.ParseMediaType(ct); e == nil && strings.HasPrefix(strings.ToLower(mt), "multipart/") {
+					if boundary := params["boundary"]; strings.TrimSpace(boundary) != "" {
+						mr := multipart.NewReader(bytes.NewReader(raw), boundary)
+						for {
+							part, e2 := mr.NextPart()
+							if e2 == io.EOF { break }
+							if e2 != nil { break }
+							name := part.FormName()
+							if name == "seconds" && part.FileName() == "" {
+								b, _ := io.ReadAll(part)
+								secondsVal = strings.TrimSpace(string(b))
+								_ = part.Close()
+								break
+							}
+							_ = part.Close()
+						}
+					}
+				}
+			}
+			logger.SysDebug(fmt.Sprintf("video.create.multipart debug -> ct=%s seconds_field=%q raw_len=%d", ct, secondsVal, len(raw)))
+		}()
 		// EzlinkAI: 严格秒数校验（仅允许 4/8/12），不做宽松归一化
 		var httpReq *http.Request
 		base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
 		if strings.Contains(base, "ezlinkai.com") {
 			if ct := headers["Content-Type"]; strings.TrimSpace(ct) != "" {
 				if err := p.validateMultipartSecondsEzlinkAI(raw, ct); err != nil {
+					logger.SysDebug(fmt.Sprintf("video.create.multipart validate_seconds failed -> err=%s", err.Error()))
 					return nil, common.StringErrorWrapperLocal(err.Error(), "invalid_seconds", http.StatusBadRequest)
 				}
 			}

@@ -443,11 +443,11 @@ main();`,
                 step: 3,
                 title: 'API 文档',
                 description: '查看完整的接口文档、参数定义与示例',
-                code: 'docs.kapon.cloud/api',
+                code: 'docs.kapon.cloud',
                 icon: <BookIcon />,
                 color: '#0EA5FF',
                 isSuccess: true,
-                link: 'https://docs.kapon.cloud/api/',
+                link: 'https://docs.kapon.cloud',
                 buttonText: '查看完整文档'
               }
             ].map((item, index) => (
@@ -729,6 +729,10 @@ main();`,
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} justifyContent="center" alignItems="center">
               <Button
                 variant="contained"
+                component="a"
+                href="https://docs.kapon.cloud"
+                target="_blank"
+                rel="noopener noreferrer"
                 startIcon={<BookIcon />}
                 sx={{
                   px: 5,

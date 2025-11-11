@@ -1,6 +1,7 @@
 package relay
 
 import (
+    "bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -62,9 +63,52 @@ type soraVideoList struct {
 
 func VideoCreate(c *gin.Context) {
     var req types.VideoCreateRequest
-    if err := common.UnmarshalBodyReusable(c, &req); err != nil {
-        common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
-        return
+    contentType := strings.ToLower(strings.TrimSpace(c.Request.Header.Get("Content-Type")))
+    // 当为 multipart/form-data 且包含文件字段时，避免使用 ShouldBind 解析（会因文件字段类型报错）。
+    if strings.Contains(contentType, "multipart/form-data") {
+        // 读取原始请求体并缓存到上下文，供上游直透使用
+        raw, err := io.ReadAll(c.Request.Body)
+        if err != nil {
+            common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
+            return
+        }
+        _ = c.Request.Body.Close()
+        c.Set(config.GinRequestBodyKey, raw)
+
+        // 复位 Body 以便后续 ParseMultipartForm 读取
+        c.Request.Body = io.NopCloser(bytes.NewReader(raw))
+        // 解析表单文本字段（不触碰文件）
+        // 使用较小内存阈值，文件会落到临时目录（我们不访问文件内容）
+        if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+            common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
+            return
+        }
+        form := c.Request.MultipartForm
+        if form != nil && form.Value != nil {
+            if v := strings.TrimSpace(firstOrEmpty(form.Value["model"])); v != "" {
+                req.Model = v
+            }
+            if v := strings.TrimSpace(firstOrEmpty(form.Value["prompt"])); v != "" {
+                req.Prompt = v
+            }
+            if v := strings.TrimSpace(firstOrEmpty(form.Value["seconds"])); v != "" {
+                if iv, e := strconv.Atoi(v); e == nil {
+                    req.Seconds = iv
+                }
+            }
+            if v := strings.TrimSpace(firstOrEmpty(form.Value["size"])); v != "" {
+                req.Size = v
+            }
+        }
+        // 调试输出：记录解析到的关键字段（不输出文件内容）
+        logger.LogDebug(c.Request.Context(), fmt.Sprintf("video.create.multipart parsed -> model=%s seconds=%d size=%s ct=%s", req.Model, req.Seconds, req.Size, c.Request.Header.Get("Content-Type")))
+        // 再次复位 Body，供后续上游直透读取原始数据
+        c.Request.Body = io.NopCloser(bytes.NewReader(raw))
+    } else {
+        if err := common.UnmarshalBodyReusable(c, &req); err != nil {
+            common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
+            return
+        }
     }
 
     originalModel := strings.TrimSpace(req.Model)
@@ -782,6 +826,13 @@ func clampSoraProgress(val int) int {
 	default:
 		return val
 	}
+}
+
+func firstOrEmpty(arr []string) string {
+    if len(arr) > 0 {
+        return arr[0]
+    }
+    return ""
 }
 
 // proxyVideoURLs 将视频结果中的真实URL替换为CF Workers代理URL
