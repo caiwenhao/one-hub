@@ -53,8 +53,7 @@ def main():
     parser.add_argument("--model", default=os.getenv("SORA_MODEL", "sora-2"))
     parser.add_argument("--seconds", default=os.getenv("SORA_SECONDS", "4"))
     parser.add_argument("--size", default=os.getenv("SORA_SIZE", "720x1280"))
-    parser.add_argument("--image", default=os.getenv("SORA_IMAGE"), help="本地参考图路径；用于官方/支持 multipart 的通道")
-    parser.add_argument("--image-url", dest="image_url", default=os.getenv("SORA_IMAGE_URL"), help="参考图直链 URL；用于 apimart 等仅支持 URL 的通道")
+    parser.add_argument("--image", default=os.getenv("SORA_IMAGE"))
     parser.add_argument("--output", default=os.getenv("SORA_OUTPUT", "sora_image2video.mp4"))
     args = parser.parse_args()
 
@@ -72,40 +71,25 @@ def main():
     if sec not in {"4", "8", "12"}:
         print(f"警告：seconds={sec} 可能不被上游接受（建议 4/8/12）", file=sys.stderr)
 
-    image_path = None
-    if not args.image_url:
-        image_path = ensure_image(args.image)
+    image_path = ensure_image(args.image)
 
     print("🎬 提交图生视频任务…")
     print(f"📝 prompt: {args.prompt}")
     print(f"🎯 model:  {args.model}")
     print(f"⏱️ seconds: {sec}")
     print(f"📐 size:    {args.size}")
-    if args.image_url:
-        print(f"🖼️ image_url: {args.image_url}")
-    else:
-        print(f"🖼️ image:   {image_path}")
+    print(f"🖼️ image:   {image_path}")
 
     # 1) 创建任务（携带 input_reference 文件句柄 -> multipart 提交）
     try:
-        if args.image_url:
-            # 适用于 apimart：通过 input_image / input_images 传 URL，由服务端适配为 image_urls
+        with open(image_path, "rb") as f:
             job = client.videos.create(
                 prompt=args.prompt,
                 model=args.model,
-                seconds=sec,
+                seconds=sec,   # 字符串形式
                 size=args.size,
-                input_image=args.image_url,
+                input_reference=f,  # 关键：参考图文件
             )
-        else:
-            with open(image_path, "rb") as f:
-                job = client.videos.create(
-                    prompt=args.prompt,
-                    model=args.model,
-                    seconds=sec,   # 字符串形式
-                    size=args.size,
-                    input_reference=f,  # 关键：参考图文件
-                )
     except Exception as e:
         print(f"❌ 创建任务失败: {e}", file=sys.stderr)
         sys.exit(2)
@@ -155,3 +139,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
