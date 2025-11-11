@@ -196,6 +196,11 @@ func InitDB() (err error) {
 			return err
 		}
 
+		err = db.AutoMigrate(&UserAllowedGroup{})
+		if err != nil {
+			return err
+		}
+
 		err = db.AutoMigrate(&ModelOwnedBy{})
 		if err != nil {
 			return err

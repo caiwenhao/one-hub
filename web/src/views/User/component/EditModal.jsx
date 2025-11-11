@@ -50,11 +50,12 @@ const validationSchema = Yup.object().shape({
 });
 
 const originInputs = {
-  is_edit: false,
-  username: '',
-  display_name: '',
-  password: '',
-  group: 'default'
+	is_edit: false,
+	username: '',
+	display_name: '',
+	password: '',
+	group: 'default',
+	role: 1
 };
 
 const EditModal = ({ open, userId, onCancel, onOk }) => {
@@ -144,9 +145,52 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
       <Divider />
       <DialogContent>
         <Formik initialValues={inputs} enableReinitialize validationSchema={validationSchema} onSubmit={submit}>
-          {({ errors, handleBlur, handleChange, handleSubmit, touched, values, isSubmitting }) => (
-            <form noValidate onSubmit={handleSubmit}>
-              <Grid container spacing={2}>
+          {({ errors, handleBlur, handleChange, handleSubmit, touched, values, isSubmitting }) => {
+            const canEditGroup = !values.is_edit || values.role === 1;
+            return (
+              <form noValidate onSubmit={handleSubmit}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth error={Boolean(touched.group && errors.group)} sx={{ ...theme.typography.otherInput }}>
+                      <InputLabel htmlFor="channel-group-label">{t('userPage.group')}</InputLabel>
+                      <Select
+                        id="channel-group-label"
+                        label={t('userPage.group')}
+                        value={values.group}
+                        name="group"
+                        onBlur={handleBlur}
+                        onChange={handleChange}
+                        size="small"
+                        disabled={!canEditGroup}
+                        MenuProps={{
+                          PaperProps: {
+                            style: {
+                              maxHeight: 200
+                            }
+                          }
+                        }}
+                      >
+                        {groupOptions.map((option) => {
+                          return (
+                            <MenuItem key={option} value={option}>
+                              {option}
+                            </MenuItem>
+                          );
+                        })}
+                      </Select>
+                      {touched.group && errors.group && (
+                        <FormHelperText error id="helper-tex-channel-group-label">
+                          {t(errors.group)}
+                        </FormHelperText>
+                      )}
+                    </FormControl>
+                    {!canEditGroup && (
+                      <FormHelperText sx={{ mt: 0.5 }}>{t('userPage.changeGroupOnlyCommon')}</FormHelperText>
+                    )}
+                    {canEditGroup && (
+                      <FormHelperText sx={{ mt: 0.5 }}>{t('userPage.changeGroupDesc')}</FormHelperText>
+                    )}
+                  </Grid>
                 <Grid item xs={12} md={6}>
                   <FormControl fullWidth error={Boolean(touched.username && errors.username)} sx={{ ...theme.typography.otherInput }}>
                 <InputLabel htmlFor="channel-username-label">{t('userPage.username')}</InputLabel>
@@ -226,43 +270,7 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                 )}
                   </FormControl>
                 </Grid>
-                {/* 创建用户时需选择分组 */}
-                {!values.is_edit && (
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth error={Boolean(touched.group && errors.group)} sx={{ ...theme.typography.otherInput }}>
-                    <InputLabel htmlFor="channel-group-label">{t('userPage.group')}</InputLabel>
-                    <Select
-                      id="channel-group-label"
-                      label={t('userPage.group')}
-                      value={values.group}
-                      name="group"
-                      onBlur={handleBlur}
-                      onChange={handleChange}
-                      size="small"
-                      MenuProps={{
-                        PaperProps: {
-                          style: {
-                            maxHeight: 200
-                          }
-                        }
-                      }}
-                    >
-                      {groupOptions.map((option) => {
-                        return (
-                          <MenuItem key={option} value={option}>
-                            {option}
-                          </MenuItem>
-                        );
-                      })}
-                    </Select>
-                    {touched.group && errors.group && (
-                      <FormHelperText error id="helper-tex-channel-group-label">
-                        {t(errors.group)}
-                      </FormHelperText>
-                    )}
-                    </FormControl>
-                  </Grid>
-                )}
+                
               </Grid>
               <DialogActions>
                 <Button onClick={onCancel}>{t('userPage.cancel')}</Button>
@@ -271,7 +279,8 @@ const EditModal = ({ open, userId, onCancel, onOk }) => {
                 </Button>
               </DialogActions>
             </form>
-          )}
+            );
+          }}
         </Formik>
       </DialogContent>
     </Dialog>

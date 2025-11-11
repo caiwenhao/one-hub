@@ -579,6 +579,7 @@ func CreateUser(c *gin.Context) {
 type ManageRequest struct {
 	Username string `json:"username"`
 	Action   string `json:"action"`
+	Group    string `json:"group,omitempty"`
 }
 
 // ManageUser Only admin user can do this
@@ -613,6 +614,7 @@ func ManageUser(c *gin.Context) {
 		})
 		return
 	}
+	originalGroup := user.Group
 	switch req.Action {
 	case "disable":
 		user.Status = config.UserStatusDisabled
@@ -672,6 +674,39 @@ func ManageUser(c *gin.Context) {
 			return
 		}
 		user.Role = config.RoleCommonUser
+	case "group":
+		if user.Role != config.RoleCommonUser {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "仅能调整普通用户的分组",
+			})
+			return
+		}
+		if req.Group == "" {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "目标分组不能为空",
+			})
+			return
+		}
+		targetGroup := model.GlobalUserGroupRatio.GetBySymbol(req.Group)
+		if targetGroup == nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "目标分组不存在或未启用",
+			})
+			return
+		}
+		if user.Group == req.Group {
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "",
+				"data":    gin.H{"group": user.Group},
+			})
+			return
+		}
+		originalGroup = user.Group
+		user.Group = req.Group
 	}
 
 	if err := user.Update(false); err != nil {
@@ -681,9 +716,13 @@ func ManageUser(c *gin.Context) {
 		})
 		return
 	}
+	if req.Action == "group" && originalGroup != user.Group {
+		model.RecordLog(user.Id, model.LogTypeManage, fmt.Sprintf("管理员将用户分组从 %s 调整为 %s", originalGroup, user.Group))
+	}
 	clearUser := model.User{
 		Role:   user.Role,
 		Status: user.Status,
+		Group:  user.Group,
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

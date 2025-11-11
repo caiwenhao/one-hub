@@ -55,7 +55,7 @@ const originInputs = {
   name: '',
   remain_quota: 0,
   expired_time: -1,
-  unlimited_quota: false,
+  unlimited_quota: true,
   group: '',
 
   setting: {

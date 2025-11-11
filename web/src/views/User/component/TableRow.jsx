@@ -40,7 +40,7 @@ function renderRole(t, role) {
   }
 }
 
-export default function UsersTableRow({ item, manageUser, handleOpenModal, setModalUserId }) {
+export default function UsersTableRow({ item, manageUser, handleOpenModal, setModalUserId, handleOpenGroupModal, handleOpenAllowedModal }) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [open, setOpen] = useState(null);
@@ -188,6 +188,26 @@ export default function UsersTableRow({ item, manageUser, handleOpenModal, setMo
           <Icon icon="solar:pen-bold-duotone" style={{ marginRight: '16px' }} />
           {t('common.edit')}
         </MenuItem>
+        {item.role === 1 && (
+          <MenuItem
+            onClick={() => {
+              handleCloseMenu();
+              handleOpenGroupModal(item);
+            }}
+          >
+            <Icon icon="solar:users-group-rounded-bold-duotone" style={{ marginRight: '16px' }} />
+            {t('userPage.changeGroup')}
+          </MenuItem>
+        )}
+        <MenuItem
+          onClick={() => {
+            handleCloseMenu();
+            handleOpenAllowedModal(item);
+          }}
+        >
+          <Icon icon="solar:checklist-minimalistic-bold-duotone" style={{ marginRight: '16px' }} />
+          {t('userPage.allowedGroups')}
+        </MenuItem>
         <MenuItem
           onClick={() => {
             handleCloseMenu();
@@ -263,5 +283,7 @@ UsersTableRow.propTypes = {
   item: PropTypes.object,
   manageUser: PropTypes.func,
   handleOpenModal: PropTypes.func,
-  setModalUserId: PropTypes.func
+  setModalUserId: PropTypes.func,
+  handleOpenGroupModal: PropTypes.func,
+  handleOpenAllowedModal: PropTypes.func
 };

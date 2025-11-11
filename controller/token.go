@@ -260,19 +260,30 @@ func UpdateToken(c *gin.Context) {
 }
 
 func validateTokenGroup(tokenGroup string, userId int) error {
-	userGroup, _ := model.CacheGetUserGroup(userId)
-	if userGroup == "" {
-		return errors.New("获取用户组信息失败")
-	}
+    userGroup, _ := model.CacheGetUserGroup(userId)
+    if userGroup == "" {
+        return errors.New("获取用户组信息失败")
+    }
 
 	groupRatio := model.GlobalUserGroupRatio.GetBySymbol(tokenGroup)
 	if groupRatio == nil {
 		return errors.New("无效的用户组")
 	}
 
-	if !groupRatio.Public && userGroup != tokenGroup {
-		return errors.New("当前用户组无权使用指定的分组")
-	}
+    if !groupRatio.Public && userGroup != tokenGroup {
+        // 非公开分组：需在用户授权白名单内
+        allowed, _ := model.GetAllowedGroupsByUser(userId)
+        ok := false
+        for _, g := range allowed {
+            if g == tokenGroup {
+                ok = true
+                break
+            }
+        }
+        if !ok {
+            return errors.New("当前用户无权使用指定的分组")
+        }
+    }
 
 	return nil
 }

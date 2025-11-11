@@ -176,7 +176,15 @@ export default function TokensTableRow({ item, manageToken, handleOpenModal, set
       <TableRow tabIndex={item.id}>
         <TableCell>{item.name}</TableCell>
         <TableCell>
-          <Label color={userGroup[item.group]?.color}>{userGroup[item.group]?.name || '跟随用户'}</Label>
+          <Label color={userGroup[item.group]?.color}>
+            {(() => {
+              if (!item.group || item.group === '') {
+                return t('token_index.followUser');
+              }
+              // 优先显示分组名称；若 user_group_map 不包含该分组（如非公开授权分组），降级显示符号本身
+              return userGroup[item.group]?.name || item.group;
+            })()}
+          </Label>
         </TableCell>
 
         <TableCell>

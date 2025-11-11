@@ -39,6 +39,7 @@ export default function Token() {
   const [refreshFlag, setRefreshFlag] = useState(false);
   const { loadUserGroup } = useContext(UserContext);
   const [userGroupOptions, setUserGroupOptions] = useState([]);
+  const [allowedGroups, setAllowedGroups] = useState([]);
 
   const [openModal, setOpenModal] = useState(false);
   const [editTokenId, setEditTokenId] = useState(0);
@@ -115,12 +116,36 @@ export default function Token() {
   }, [loadUserGroup]);
 
   useEffect(() => {
-    let options = [];
-    Object.values(userGroup).forEach((item) => {
-      options.push({ label: `${item.name} (倍率：${item.ratio})`, value: item.symbol });
+    // 获取当前用户的授权分组；为空时仅展示“公开分组 + 自身分组”
+    (async () => {
+      try {
+        const res = await API.get('/api/user/allowed_groups');
+        if (res?.data?.success) {
+          setAllowedGroups(res.data.data || []);
+        }
+      } catch (e) {
+        // 静默失败，沿用全部分组
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    // 构建可选分组 = 公开分组+自身分组 ∪ 授权分组（确保授权的非公开分组也能选择）
+    const baseSymbols = Object.keys(userGroup || {});
+    const unionSet = new Set([...(allowedGroups || []), ...baseSymbols]);
+    const symbols = Array.from(unionSet);
+
+    const options = symbols.map((sym) => {
+      const item = userGroup[sym];
+      if (item) {
+        return { label: `${item.name} (倍率：${item.ratio})`, value: item.symbol };
+      }
+      // 对于授权但非公开的分组，后端不返回详细信息，这里降级显示符号
+      return { label: sym, value: sym };
     });
+
     setUserGroupOptions(options);
-  }, [userGroup]);
+  }, [userGroup, allowedGroups]);
 
   const manageToken = async (id, action, value) => {
     const url = '/api/token/';
