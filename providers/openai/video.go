@@ -268,62 +268,78 @@ func (p *OpenAIProvider) createOfficialVideo(request *types.VideoCreateRequest) 
 		contentType = p.Context.Request.Header.Get("Content-Type")
 	}
 
-	if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
-		urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
-		if errWithCode != nil {
-			return nil, errWithCode
-		}
-		fullURL := p.GetFullRequestURL(urlPath, request.Model)
-		// 透传原始 body
-		raw, ok := p.GetRawBody()
-		if !ok {
-			return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
-		}
-		headers := p.GetRequestHeaders()
+    if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
+        urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
+        if errWithCode != nil {
+            return nil, errWithCode
+        }
+        fullURL := p.GetFullRequestURL(urlPath, request.Model)
+        // 透传原始 body
+        raw, ok := p.GetRawBody()
+        if !ok {
+            return nil, common.StringErrorWrapperLocal("missing raw multipart body", "missing_body", http.StatusBadRequest)
+        }
+        headers := p.GetRequestHeaders()
+        // 关键修复：将下游原始 Content-Type（含 boundary）透传到上游
+        if ct := strings.TrimSpace(contentType); ct != "" {
+            headers["Content-Type"] = ct
+        }
 
 		// 调试输出：解析 multipart 中的 seconds 字段，辅助定位上游严格校验失败
-		func() {
-			ct := headers["Content-Type"]
-			secondsVal := ""
-			if ct != "" {
-				if mt, params, e := mime.ParseMediaType(ct); e == nil && strings.HasPrefix(strings.ToLower(mt), "multipart/") {
-					if boundary := params["boundary"]; strings.TrimSpace(boundary) != "" {
-						mr := multipart.NewReader(bytes.NewReader(raw), boundary)
-						for {
-							part, e2 := mr.NextPart()
-							if e2 == io.EOF { break }
-							if e2 != nil { break }
-							name := part.FormName()
-							if name == "seconds" && part.FileName() == "" {
-								b, _ := io.ReadAll(part)
-								secondsVal = strings.TrimSpace(string(b))
-								_ = part.Close()
-								break
-							}
-							_ = part.Close()
-						}
-					}
-				}
-			}
-			logger.SysDebug(fmt.Sprintf("video.create.multipart debug -> ct=%s seconds_field=%q raw_len=%d", ct, secondsVal, len(raw)))
-		}()
-		// EzlinkAI: 严格秒数校验（仅允许 4/8/12），不做宽松归一化
-		var httpReq *http.Request
-		base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
-		if strings.Contains(base, "ezlinkai.com") {
-			if ct := headers["Content-Type"]; strings.TrimSpace(ct) != "" {
-				if err := p.validateMultipartSecondsEzlinkAI(raw, ct); err != nil {
-					logger.SysDebug(fmt.Sprintf("video.create.multipart validate_seconds failed -> err=%s", err.Error()))
-					return nil, common.StringErrorWrapperLocal(err.Error(), "invalid_seconds", http.StatusBadRequest)
-				}
-			}
-		}
-		if req2, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers)); e == nil {
-			httpReq = req2
-		} else {
-			return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError)
-		}
-		defer httpReq.Body.Close()
+        func() {
+            // 使用已透传的 contentType 解析 seconds，避免 headers 中缺失导致日志/校验失真
+            ct := headers["Content-Type"]
+            secondsVal := ""
+            if ct != "" {
+                if mt, params, e := mime.ParseMediaType(ct); e == nil && strings.HasPrefix(strings.ToLower(mt), "multipart/") {
+                    if boundary := params["boundary"]; strings.TrimSpace(boundary) != "" {
+                        mr := multipart.NewReader(bytes.NewReader(raw), boundary)
+                        for {
+                            part, e2 := mr.NextPart()
+                            if e2 == io.EOF { break }
+                            if e2 != nil { break }
+                            name := part.FormName()
+                            if name == "seconds" && part.FileName() == "" {
+                                b, _ := io.ReadAll(part)
+                                secondsVal = strings.TrimSpace(string(b))
+                                _ = part.Close()
+                                break
+                            }
+                            _ = part.Close()
+                        }
+                    }
+                }
+            }
+            logger.SysDebug(fmt.Sprintf("video.create.multipart debug -> ct=%s seconds_field=%q raw_len=%d", ct, secondsVal, len(raw)))
+        }()
+        // EzlinkAI: 严格秒数校验（仅允许 4/8/12），不做宽松归一化
+        var httpReq *http.Request
+        base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
+        if strings.Contains(base, "ezlinkai.com") {
+            if ct := headers["Content-Type"]; strings.TrimSpace(ct) != "" {
+                if err := p.validateMultipartSecondsEzlinkAI(raw, ct); err != nil {
+                    logger.SysDebug(fmt.Sprintf("video.create.multipart validate_seconds failed -> err=%s", err.Error()))
+                    return nil, common.StringErrorWrapperLocal(err.Error(), "invalid_seconds", http.StatusBadRequest)
+                }
+            }
+        }
+        if req2, e := p.Requester.NewRequest(
+            http.MethodPost,
+            fullURL,
+            p.Requester.WithBody(raw),
+            p.Requester.WithHeader(headers),
+        ); e == nil {
+            httpReq = req2
+        } else {
+            return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError)
+        }
+        // 最佳实践：同步下游 Content-Length，必要时回落为原始字节长度
+        if p.Context != nil && p.Context.Request != nil && p.Context.Request.ContentLength > 0 {
+            httpReq.ContentLength = p.Context.Request.ContentLength
+        } else {
+            httpReq.ContentLength = int64(len(raw))
+        }
+        defer httpReq.Body.Close()
 
 		response := &openAIVideoResponse{}
 		_, errWithCode = p.Requester.SendRequest(httpReq, response, false)

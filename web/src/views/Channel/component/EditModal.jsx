@@ -88,8 +88,7 @@ const OPENAI_UPSTREAM_OPTIONS = [
   { value: 'openrouter', label: 'OpenRouter（聚合）' },
   { value: 'mountsea', label: 'MountSea' },
   { value: 'sutui', label: '速推 Sutui' },
-  { value: 'apimart', label: 'Apimart（Sora 聚合）' },
-  { value: 'ezlinkai', label: 'EzlinkAI（OpenAI 兼容）' }
+  { value: 'apimart', label: 'Apimart（Sora 聚合）' }
 ];
 
 // Gemini 上游供应商选项（官方原生 / 官方 OpenAI 兼容 / 第三方 OpenAI 兼容）
@@ -720,8 +719,6 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                           setFieldValue('base_url', 'https://api.sora2.pub');
                         } else if (next === 'apimart') {
                           setFieldValue('base_url', 'https://api.apimart.ai');
-                        } else if (next === 'ezlinkai') {
-                          setFieldValue('base_url', 'https://api.ezlinkai.com');
                         } else if (next === 'official' || next === '') {
                           setFieldValue('base_url', 'https://api.openai.com');
                         }
@@ -763,18 +760,6 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                               if (!values.test_model) setFieldValue('test_model', 'sora-2');
                             }
                           } catch (_) {}
-                        } else if (next === 'ezlinkai') {
-                          // EzlinkAI：开放 OpenAI 官方模型；若为空则自动填充
-                          try {
-                            const ezModels = ['sora-2'];
-                            const current = Array.isArray(values.models) ? values.models : [];
-                            if (current.length === 0) {
-                              const prefill = ezModels.map((id) => ({ id, group: 'OpenAI Video' }));
-                              setFieldValue('models', prefill);
-                              if (!values.test_model) setFieldValue('test_model', 'sora-2');
-                            }
-                          } catch (_) {}
-                          setFieldValue('plugin.sora.vendor', '');
                         } else {
                           // 清理避免误判
                           setFieldValue('plugin.sora.vendor', '');
