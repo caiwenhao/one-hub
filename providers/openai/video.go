@@ -901,18 +901,9 @@ func (p *OpenAIProvider) downloadMountSeaVideo(videoID string, variant string) (
 }
 
 func (p *OpenAIProvider) createApimartVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-	// 严格校验：
-	modelName := strings.ToLower(strings.TrimSpace(request.Model))
-	secs := request.Seconds
-	if modelName == "sora-2-pro" {
-		if !(secs == 15 || secs == 25) {
-			return nil, common.StringErrorWrapperLocal("seconds must be 15 or 25 for apimart (sora-2-pro)", "invalid_seconds", http.StatusBadRequest)
-		}
-	} else { // 默认按 sora-2 处理
-		if !(secs == 10 || secs == 15) {
-			return nil, common.StringErrorWrapperLocal("seconds must be 10 or 15 for apimart (sora-2)", "invalid_seconds", http.StatusBadRequest)
-		}
-	}
+    // 与官方对齐：不对外部请求做刚性秒数限制，内部归一化为上游可接受档位
+    modelName := strings.ToLower(strings.TrimSpace(request.Model))
+    secs := normalizeApimartSeconds(modelName, request.Seconds)
 
     // 收集参考图 URL：支持 JSON（input_image(s)）与 multipart 文件（input_reference/input_images）
     collectedURLs := []string{}
@@ -1001,6 +992,8 @@ func (p *OpenAIProvider) createApimartVideo(request *types.VideoCreateRequest) (
     if strings.TrimSpace(overridePrompt) != "" { promptForUp = overridePrompt }
     secondsForUp := secs
     if overrideSeconds > 0 { secondsForUp = overrideSeconds }
+    // 再次归一化（兼容 multipart 覆盖）
+    secondsForUp = normalizeApimartSeconds(modelForUp, secondsForUp)
     sizeForUp := request.Size
     if strings.TrimSpace(overrideSize) != "" { sizeForUp = overrideSize }
 
@@ -1046,19 +1039,19 @@ func (p *OpenAIProvider) createApimartVideo(request *types.VideoCreateRequest) (
 		return nil, common.StringErrorWrapperLocal("invalid upstream response", "bad_upstream", http.StatusBadGateway)
 	}
 
-	task := resp.Data[0]
-	job := &types.VideoJob{
-		ID:        task.TaskID,
-		Object:    "video",
-		Model:     request.Model,
-		Status:    mapApimartStatus(task.Status),
-		Progress:  0,
-		Seconds:   request.Seconds,
-		Size:      request.Size,
-		Quality:   "standard",
-		CreatedAt: time.Now().Unix(),
-		Prompt:    request.Prompt,
-	}
+    task := resp.Data[0]
+    job := &types.VideoJob{
+        ID:        task.TaskID,
+        Object:    "video",
+        Model:     request.Model,
+        Status:    mapApimartStatus(task.Status),
+        Progress:  0,
+        Seconds:   secondsForUp,
+        Size:      request.Size,
+        Quality:   "standard",
+        CreatedAt: time.Now().Unix(),
+        Prompt:    request.Prompt,
+    }
 	if job.Status == "" {
 		job.Status = "queued"
 	}
@@ -1884,6 +1877,24 @@ func buildApimartAspectRatio(size string) string {
 		return "16:9"
 	}
 	return ""
+}
+
+// normalizeApimartSeconds 将对外暴露的 OpenAI seconds 归一化到 apimart 支持的档位
+// 规则：
+// - sora-2：<=10 => 10；>10 => 15；缺省或非法 -> 10
+// - sora-2-pro：<=15 => 15；>15 => 25；缺省或非法 -> 15
+// - 其他模型名：按 sora-2 处理（更保守）
+func normalizeApimartSeconds(model string, seconds int) int {
+    m := strings.ToLower(strings.TrimSpace(model))
+    if m == "sora-2-pro" {
+        if seconds <= 0 { return 15 }
+        if seconds <= 15 { return 15 }
+        return 25
+    }
+    // 默认 sora-2
+    if seconds <= 0 { return 10 }
+    if seconds <= 10 { return 10 }
+    return 15
 }
 
 func mapApimartStatus(status string) string {
