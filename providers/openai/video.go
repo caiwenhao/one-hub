@@ -12,7 +12,6 @@ import (
 	"one-api/common"
 	"one-api/common/config"
 	"one-api/common/logger"
-	"one-api/common/requester"
 	"one-api/common/storage"
 	"one-api/common/utils"
 	"one-api/types"
@@ -1217,29 +1216,12 @@ func (p *OpenAIProvider) createSutuiVideo(request *types.VideoCreateRequest) (*t
 		if strings.TrimSpace(reqCopy.Size) != "" {
 			_ = builder.WriteField("size", reqCopy.Size)
 		}
-		// 参考图 URL：下载后作为文件字段追加（默认不镜像，直接直传）
-		const sutuiMaxImage = 10 * 1024 * 1024
-		urlFilesAppended := 0
-		appendURL := func(u string) {
-			u = strings.TrimSpace(u)
-			if u == "" { return }
-			if data, filename, e := fetchImageForSutui(u, sutuiMaxImage); e == nil && len(data) > 0 {
-				if err := builder.CreateFormFileReader("input_images", bytes.NewReader(data), filename); err == nil {
-					urlFilesAppended++
-				}
-			}
-		}
-		if len(request.InputImages) > 0 {
-			for _, u := range request.InputImages { appendURL(u) }
-		}
-		if strings.TrimSpace(request.InputImage) != "" { appendURL(request.InputImage) }
-
-		// 其它可选参数（若将来 Sutui 支持可扩展）
-		_ = builder.Close()
-		// Debug: 仅记录成功追加的 URL 文件数量
-		logger.SysDebug(fmt.Sprintf("sutui.gen debug -> url_files_appended=%d", urlFilesAppended))
-		headers["Content-Type"] = builder.FormDataContentType()
-		req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(&buf), p.Requester.WithHeader(headers))
+    // Sutui 图生视频仅保留本地文件方式：input_reference。
+    // 此处不再处理任何 URL 下载到文件的逻辑（不支持 image_urls / input_image(s) 的 URL）。
+    // 其它可选参数（若将来 Sutui 支持可扩展）
+    _ = builder.Close()
+    headers["Content-Type"] = builder.FormDataContentType()
+    req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(&buf), p.Requester.WithHeader(headers))
 		if err != nil {
 			return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
 		}
@@ -1294,8 +1276,8 @@ func (p *OpenAIProvider) rewriteMultipartForSutui(raw []byte, contentType string
 		return nil, "", fmt.Errorf("missing boundary")
 	}
 
-	// 解析原始 multipart
-	mr := multipart.NewReader(bytes.NewReader(raw), boundary)
+    // 解析原始 multipart
+    mr := multipart.NewReader(bytes.NewReader(raw), boundary)
 	// 暂存字段与文件
 	type filePart struct {
 		field    string
@@ -1304,12 +1286,11 @@ func (p *OpenAIProvider) rewriteMultipartForSutui(raw []byte, contentType string
 	}
 	fields := map[string][]string{}
 	files := []filePart{}
-	urlFilesAppended := 0
-	for {
-		part, e := mr.NextPart()
-		if e == io.EOF {
-			break
-		}
+    for {
+        part, e := mr.NextPart()
+        if e == io.EOF {
+            break
+        }
 		if e != nil {
 			return nil, "", e
 		}
@@ -1319,15 +1300,18 @@ func (p *OpenAIProvider) rewriteMultipartForSutui(raw []byte, contentType string
 			_ = part.Close()
 			continue
 		}
-		if fn := part.FileName(); fn != "" {
-			b, e2 := io.ReadAll(part)
-			_ = part.Close()
-			if e2 != nil {
-				return nil, "", e2
-			}
-			files = append(files, filePart{field: name, filename: fn, data: b})
-			continue
-		}
+        if fn := part.FileName(); fn != "" {
+            b, e2 := io.ReadAll(part)
+            _ = part.Close()
+            if e2 != nil {
+                return nil, "", e2
+            }
+            // 仅保留 Sutui 约定的本地文件参考图字段：input_reference
+            if strings.EqualFold(strings.TrimSpace(name), "input_reference") {
+                files = append(files, filePart{field: "input_reference", filename: fn, data: b})
+            }
+            continue
+        }
 		b, e3 := io.ReadAll(part)
 		_ = part.Close()
 		if e3 != nil {
@@ -1348,26 +1332,8 @@ func (p *OpenAIProvider) rewriteMultipartForSutui(raw []byte, contentType string
 		}
 	}
 
-	// 将文本字段中的 URL 参考图下载为文件并追加
-	const maxImageSize = 10 * 1024 * 1024
-	appendURL := func(u string) {
-		u = strings.TrimSpace(u)
-		if u == "" { return }
-		if data, filename, e := fetchImageForSutui(u, maxImageSize); e == nil && len(data) > 0 {
-			files = append(files, filePart{field: "input_images", filename: filename, data: data})
-			urlFilesAppended++
-		}
-	}
-	if arr, ok := fields["input_image"]; ok {
-		for _, u := range arr { appendURL(u) }
-	}
-	if arr, ok := fields["input_images"]; ok {
-		for _, u := range arr { appendURL(u) }
-	}
-
-	// 决策 SKU（严格）：若秒数不合法将返回空 sku
-	// Debug: 记录从 URL 追加的文件数量
-	logger.SysDebug(fmt.Sprintf("sutui.rewrite debug -> url_files_appended=%d", urlFilesAppended))
+    // 不再处理任何 URL→文件 的转换，仅透传 input_reference 文件。
+    // 决策 SKU（严格）：若秒数不合法将返回空 sku
 
 	sku, slotSec := pickSutuiSKU(originalModel, size, seconds)
 	if strings.TrimSpace(sku) == "" || slotSec == 0 {
@@ -1548,60 +1514,8 @@ func pickSutuiSKU(originalModel string, size string, seconds int) (sku string, s
 	return base + "-landscape-15s", 15
 }
 
-// fetchImageForSutui 下载 URL 图片到内存并返回数据与建议文件名（带扩展名）。仅支持 http/https。
-func fetchImageForSutui(u string, maxSize int) ([]byte, string, error) {
-    if !(strings.HasPrefix(strings.ToLower(u), "http://") || strings.HasPrefix(strings.ToLower(u), "https://")) {
-        return nil, "", fmt.Errorf("unsupported image url")
-    }
-    client := requester.HTTPClient
-    if client == nil {
-        client = http.DefaultClient
-    }
-    req, err := http.NewRequest(http.MethodGet, u, nil)
-    if err != nil {
-        return nil, "", err
-    }
-    // 设置较小的超时保护（如全局未设置）
-    // 注意：requester.HTTPClient 可能已配置全局超时/代理
-    resp, err := client.Do(req)
-    if err != nil {
-        return nil, "", err
-    }
-    defer resp.Body.Close()
-    if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-        return nil, "", fmt.Errorf("bad status: %d", resp.StatusCode)
-    }
-    // 限流读取
-    lr := io.LimitReader(resp.Body, int64(maxSize)+1)
-    data, err := io.ReadAll(lr)
-    if err != nil {
-        return nil, "", err
-    }
-    if len(data) == 0 || len(data) > maxSize {
-        return nil, "", fmt.Errorf("image too large or empty")
-    }
-    // 推断扩展名
-    ext := ".jpg"
-    ct := strings.ToLower(strings.TrimSpace(resp.Header.Get("Content-Type")))
-    switch {
-    case strings.Contains(ct, "image/png"):
-        ext = ".png"
-    case strings.Contains(ct, "image/webp"):
-        ext = ".webp"
-    case strings.Contains(ct, "image/jpeg"), strings.Contains(ct, "image/jpg"):
-        ext = ".jpg"
-    default:
-        // 尝试从 URL 路径推断
-        if u2, err := url.Parse(u); err == nil {
-            if e := strings.ToLower(filepath.Ext(u2.Path)); e == ".png" || e == ".webp" || e == ".jpg" || e == ".jpeg" {
-                ext = e
-            }
-        }
-    }
-    // 生成文件名
-    filename := utils.GetUUID() + ext
-    return data, filename, nil
-}
+// 说明：Sutui 仅保留本地文件参考图（input_reference）。
+// 不再支持将文本 URL 下载为文件的逻辑。
 
 func (p *OpenAIProvider) retrieveSutuiVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
 	fullURL := p.buildOfficialVideoURL(videoID, "")

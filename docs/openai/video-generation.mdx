@@ -15,7 +15,7 @@ curl -X POST "https://models.kapon.cloud/v1/videos" \
   -H "Authorization: Bearer $TOKEN" \
   -F "model=sora-2" \
   -F "prompt=百事可乐宣传片" \
-  -F "seconds=4" \
+  -F "seconds=10" \
   -F "size=720x1280"
 ```
 
@@ -23,11 +23,16 @@ curl -X POST "https://models.kapon.cloud/v1/videos" \
 
 - `model`：模型名称，支持 `sora-2` 和 `sora-2-pro`
 - `prompt`：视频生成的文本描述
-- `seconds`：视频时长（秒，字符串传递更兼容），仅支持 `4`、`8`、`12`，默认 `4`
+- `seconds`：视频时长（秒，字符串传递更兼容）。常见可用档位：
+  - `sora-2`：`10`、`15`
+  - `sora-2-pro`：`15`、`25`
+  - 特定上游（如 `ezlinkai`）仅支持：`4`、`8`、`12`
 - `size`：视频分辨率，如 `1280x720`、`1920x1080`
 
 <Callout type="tip">
-仅支持 4/8/12 秒。较短的视频时长（4、8、12 秒）可以更快生成，适合快速预览或短视频场景。
+时长选择建议：
+- 快速预览：优先 10 秒（或在 `ezlinkai` 上游使用 4/8/12 秒）
+- 正式成片：`sora-2-pro` 的 25 秒可以呈现更完整叙事，但生成与下载时间也更长
 </Callout>
 
 ### 响应示例
@@ -69,7 +74,7 @@ RESPONSE=$(curl -X POST "https://models.kapon.cloud/v1/videos" \
   -H "Authorization: Bearer $TOKEN" \
   -F "model=sora-2" \
   -F "prompt=百事可乐宣传片" \
-  -F "seconds=4" \
+  -F "seconds=10" \
   -F "size=720x1280")
 
 VIDEO_ID=$(echo $RESPONSE | jq -r '.id')
@@ -136,13 +141,13 @@ curl -X POST "https://models.kapon.cloud/v1/videos" \
   -H "Authorization: Bearer $TOKEN" \
   -F "model=sora-2" \
   -F "prompt=百事可乐宣传片，都市街拍风，年轻活力，镜头运动丰富" \
-  -F "seconds=4" \
+  -F "seconds=10" \
   -F "size=720x1280" \
   -F "input_reference=@/absolute/path/to/ref.jpg"
 ```
 
 <Callout type="warning">
-部分上游（如 ezlinkai）对 `seconds` 有严格要求：必须是 4、8 或 12 且必须在 multipart 中显式出现。请确保 `-F seconds=4` 使用的是纯数字，不要加引号，也不要误用 Bash/Zsh 的保留变量 `SECONDS`。
+若通道为 `ezlinkai`，`seconds` 必须是 4、8 或 12 且需在 multipart 表单中显式提供。请确保 `-F seconds=8` 使用的是纯数字，不要加引号，也不要误用 Bash/Zsh 的保留变量 `SECONDS`。
 </Callout>
 
 ### Python SDK 示例（openai-python）
@@ -159,7 +164,7 @@ with open("./ref.jpg", "rb") as f:
     job = client.videos.create(
         model="sora-2",
         prompt="百事可乐宣传片，都市街拍风，年轻活力，镜头运动丰富",
-        seconds="4",          # 以字符串传递更兼容
+        seconds="10",         # 以字符串传递更兼容
         size="720x1280",
         input_reference=f,     # 关键：参考图文件
     )
