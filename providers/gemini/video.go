@@ -84,14 +84,6 @@ func buildVeoInitPayload(prompt string, seconds int, size string, refs []string,
 
 func (p *GeminiProvider) CreateVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
     modelName := strings.TrimSpace(normalizeVeoModel(request.Model))
-    // 仅允许官方型号
-    allowed := map[string]bool{
-        "veo-3.1-generate-preview":       true,
-        "veo-3.1-fast-generate-preview":  true,
-    }
-    if !allowed[strings.ToLower(modelName)] {
-        return nil, common.StringErrorWrapperLocal("model not supported by Gemini Veo adapter", "invalid_model", http.StatusBadRequest)
-    }
 
     // 预处理：扩展视频需要获得历史成片的 uri
     extendURI := ""
@@ -113,6 +105,25 @@ func (p *GeminiProvider) CreateVideo(request *types.VideoCreateRequest) (*types.
 
     // 分供应商处理
     vendor := p.detectVeoVendor()
+
+    // 允许的型号按供应商划分：
+    allowed := map[string]bool{
+        "veo-3.1-generate-preview":      true,
+        "veo-3.1-fast-generate-preview": true,
+    }
+    if vendor == "ezlinkai" {
+        // ezlinkai 支持 3.0 preview/fast 族
+        allowed = map[string]bool{
+            "veo-3.0-generate-preview":      true,
+            "veo-3.0-fast-generate-preview": true,
+            // 兼容 3.1 如需
+            "veo-3.1-generate-preview":      true,
+            "veo-3.1-fast-generate-preview": true,
+        }
+    }
+    if !allowed[strings.ToLower(modelName)] {
+        return nil, common.StringErrorWrapperLocal("model not supported by Gemini Veo adapter", "invalid_model", http.StatusBadRequest)
+    }
     var id string
     switch vendor {
     case "apimart":
@@ -120,6 +131,13 @@ func (p *GeminiProvider) CreateVideo(request *types.VideoCreateRequest) (*types.
             return nil, common.StringErrorWrapperLocal("extend video is not supported for apimart vendor", "not_implemented", http.StatusNotImplemented)
         }
         taskID, e := p.relayPredictLongRunningViaApimart(modelName, request.Prompt, request.Seconds, request.Size, request.InputReference)
+        if e != nil { return nil, e }
+        id = taskID
+    case "ezlinkai":
+        if extendURI != "" {
+            return nil, common.StringErrorWrapperLocal("extend video is not supported for ezlinkai vendor", "not_implemented", http.StatusNotImplemented)
+        }
+        taskID, e := p.relayPredictLongRunningViaEzlinkai(modelName, request.Prompt, request.Seconds, request.Size, request.InputReference)
         if e != nil { return nil, e }
         id = taskID
     default:
@@ -163,6 +181,14 @@ func (p *GeminiProvider) RetrieveVideo(videoID string) (*types.VideoJob, *types.
         // GET /v1/tasks/{id}
         base := strings.TrimSuffix(p.GetBaseURL(), "/")
         fullURL := fmt.Sprintf("%s/v1/tasks/%s", base, strings.TrimSpace(videoID))
+        headers := map[string]string{"Authorization": fmt.Sprintf("Bearer %s", p.Channel.Key)}
+        req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(headers))
+        if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
+        if req.Body != nil { defer req.Body.Close() }
+        if _, e := p.Requester.SendRequest(req, &data, false); e != nil { return nil, e }
+    } else if vendor == "ezlinkai" {
+        base := strings.TrimSuffix(p.GetBaseURL(), "/")
+        fullURL := fmt.Sprintf("%s/v1/video/generations/result?taskid=%s", base, strings.TrimSpace(videoID))
         headers := map[string]string{"Authorization": fmt.Sprintf("Bearer %s", p.Channel.Key)}
         req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(headers))
         if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
@@ -216,6 +242,34 @@ func (p *GeminiProvider) RetrieveVideo(videoID string) (*types.VideoJob, *types.
                 }
             } else if job.Status == "submitted" || job.Status == "pending" || job.Status == "processing" {
                 job.Status = "in_progress"
+            }
+        }
+        return job, nil
+    } else if vendor == "ezlinkai" {
+        // 适配 ezlinkai 查询结构
+        // 典型：{ task_id, task_status, video_result, video_results:[], duration }
+        st, _ := data["task_status"].(string)
+        status := strings.ToLower(strings.TrimSpace(st))
+        switch status {
+        case "succeed", "succeeded", "success":
+            job.Status = "completed"
+            job.Progress = 100
+        case "failed":
+            job.Status = "failed"
+        default:
+            job.Status = "in_progress"
+        }
+        if job.Status == "completed" {
+            if u, ok := data["video_result"].(string); ok && strings.TrimSpace(u) != "" {
+                job.VideoURL = strings.TrimSpace(u)
+            }
+            if job.VideoURL == "" {
+                if arr, ok := data["video_results"].([]any); ok && len(arr) > 0 {
+                    if s, ok2 := arr[0].(string); ok2 { job.VideoURL = strings.TrimSpace(s) }
+                }
+            }
+            if d, ok := data["duration"].(string); ok && strings.TrimSpace(d) != "" {
+                if n, err := strconv.Atoi(strings.Split(strings.TrimSpace(d), ".")[0]); err == nil { job.Seconds = n }
             }
         }
         return job, nil
@@ -273,7 +327,7 @@ func (p *GeminiProvider) DownloadVideo(videoID string, variant string) (*http.Re
     // 直连视频 URL：google 需要 x-goog-api-key；apimart 一般无需额外头
     vendor := p.detectVeoVendor()
     var headers map[string]string
-    if vendor == "apimart" {
+    if vendor == "apimart" || vendor == "ezlinkai" {
         headers = map[string]string{}
     } else {
         headers = p.GetRequestHeaders()

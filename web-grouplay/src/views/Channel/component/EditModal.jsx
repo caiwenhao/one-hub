@@ -97,7 +97,8 @@ const GEMINI_UPSTREAM_OPTIONS = [
   { value: 'official', label: '官方原生（/gemini 路由）' },
   { value: 'google_openai', label: '官方（OpenAI 兼容）' },
   { value: 'openrouter', label: 'OpenRouter（第三方 OpenAI 兼容）' },
-  { value: 'mountsea', label: 'MountSea（第三方 OpenAI 兼容）' }
+  { value: 'mountsea', label: 'MountSea（第三方 OpenAI 兼容）' },
+  { value: 'ezlinkai', label: 'EzlinkAI（第三方 OpenAI 兼容）' }
 ];
 
 const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, modelOptions, prices }) => {
@@ -804,7 +805,22 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                           // MountSea 需根据实际部署端点覆盖
                           setFieldValue('base_url', 'https://api.mountsea.ai');
                           setFieldValue('plugin.use_openai_api.enable', true);
+                        } else if (next === 'ezlinkai') {
+                          setFieldValue('base_url', 'https://api.ezlinkai.com');
+                          setFieldValue('plugin.use_openai_api.enable', true);
                         }
+                        // 同步到 gemini_video.vendor：用于 Veo 视频上游选择
+                        const plugin = values.plugin ? { ...values.plugin } : {};
+                        plugin.gemini_video = plugin.gemini_video || {};
+                        if (next === 'official' || next === '' || next === 'google_openai') {
+                          plugin.gemini_video.vendor = 'google';
+                        } else if (next === 'openrouter' || next === 'mountsea') {
+                          // 第三方 OpenAI 兼容并不提供 Veo，保持 google 以便使用官方 Veo
+                          plugin.gemini_video.vendor = 'google';
+                        } else if (next === 'ezlinkai') {
+                          plugin.gemini_video.vendor = 'ezlinkai';
+                        }
+                        setFieldValue('plugin', plugin);
                         // Gemini 渠道不使用第三方聚合 upstream 字段，保持 custom_parameter 干净
                         try {
                           const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};

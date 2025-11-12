@@ -310,7 +310,7 @@ func GeminiOperations(c *gin.Context) {
         return
     }
 
-    // 构造原生 URL 与请求头；若上游为 sutui，则改为查询 sutui /v1/videos 并转换为 operations
+    // 构造原生 URL 与请求头；若上游为 sutui/ezlinkai，则改为查询其任务接口并转换为 operations
     if gp, ok := provider.(*gemini.GeminiProvider); ok {
         // sutui 分支
         if gp != nil && strings.EqualFold(gp.DetectVeoVendorForOps(), "sutui") {
@@ -384,6 +384,81 @@ func GeminiOperations(c *gin.Context) {
                 if v := strings.TrimSpace(c.Query("duration")); v != "" {
                     if n, err := strconv.Atoi(v); err == nil { seconds = n }
                 }
+            }
+            if seconds > 0 {
+                usage := &types.Usage{PromptTokens: seconds}
+                q := relay_util.NewQuota(c, modelName, seconds)
+                q.Consume(c, usage, false)
+            }
+
+            _ = responseJsonClient(c, resp)
+            return
+        }
+
+        // ezlinkai 分支
+        if gp != nil && strings.EqualFold(gp.DetectVeoVendorForOps(), "ezlinkai") {
+            id := name
+            if strings.HasPrefix(id, "operations/") { id = strings.TrimPrefix(id, "operations/") }
+
+            base := strings.TrimSuffix(gp.GetBaseURL(), "/")
+            fullURL := fmt.Sprintf("%s/v1/video/generations/result?taskid=%s", base, id)
+            headers := map[string]string{"Authorization": fmt.Sprintf("Bearer %s", gp.GetChannel().Key)}
+
+            req, err := gp.Requester.NewRequest(http.MethodGet, fullURL, gp.Requester.WithHeader(headers))
+            if err != nil {
+                common.AbortWithMessage(c, http.StatusInternalServerError, "new_request_failed")
+                return
+            }
+            if req.Body != nil { defer req.Body.Close() }
+
+            var data map[string]any
+            if _, e := gp.Requester.SendRequest(req, &data, false); e != nil {
+                gemErr := gemini.OpenaiErrToGeminiErr(e)
+                status := e.StatusCode
+                if status == 0 { status = http.StatusBadRequest }
+                c.JSON(status, gemErr.GeminiErrorResponse)
+                return
+            }
+
+            // done 判定
+            st, _ := data["task_status"].(string)
+            sLower := strings.ToLower(strings.TrimSpace(st))
+            done := (sLower == "succeed" || sLower == "succeeded" || sLower == "failed")
+
+            // 提取视频 URL
+            video := ""
+            if u, ok := data["video_result"].(string); ok && strings.TrimSpace(u) != "" {
+                video = strings.TrimSpace(u)
+            } else if vs, ok := data["video_results"].([]any); ok && len(vs) > 0 {
+                if s, ok2 := vs[0].(string); ok2 { video = strings.TrimSpace(s) }
+            }
+            if strings.TrimSpace(video) != "" {
+                video = video2.ProxyVideoURL(video, id)
+            }
+
+            // 组装 operations 响应
+            sample := map[string]any{}
+            if video != "" { sample["video"] = map[string]any{"uri": video} }
+            // 尝试 duration
+            if d, ok := data["duration"].(string); ok && strings.TrimSpace(d) != "" {
+                if n, err := strconv.Atoi(strings.Split(strings.TrimSpace(d), ".")[0]); err == nil {
+                    sample["metadata"] = map[string]any{"durationSeconds": n}
+                }
+            }
+            var samples []any
+            if len(sample) > 0 { samples = append(samples, sample) }
+
+            resp := map[string]any{"name": name, "done": done}
+            if done {
+                resp["response"] = map[string]any{
+                    "generateVideoResponse": map[string]any{"generatedSamples": samples},
+                }
+            }
+
+            // 计费（若能解析到 duration）
+            seconds := 0
+            if meta, ok := sample["metadata"].(map[string]any); ok {
+                if dur, ok2 := meta["durationSeconds"].(int); ok2 { seconds = dur }
             }
             if seconds > 0 {
                 usage := &types.Usage{PromptTokens: seconds}

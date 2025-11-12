@@ -188,11 +188,11 @@
   "25": {
     "gemini_video": {
       "name": "Gemini 视频上游",
-      "description": "Veo 视频上游供应商选择（google/sutui）。用于 /gemini/{version}/models/veo-*",
+      "description": "Veo 视频上游供应商选择（google/sutui/apimart/ezlinkai）。用于 /gemini/{version}/models/veo-*",
       "params": {
         "vendor": {
           "name": "视频上游供应商",
-          "description": "可填 google/sutui；选择 sutui 时，后端按 sutui 适配器（OpenAI /v1/videos）转发。",
+          "description": "可填 google/sutui/apimart/ezlinkai；选择 sutui/apimart/ezlinkai 时，后端按对应适配器（OpenAI /v1/videos 或 /v1/video/generations）转发。",
           "type": "string",
           "required": false
         }

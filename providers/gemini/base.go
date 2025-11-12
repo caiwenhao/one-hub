@@ -7,6 +7,7 @@ import (
     "io"
     "net/http"
     "one-api/common"
+    img "one-api/common/image"
     "one-api/common/requester"
     "one-api/model"
     "one-api/providers/base"
@@ -184,6 +185,7 @@ func (p *GeminiProvider) detectVeoVendor() string {
                 if v, ok3 := gm["vendor"].(string); ok3 {
                     if strings.EqualFold(v, "sutui") { return "sutui" }
                     if strings.EqualFold(v, "apimart") { return "apimart" }
+                    if strings.EqualFold(v, "ezlinkai") { return "ezlinkai" }
                 }
             }
             // 兼容形式：plugin.gemini.video.vendor
@@ -192,6 +194,7 @@ func (p *GeminiProvider) detectVeoVendor() string {
                     if v, ok4 := vm["vendor"].(string); ok4 {
                         if strings.EqualFold(v, "sutui") { return "sutui" }
                         if strings.EqualFold(v, "apimart") { return "apimart" }
+                        if strings.EqualFold(v, "ezlinkai") { return "ezlinkai" }
                     }
                 }
             }
@@ -203,6 +206,9 @@ func (p *GeminiProvider) detectVeoVendor() string {
     }
     if base != "" && strings.Contains(base, "apimart.ai") {
         return "apimart"
+    }
+    if base != "" && strings.Contains(base, "ezlinkai.com") {
+        return "ezlinkai"
     }
     return "google"
 }
@@ -406,6 +412,78 @@ func (p *GeminiProvider) relayPredictLongRunningViaApimart(modelName string, pro
         return "", common.StringErrorWrapperLocal("apimart missing task id", "upstream_error", http.StatusBadGateway)
     }
     return strings.TrimSpace(resp.Data[0].TaskID), nil
+}
+
+// 将 Veo 初始化映射到 ezlinkai 的 /v1/video/generations
+// 需求：
+// - Authorization: Bearer <key>
+// - JSON: { model, instances:[{prompt, image?{bytesBase64Encoded,mimeType}}], parameters:{aspectRatio,durationSeconds,enhancePrompt,generateAudio,seed?} }
+func (p *GeminiProvider) relayPredictLongRunningViaEzlinkai(modelName string, prompt string, seconds int, size string, refs []string) (string, *types.OpenAIErrorWithStatusCode) {
+    base := strings.TrimSuffix(p.GetBaseURL(), "/")
+    fullURL := base + "/v1/video/generations"
+
+    // 组装 instances[0]
+    inst := map[string]any{"prompt": prompt}
+    if len(refs) > 0 && strings.TrimSpace(refs[0]) != "" {
+        if mt, data, err := img.GetImageFromUrl(strings.TrimSpace(refs[0])); err == nil && strings.TrimSpace(data) != "" {
+            inst["image"] = map[string]any{
+                "bytesBase64Encoded": data,
+                "mimeType":           mt,
+            }
+        }
+    }
+
+    // aspectRatio / durationSeconds
+    ar, _ := parseSizeToGemini(size)
+    m := strings.ToLower(strings.TrimSpace(modelName))
+    // veo-3.0-generate-preview 仅支持 16:9（保护性回退）
+    if m == "veo-3.0-generate-preview" && ar != "16:9" {
+        ar = "16:9"
+    }
+    if seconds <= 0 { seconds = 6 }
+    if seconds < 1 { seconds = 1 }
+    if seconds > 8 { seconds = 8 }
+
+    // 默认增强与生成音频，可后续从插件中读取开关
+    params := map[string]any{
+        "aspectRatio":     ar,
+        "durationSeconds": seconds,
+        "enhancePrompt":   true,
+        "generateAudio":   true,
+    }
+
+    body := map[string]any{
+        "model":      modelName,
+        "instances":  []map[string]any{inst},
+        "parameters": params,
+    }
+
+    headers := map[string]string{
+        "Authorization": fmt.Sprintf("Bearer %s", p.Channel.Key),
+        "Content-Type":  "application/json",
+    }
+
+    req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+    if err != nil { return "", common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
+    defer req.Body.Close()
+
+    // 响应示例：{ task_id: "...", task_status: "pending" }
+    var resp map[string]any
+    if _, e := p.Requester.SendRequest(req, &resp, false); e != nil { return "", e }
+
+    // 容错提取 task_id
+    taskID := ""
+    if s, ok := resp["task_id"].(string); ok { taskID = strings.TrimSpace(s) }
+    if taskID == "" {
+        // 兼容 data.task_id
+        if data, ok := resp["data"].(map[string]any); ok {
+            if s, ok2 := data["task_id"].(string); ok2 { taskID = strings.TrimSpace(s) }
+        }
+    }
+    if taskID == "" {
+        return "", common.StringErrorWrapperLocal("ezlinkai missing task id", "upstream_error", http.StatusBadGateway)
+    }
+    return taskID, nil
 }
 
 // RelayModelAction 透传任意 models/<model>:<action> 原生请求（非流式）。

@@ -95,7 +95,8 @@ const OPENAI_UPSTREAM_OPTIONS = [
 const GEMINI_UPSTREAM_OPTIONS = [
   { value: 'google', label: 'Google（官方）' },
   { value: 'sutui', label: 'Sutui（速推）' },
-  { value: 'apimart', label: 'Apimart' }
+  { value: 'apimart', label: 'Apimart' },
+  { value: 'ezlinkai', label: 'EzlinkAI' }
 ];
 
 const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, modelOptions, prices }) => {
@@ -631,6 +632,8 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                           setFieldValue('base_url', 'https://api.sora2.pub');
                         } else if (next === 'apimart') {
                           setFieldValue('base_url', 'https://api.apimart.ai');
+                        } else if (next === 'ezlinkai') {
+                          setFieldValue('base_url', 'https://api.ezlinkai.com');
                         }
                       }}
                       MenuProps={{ PaperProps: { style: { maxHeight: 200 } } }}

@@ -1,43 +1,169 @@
 ---
-title: "Images"
-description: "POST /gemini/{version}/models/{model}:predict（Imagen 系列生图）"
+title: "图像生成"
+description: "使用 Imagen 系列模型进行文生图创作。"
 openapi: 'POST /gemini/v1beta/models/{model}:predict'
 ---
 
-概述
+`POST /gemini/v1beta/models/{model}:predict` 用于调用 Imagen 系列模型生成图像，支持多种宽高比和批量生成。
 
-- 路径：`POST /gemini/v1beta/models/{model}:predict`
-- 鉴权：`x-goog-api-key: <Token>`（由 kapon 渠道签发）
-- 模型：如 `imagen-3.0-generate-001`（示例）
-
-请求示例（cURL）
+## 基础请求
 
 ```bash
 curl -X POST "$BASE_URL/gemini/v1beta/models/imagen-3.0-generate-001:predict" \
   -H "x-goog-api-key: $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "instances": [{ "prompt": "a panda reading a book in the library, cinematic lighting" }],
+    "instances": [{
+      "prompt": "a panda reading a book in the library, cinematic lighting"
+    }],
     "parameters": {
       "aspectRatio": "1:1",
-      "sampleCount": 2,
-      "personGeneration": "allow_adult"
+      "sampleCount": 1
     }
   }'
 ```
 
-参数与映射
+## 响应示例
 
-- `instances[0].prompt`：文生图提示词
-- `parameters.aspectRatio`：比例，常用 `1:1`、`16:9`、`9:16`
-  - 若你使用 OpenAI 风格的 `size`：`1024x1792` → `9:16`，`1792x1024` → `16:9`，其他 → `1:1`
-- `parameters.sampleCount`：返回图片张数
+```json
+{
+  "predictions": [
+    {
+      "bytesBase64Encoded": "<BASE64_IMAGE_DATA>",
+      "mimeType": "image/png"
+    }
+  ]
+}
+```
 
-返回
+## 宽高比设置
 
-- `predictions[].bytesBase64Encoded`：Base64 图片数据
-- 时间/用量按张数折算（由网关计费）
+通过 `aspectRatio` 参数控制图像比例：
+
+```json
+{
+  "instances": [{"prompt": "sunset over mountains"}],
+  "parameters": {
+    "aspectRatio": "16:9"
+  }
+}
+```
+
+支持的宽高比：
+
+- `1:1`：正方形（1024x1024）
+- `16:9`：横向宽屏（1792x1024）
+- `9:16`：竖向（1024x1792）
+- `4:3`：传统横向（1536x1152）
+- `3:4`：传统竖向（1152x1536）
+
+## 批量生成
+
+通过 `sampleCount` 参数一次生成多张图片：
+
+```bash
+curl -X POST "$BASE_URL/gemini/v1beta/models/imagen-3.0-generate-001:predict" \
+  -H "x-goog-api-key: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instances": [{
+      "prompt": "futuristic cityscape at night"
+    }],
+    "parameters": {
+      "aspectRatio": "16:9",
+      "sampleCount": 4
+    }
+  }'
+```
+
+<Note>
+  `sampleCount` 最大值取决于模型限制，通常为 4。生成的每张图片都会单独计费。
+</Note>
+
+## 人物生成控制
+
+通过 `personGeneration` 参数控制是否允许生成人物：
+
+```json
+{
+  "instances": [{"prompt": "portrait of a scientist"}],
+  "parameters": {
+    "personGeneration": "allow_adult"
+  }
+}
+```
+
+可选值：
+
+- `allow_adult`：允许生成成年人物
+- `dont_allow`：不允许生成人物
+
+## 负面提示词
+
+使用 `negativePrompt` 排除不想要的元素：
+
+```json
+{
+  "instances": [{
+    "prompt": "beautiful landscape",
+    "negativePrompt": "people, buildings, cars"
+  }],
+  "parameters": {
+    "aspectRatio": "16:9"
+  }
+}
+```
+
+## 种子值
+
+通过 `seed` 参数实现可复现的生成结果：
+
+```json
+{
+  "instances": [{"prompt": "abstract art"}],
+  "parameters": {
+    "seed": 12345,
+    "sampleCount": 1
+  }
+}
+```
 
 <Callout type="tip">
-  也可用 OpenAI 兼容路径 `POST /v1/images/generations` 搭配 Gemini 的生图模型名，kapon 会自动做字段映射。
+  使用相同的 prompt 和 seed 可以生成相同的图片，适用于需要一致性的场景。
+</Callout>
+
+## OpenAI 兼容方式
+
+也可以使用 OpenAI 风格的图像生成接口：
+
+```bash
+curl -X POST "$BASE_URL/v1/images/generations" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "imagen-3.0-generate-001",
+    "prompt": "a panda reading a book",
+    "size": "1024x1024",
+    "n": 1,
+    "response_format": "b64_json"
+  }'
+```
+
+kapon 会自动完成参数映射：
+
+- `size` → `aspectRatio`（1024x1024 → 1:1，1792x1024 → 16:9，1024x1792 → 9:16）
+- `n` → `sampleCount`
+- `response_format` 支持 `url` 和 `b64_json`
+
+## 常见参数
+
+- `prompt`：图像描述文本（必填）
+- `negativePrompt`：负面提示词（可选）
+- `aspectRatio`：宽高比（默认 1:1）
+- `sampleCount`：生成数量（默认 1）
+- `seed`：随机种子（可选）
+- `personGeneration`：人物生成控制（可选）
+
+<Callout type="info">
+  kapon 会根据生成的图片数量自动计算用量和费用，你无需手动处理计费逻辑。
 </Callout>

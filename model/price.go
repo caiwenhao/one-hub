@@ -462,6 +462,9 @@ func GetDefaultPrice() []*Price {
 		// ratio = ($/sec) / 0.002；具体换算在 quota 中对 "veo-*" 模型将 promptTokens×1000
 		"veo-3.1-generate-preview":       {[]float64{200, 0}, config.ChannelTypeGemini},  // $0.40/sec → 200
 		"veo-3.1-fast-generate-preview":  {[]float64{75, 0}, config.ChannelTypeGemini},   // $0.15/sec → 75
+		// 兼容 ezlinkai 使用的 Veo 3.0 preview 型号（按 3.0 generate-001 / 3.1 档对齐）
+		"veo-3.0-generate-preview":       {[]float64{200, 0}, config.ChannelTypeGemini},  // $0.40/sec → 200
+		"veo-3.0-fast-generate-preview":  {[]float64{75, 0}, config.ChannelTypeGemini},   // $0.15/sec → 75
 		"veo-3.0-generate-001":           {[]float64{200, 0}, config.ChannelTypeGemini},  // $0.40/sec → 200
 		"veo-3.0-fast-generate-001":      {[]float64{75, 0}, config.ChannelTypeGemini},   // $0.15/sec → 75
 		"veo-2.0-generate-001":           {[]float64{175, 0}, config.ChannelTypeGemini},  // $0.35/sec → 175

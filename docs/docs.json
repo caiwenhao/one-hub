@@ -108,13 +108,23 @@
         "tab": "Gemini",
         "groups": [
           {
-            "group": "Gemini",
+            "group": "概述",
             "pages": [
-              "gemini/overview",
+              "gemini/overview"
+            ]
+          },
+          {
+            "group": "核心功能",
+            "pages": [
               "gemini/generate-content",
               "gemini/embeddings",
               "gemini/images",
-              "gemini/video",
+              "gemini/video"
+            ]
+          },
+          {
+            "group": "其他",
+            "pages": [
               "gemini/openai-compat",
               "gemini/troubleshooting"
             ]

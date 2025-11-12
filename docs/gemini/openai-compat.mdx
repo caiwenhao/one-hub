@@ -1,12 +1,14 @@
 ---
 title: "OpenAI 兼容"
-description: "使用 Chat Completions/Responses 调用 Gemini 模型（便于统一网关与切换）"
+description: "使用 OpenAI 风格接口调用 Gemini 模型，实现无缝切换。"
 openapi: 'POST /v1/chat/completions'
 ---
 
-在 kapon 中，你可以直接使用 OpenAI 风格的路径与请求体来调用 Gemini 模型：
+kapon 支持使用标准 OpenAI 接口调用 Gemini 模型，只需将 `model` 参数设置为 Gemini 模型名称即可。这种方式便于在不同模型供应商之间快速切换，无需修改代码。
 
-### Chat Completions
+## Chat Completions
+
+使用 `/v1/chat/completions` 接口进行对话：
 
 ```bash
 curl -X POST "$BASE_URL/v1/chat/completions" \
@@ -15,27 +17,174 @@ curl -X POST "$BASE_URL/v1/chat/completions" \
   -d '{
     "model": "gemini-1.5-pro",
     "messages": [
-      {"role":"system","content":"你是一个友好的助手"},
-      {"role":"user","content":"用要点说明优势"}
+      {"role": "system", "content": "你是一个友好的助手"},
+      {"role": "user", "content": "用三句话介绍 kapon"}
+    ],
+    "temperature": 0.7
+  }'
+```
+
+## 流式输出
+
+设置 `stream: true` 启用流式响应：
+
+```bash
+curl -N -X POST "$BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-1.5-pro",
+    "messages": [
+      {"role": "user", "content": "逐字输出一段文案"}
     ],
     "stream": true
   }'
 ```
 
-### Responses（统一多模态）
+响应格式与 OpenAI 完全一致，使用标准的 Server-Sent Events (SSE)。
+
+## 多模态输入
+
+支持文本、图像混合输入：
 
 ```bash
-curl -X POST "$BASE_URL/v1/responses" \
+curl -X POST "$BASE_URL/v1/chat/completions" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemini-1.5-pro",
-    "input": [{"role":"user","content":[{"type":"text","text":"输出 JSON"}]}],
-    "text": {"format": {"type":"json_schema","name":"Spec","schema":{"type":"object"}}}
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {"type": "text", "text": "请描述这张图片"},
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,<BASE64_IMAGE>"
+            }
+          }
+        ]
+      }
+    ]
   }'
 ```
 
-说明
+## 工具调用
 
-- kapon 会在网关侧完成 OpenAI→Gemini 的字段映射（messages → contents/parts 等）。
-- 支持流式（SSE）与工具调用；部分安全阈值与多模态配置会在后台做合理默认。
+支持 OpenAI 风格的函数调用：
+
+```bash
+curl -X POST "$BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-1.5-pro",
+    "messages": [
+      {"role": "user", "content": "今天北京的天气怎么样？"}
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "get_weather",
+          "description": "获取指定城市的天气信息",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "city": {
+                "type": "string",
+                "description": "城市名称"
+              }
+            },
+            "required": ["city"]
+          }
+        }
+      }
+    ]
+  }'
+```
+
+kapon 会自动将 OpenAI 的 `tools` 格式转换为 Gemini 的 `functionDeclarations` 格式。
+
+## JSON 模式
+
+使用 `response_format` 强制输出 JSON：
+
+```bash
+curl -X POST "$BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-1.5-pro",
+    "messages": [
+      {"role": "user", "content": "生成一个用户信息的 JSON"}
+    ],
+    "response_format": {
+      "type": "json_object"
+    }
+  }'
+```
+
+## Embeddings
+
+使用 `/v1/embeddings` 接口生成向量：
+
+```bash
+curl -X POST "$BASE_URL/v1/embeddings" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "text-embedding-004",
+    "input": "kapon 是一个多云模型网关"
+  }'
+```
+
+## 图像生成
+
+使用 `/v1/images/generations` 接口生成图片：
+
+```bash
+curl -X POST "$BASE_URL/v1/images/generations" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "imagen-3.0-generate-001",
+    "prompt": "a panda reading a book",
+    "size": "1024x1024",
+    "n": 1
+  }'
+```
+
+## 字段映射说明
+
+kapon 会自动完成以下格式转换：
+
+### Chat Completions
+
+- `messages` → `contents`（角色映射：user/assistant/system → user/model）
+- `tools` → `functionDeclarations`
+- `response_format` → `generationConfig.responseMimeType`
+- `temperature`、`max_tokens` 等参数直接映射
+
+### Images
+
+- `prompt` → `instances[0].prompt`
+- `size` → `aspectRatio`（1024x1024 → 1:1，1792x1024 → 16:9）
+- `n` → `sampleCount`
+
+### Embeddings
+
+- `input` → `content.parts[0].text`
+- 响应格式自动转换为 OpenAI 标准格式
+
+## 优势
+
+- **统一接口**：使用相同的代码调用不同供应商的模型
+- **快速切换**：只需修改 `model` 参数即可切换模型
+- **生态兼容**：兼容所有 OpenAI SDK 和工具
+- **自动转换**：kapon 自动处理格式差异，无需手动适配
+
+<Callout type="tip">
+  推荐优先使用 OpenAI 兼容接口，除非需要使用 Gemini 特有的高级功能（如自定义安全阈值、特定的生成配置等）。
+</Callout>

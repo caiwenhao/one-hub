@@ -1,32 +1,224 @@
 ---
-title: "排错与限制"
-description: "常见错误、权限与品牌限制、用量计费口径"
+title: "故障排查"
+description: "常见错误、限制说明与解决方案。"
 ---
 
-常见错误
+## 认证错误
 
-- 401 未授权：
-  - 官方路径请使用 `x-goog-api-key` 或 `?key=`；OpenAI 兼容路径使用 `Authorization: Bearer`。
-  - 令牌无对应权限或已过期，请联系管理员。
-- 400/422 参数错误：
-  - Imagen 生图：检查 `instances/parameters` 字段；`aspectRatio` 取值 `1:1/16:9/9:16`。
-  - Veo 视频：检查 `predictLongRunning` 载荷与必填项（prompt/durationSeconds）。
-- 403 品牌限制：
-  - 官方路径直透仅允许归属 Gemini 的模型；若模型来源为其他供应商，请改用 OpenAI 兼容路径。
+### 401 Unauthorized
 
-权限与版本
+**原因**：
 
-- 版本默认 `v1beta`；可通过渠道配置覆盖，也可在 URL 指定 `/:version/`。
-- 官方路径路由：`/gemini/{version}/models/{model}:<action>`；查询：`/gemini/{version}/operations/{name}`。
+- Token 无效或已过期
+- 使用了错误的认证方式
 
-计费与用量
+**解决方案**：
 
-- GenerateContent：按 token 口径计费（与模型定价规则保持一致）。
-- Imagen 生图：按返回张数折算图片 token（网关侧聚合）。
-- Veo 视频：按 `durationSeconds` 计费；若返回数据不能解析时，可在查询时携带 `?duration=秒` 明确计费口径。
+- 官方路径使用 `x-goog-api-key: <Token>` 或 `?key=<Token>`
+- OpenAI 兼容路径使用 `Authorization: Bearer <Token>`
+- 检查 Token 是否正确，是否有对应模型的访问权限
+- 在 kapon 控制台确认 Token 状态
 
-建议
+```bash
+# 官方路径
+curl "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:generateContent" \
+  -H "x-goog-api-key: $TOKEN"
 
-- 通用业务优先用 OpenAI 兼容路径（便于多云切换）；需要使用 Imagen/Veo 原生能力时再使用官方路径。
-- 若需同时使用流式与工具调用，可考虑使用 Responses 统一接口（见 OpenAI 兼容章节）。
+# OpenAI 兼容路径
+curl "$BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## 参数错误
+
+### 400 Bad Request
+
+**常见原因**：
+
+1. **GenerateContent**：
+   - `contents` 数组为空或格式错误
+   - `parts` 中缺少必填字段
+   - 多模态输入格式不正确
+
+2. **Imagen 生图**：
+   - `instances` 数组为空
+   - `aspectRatio` 取值不在支持范围内（应为 1:1、16:9、9:16、4:3、3:4）
+   - `sampleCount` 超出限制
+
+3. **Veo 视频**：
+   - `prompt` 为空
+   - `durationSeconds` 超出模型支持范围
+   - `aspectRatio` 取值不支持
+
+**解决方案**：
+
+```bash
+# 正确的 GenerateContent 请求
+curl -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:generateContent" \
+  -H "x-goog-api-key: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contents": [{
+      "parts": [{"text": "你好"}]
+    }]
+  }'
+
+# 正确的 Imagen 请求
+curl -X POST "$BASE_URL/gemini/v1beta/models/imagen-3.0-generate-001:predict" \
+  -H "x-goog-api-key: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instances": [{"prompt": "a cat"}],
+    "parameters": {
+      "aspectRatio": "1:1",
+      "sampleCount": 1
+    }
+  }'
+```
+
+### 422 Unprocessable Entity
+
+**原因**：
+
+- 请求格式正确但内容不符合业务规则
+- 提示词包含敏感内容被安全过滤拦截
+- 模型不支持请求的功能
+
+**解决方案**：
+
+- 检查提示词内容，避免敏感词汇
+- 确认模型支持所请求的功能（如某些模型不支持工具调用）
+- 查看响应中的详细错误信息
+
+## 品牌限制
+
+### 403 Forbidden
+
+**错误信息**：`模型不属于Gemini品牌，不支持该官方端点`
+
+**原因**：
+
+官方原生路径（`/gemini/{version}/models/{model}:<action>`）仅支持品牌归属为 Gemini 的模型。
+
+**解决方案**：
+
+使用 OpenAI 兼容路径调用非 Gemini 品牌的模型：
+
+```bash
+# 错误：使用官方路径调用非 Gemini 模型
+curl -X POST "$BASE_URL/gemini/v1beta/models/gpt-4o:generateContent" \
+  -H "x-goog-api-key: $TOKEN"
+# ❌ 403 Forbidden
+
+# 正确：使用 OpenAI 兼容路径
+curl -X POST "$BASE_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"model": "gpt-4o", "messages": [...]}'
+# ✅ 成功
+```
+
+## 速率限制
+
+### 429 Too Many Requests
+
+**原因**：
+
+- 超出 Token 的速率限制
+- 超出模型的并发限制
+
+**解决方案**：
+
+- 实现请求重试机制（指数退避）
+- 在 kapon 控制台查看速率限制配置
+- 联系管理员提升配额
+
+```python
+import time
+import requests
+
+def retry_with_backoff(func, max_retries=5):
+    for i in range(max_retries):
+        try:
+            return func()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                wait_time = (2 ** i) + random.random()
+                time.sleep(wait_time)
+            else:
+                raise
+    raise Exception("Max retries exceeded")
+```
+
+## 视频任务问题
+
+### 任务长时间未完成
+
+**原因**：
+
+- 视频生成通常需要 1-5 分钟
+- 服务端负载较高
+
+**解决方案**：
+
+- 使用指数退避策略轮询，避免频繁请求
+- 设置合理的超时时间（建议 5-10 分钟）
+- 检查任务状态是否为 `failed`
+
+### 无法下载视频
+
+**原因**：
+
+- 视频 URL 已过期
+- 网络连接问题
+
+**解决方案**：
+
+- 重新查询任务获取最新的视频 URL
+- 使用 `curl -L` 跟随重定向
+- 检查网络连接和防火墙设置
+
+## 计费问题
+
+### 用量统计不准确
+
+**原因**：
+
+- 视频任务的时长未正确解析
+- 图片生成的数量统计有误
+
+**解决方案**：
+
+- 视频查询时添加 `?duration=<秒数>` 参数明确计费时长
+- 在 kapon 控制台查看详细的用量记录
+- 联系技术支持核实
+
+```bash
+# 明确指定视频时长用于计费
+curl "$BASE_URL/gemini/v1beta/operations/abc123?model=veo-2.0&duration=8" \
+  -H "x-goog-api-key: $TOKEN"
+```
+
+## 版本问题
+
+### 模型版本不支持
+
+**错误信息**：`Model not found` 或 `Invalid version`
+
+**解决方案**：
+
+- 确认使用的版本（默认 `v1beta`）
+- 在路径中显式指定版本：`/gemini/v1/models/...`
+- 查看模型文档确认支持的版本
+
+## 最佳实践
+
+1. **优先使用 OpenAI 兼容路径**：便于多云切换，减少适配成本
+2. **实现错误重试**：对于 429、500 等临时错误，使用指数退避重试
+3. **合理设置超时**：对话类接口 30 秒，视频生成 5-10 分钟
+4. **监控用量**：定期检查 kapon 控制台的用量统计
+5. **测试环境验证**：新功能先在测试环境验证，再部署到生产
+
+<Callout type="info">
+  如果遇到文档中未提及的错误，请查看响应中的详细错误信息，或联系 kapon 技术支持。
+</Callout>
 

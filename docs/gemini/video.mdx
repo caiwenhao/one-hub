@@ -1,25 +1,20 @@
 ---
-title: "Videos"
-description: "POST /gemini/{version}/models/{model}:predictLongRunning（Veo 系列视频生成） + GET /gemini/{version}/operations/{id}"
+title: "视频生成"
+description: "使用 Veo 系列模型进行视频生成与任务查询。"
 openapi: 'POST /gemini/v1beta/models/{model}:predictLongRunning'
 ---
 
-概述
+`POST /gemini/v1beta/models/{model}:predictLongRunning` 用于创建视频生成任务，支持文生视频、图生视频等多种模式。
 
-- 初始化：`POST /gemini/v1beta/models/{model}:predictLongRunning`
-- 轮询任务：`GET /gemini/v1beta/operations/{operation_id}`（可选 query `model` 指定用于选择渠道的模型）
-- 鉴权：`x-goog-api-key: <Token>`
-- 模型：如 `veo-1.5`/`veo-2.0`（示例）
-
-创建任务（cURL）
+## 创建视频任务
 
 ```bash
-curl -X POST "$BASE_URL/gemini/v1beta/models/veo-1.5:predictLongRunning" \
+curl -X POST "$BASE_URL/gemini/v1beta/models/veo-2.0:predictLongRunning" \
   -H "x-goog-api-key: $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "input": {
-      "prompt": "a drone rises from a beach at sunset, 8s, cinematic, 24fps"
+      "prompt": "a drone rises from a beach at sunset, cinematic, 8s"
     },
     "config": {
       "durationSeconds": 8,
@@ -28,36 +23,209 @@ curl -X POST "$BASE_URL/gemini/v1beta/models/veo-1.5:predictLongRunning" \
   }'
 ```
 
-查询进度
+## 响应示例
+
+```json
+{
+  "name": "operations/abc123xyz",
+  "done": false
+}
+```
+
+返回的 `name` 字段是任务 ID，用于后续查询任务状态。
+
+## 查询任务状态
+
+使用 `GET /gemini/v1beta/operations/{operation_id}` 查询任务进度：
 
 ```bash
-curl "$BASE_URL/gemini/v1beta/operations/$OP_ID?model=gemini-2.5-pro" \
+curl "$BASE_URL/gemini/v1beta/operations/abc123xyz?model=veo-2.0" \
   -H "x-goog-api-key: $TOKEN"
 ```
 
-- `done` 为 true 表示任务完成；返回内含 `response.generateVideoResponse.generatedSamples[]`，其中包含素材链接与元数据（如 `metadata.durationSeconds`）。
-- 下载通常为直链（签名 URL），可用 `curl -L` 直接保存。
+<Note>
+  `model` 参数用于选择渠道，建议与创建任务时使用的模型保持一致。
+</Note>
 
-注意
+## 任务完成响应
 
-- 该路由为官方风格直透；若你更偏好统一风格，可使用 OpenAI `POST /v1/videos`（若你的渠道映射到了 OpenAI 视频供应商）。
-- kapon 在 `operations` 返回中会根据解析到的时长（秒）进行用量记账；若无法解析，你也可在查询时带上 `?duration=8` 明确计费口径。
+当 `done` 为 `true` 时，表示任务已完成：
 
-## 常见返回字段速查
-
-- `done`：布尔，表示任务是否完成。
-- `name`：字符串，operation ID（可用于后续查询）。
-- `response.generateVideoResponse.generatedSamples[]`：数组，视频素材条目。
-  - `uri`：素材下载直链（可能为签名 URL）。
-  - `metadata.durationSeconds`：视频时长（秒）。
-  - 其他如 `resolution`、`aspectRatio` 等可能随模型版本返回。
-
-## 下载示例（curl -L）
-
-假设已从查询接口得到一个样本地址 `SAMPLE_URL`：
-
-```bash
-curl -L "$SAMPLE_URL" --output output.mp4
+```json
+{
+  "name": "operations/abc123xyz",
+  "done": true,
+  "response": {
+    "generateVideoResponse": {
+      "generatedSamples": [
+        {
+          "video": {
+            "uri": "https://models.kapon.cloud/proxy/video/abc123xyz"
+          },
+          "metadata": {
+            "durationSeconds": 8,
+            "size": "1920x1080"
+          }
+        }
+      ]
+    }
+  }
+}
 ```
 
-若有多条 `generatedSamples`，可按需求挑选分辨率或时长匹配的条目下载。
+## 下载视频
+
+从响应中获取视频 URL 后，可以直接下载：
+
+```bash
+curl -L "https://models.kapon.cloud/proxy/video/abc123xyz" \
+  --output video.mp4
+```
+
+<Callout type="info">
+  kapon 会自动代理视频 URL，确保下载链接的稳定性和安全性。
+</Callout>
+
+## 宽高比设置
+
+通过 `aspectRatio` 参数控制视频比例：
+
+```json
+{
+  "input": {
+    "prompt": "city traffic time-lapse"
+  },
+  "config": {
+    "durationSeconds": 8,
+    "aspectRatio": "9:16"
+  }
+}
+```
+
+支持的宽高比：
+
+- `16:9`：横向宽屏（1920x1080）
+- `9:16`：竖向（1080x1920）
+- `1:1`：正方形（1080x1080）
+
+## 时长设置
+
+通过 `durationSeconds` 参数设置视频时长：
+
+```json
+{
+  "input": {
+    "prompt": "ocean waves"
+  },
+  "config": {
+    "durationSeconds": 4
+  }
+}
+```
+
+<Note>
+  不同模型支持的时长范围不同，通常为 2-8 秒。具体限制请参考模型文档。
+</Note>
+
+## 图生视频
+
+提供参考图像进行视频生成：
+
+```json
+{
+  "input": {
+    "prompt": "camera zooms in slowly",
+    "image": {
+      "bytesBase64Encoded": "<BASE64_IMAGE_DATA>"
+    }
+  },
+  "config": {
+    "durationSeconds": 8,
+    "aspectRatio": "16:9"
+  }
+}
+```
+
+## 视频续写
+
+基于已有视频进行续写：
+
+```json
+{
+  "input": {
+    "prompt": "continue the scene",
+    "video": {
+      "bytesBase64Encoded": "<BASE64_VIDEO_DATA>"
+    }
+  },
+  "config": {
+    "durationSeconds": 8
+  }
+}
+```
+
+## 轮询最佳实践
+
+建议使用指数退避策略轮询任务状态：
+
+```python
+import time
+import requests
+
+def wait_for_video(operation_id, token, max_wait=300):
+    base_url = "https://models.kapon.cloud"
+    headers = {"x-goog-api-key": token}
+    
+    wait_time = 2
+    elapsed = 0
+    
+    while elapsed < max_wait:
+        url = f"{base_url}/gemini/v1beta/operations/{operation_id}?model=veo-2.0"
+        resp = requests.get(url, headers=headers)
+        data = resp.json()
+        
+        if data.get("done"):
+            return data
+        
+        time.sleep(wait_time)
+        elapsed += wait_time
+        wait_time = min(wait_time * 1.5, 30)  # 最多等待30秒
+    
+    raise TimeoutError("Video generation timeout")
+```
+
+## OpenAI 兼容方式
+
+也可以使用 OpenAI 风格的视频接口（如果你的渠道支持）：
+
+```bash
+curl -X POST "$BASE_URL/v1/videos" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "veo-2.0",
+    "prompt": "sunset over mountains",
+    "duration": 8,
+    "size": "1920x1080"
+  }'
+```
+
+## 计费说明
+
+视频生成按时长计费：
+
+- 计费单位：秒
+- 计费时机：任务完成时
+- kapon 会自动从响应中提取视频时长进行计费
+
+<Callout type="tip">
+  如果响应中无法解析时长，可以在查询时添加 `?duration=8` 参数明确指定计费时长。
+</Callout>
+
+## 常见参数
+
+- `prompt`：视频描述文本（必填）
+- `durationSeconds`：视频时长（秒）
+- `aspectRatio`：宽高比（16:9、9:16、1:1）
+- `image`：参考图像（图生视频）
+- `video`：参考视频（视频续写）

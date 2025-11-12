@@ -1,18 +1,27 @@
 ---
-title: "GenerateContent"
-description: "POST /gemini/v1beta/models/{model}:generateContent"
+title: "内容生成"
+description: "使用 Gemini 原生接口进行文本生成与多模态交互。"
 openapi: 'POST /gemini/v1beta/models/{model}:generateContent'
 ---
 
- 
+`POST /gemini/v1beta/models/{model}:generateContent` 是 Gemini 的核心对话接口，支持文本、图像、音频等多模态输入，以及流式输出、工具调用等高级功能。
+
+## 基础请求
+
 ```bash
 curl -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:generateContent" \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "x-goog-api-key: $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"contents":[{"parts":[{"text":"用三句话介绍 kapon。"}]}]}'
+  -d '{
+    "contents": [{
+      "parts": [{"text": "用三句话介绍 kapon。"}]
+    }]
+  }'
 ```
 
 ## 多模态输入
+
+### 文本 + 图像
 
 ```bash
 curl -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:generateContent" \
@@ -21,34 +30,149 @@ curl -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:generateContent" \
   -d '{
     "contents": [{
       "parts": [
-        { "text": "请根据图片内容写标题" },
-        { "inline_data": { "mime_type": "image/png", "data": "<BASE64_IMAGE>" } }
+        {"text": "请描述这张图片的内容"},
+        {
+          "inline_data": {
+            "mime_type": "image/png",
+            "data": "<BASE64_ENCODED_IMAGE>"
+          }
+        }
       ]
-    }]}
-  '
+    }]
+  }'
 ```
 
-<Callout type="tip">
-  若你使用 OpenAI 兼容路径（Chat/Responses），kapon 会自动在网关侧将 messages 映射为 `contents/parts`。
-</Callout>
+### 文本 + 音频
 
-## 流式（SSE）
+```bash
+curl -X POST "$BASE_URL/gemini/v1beta/models/gemini-2.5-flash:generateContent" \
+  -H "x-goog-api-key: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contents": [{
+      "parts": [
+        {"text": "请转写这段音频"},
+        {
+          "inline_data": {
+            "mime_type": "audio/mp3",
+            "data": "<BASE64_ENCODED_AUDIO>"
+          }
+        }
+      ]
+    }]
+  }'
+```
 
-- 将路径改为 `:streamGenerateContent?alt=sse`，并设置 `Accept: text/event-stream`：
+<Note>
+  音频输入会自动触发音频定价模式（适用于 gemini-2.5-flash 等支持音频的模型）。
+</Note>
+
+## 流式输出
+
+将 action 改为 `streamGenerateContent` 并添加 `?alt=sse` 参数：
 
 ```bash
 curl -N -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:streamGenerateContent?alt=sse" \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "x-goog-api-key: $TOKEN" \
   -H "Accept: text/event-stream" \
   -H "Content-Type: application/json" \
-  -d '{"contents":[{"parts":[{"text":"逐字输出一段文案"}]}]}'
+  -d '{
+    "contents": [{
+      "parts": [{"text": "逐字输出一段关于人工智能的介绍"}]
+    }]
+  }'
 ```
 
-## 多模态与语音
+响应格式为 Server-Sent Events (SSE)，每个事件包含一个 JSON 对象：
 
-- 文图混合：在 `parts` 中加入 `inline_data` 或图像 URL。
-- 语音输出：使用带 `-tts` 后缀的模型，并在 `generationConfig.responseModalities` 指定 `AUDIO`。
+```
+data: {"candidates":[{"content":{"parts":[{"text":"人工"}],"role":"model"},"index":0}]}
+
+data: {"candidates":[{"content":{"parts":[{"text":"智能"}],"role":"model"},"index":0}]}
+```
+
+## 生成配置
+
+通过 `generationConfig` 控制输出行为：
+
+```bash
+curl -X POST "$BASE_URL/gemini/v1beta/models/gemini-1.5-pro:generateContent" \
+  -H "x-goog-api-key: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contents": [{
+      "parts": [{"text": "写一首诗"}]
+    }],
+    "generationConfig": {
+      "temperature": 0.9,
+      "topP": 0.95,
+      "topK": 40,
+      "maxOutputTokens": 1024,
+      "stopSequences": ["END"]
+    }
+  }'
+```
+
+## 安全设置
+
+通过 `safetySettings` 调整内容过滤级别：
+
+```json
+{
+  "contents": [...],
+  "safetySettings": [
+    {
+      "category": "HARM_CATEGORY_HARASSMENT",
+      "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+      "category": "HARM_CATEGORY_HATE_SPEECH",
+      "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    }
+  ]
+}
+```
+
+## 工具调用
+
+Gemini 支持函数调用（Function Calling）：
+
+```json
+{
+  "contents": [{
+    "parts": [{"text": "今天北京的天气怎么样？"}]
+  }],
+  "tools": [{
+    "functionDeclarations": [{
+      "name": "get_weather",
+      "description": "获取指定城市的天气信息",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "城市名称"
+          }
+        },
+        "required": ["city"]
+      }
+    }]
+  }]
+}
+```
+
+<Callout type="tip">
+  如果你更习惯 OpenAI 的 `messages` 格式和 `tools` 定义，可以直接使用 OpenAI 兼容路径（`/v1/chat/completions`），kapon 会自动完成格式转换。详见《OpenAI 兼容》章节。
+</Callout>
+
+## 常见参数
+
+- `contents`：对话内容数组，每个元素包含 `role` 和 `parts`
+- `generationConfig`：生成配置（温度、最大 token 数等）
+- `safetySettings`：安全过滤设置
+- `tools`：可调用的函数定义
+- `systemInstruction`：系统指令（部分模型支持）
 
 <Callout type="info">
-  如果你更偏向 OpenAI 兼容风格（messages/tools/JSON mode），可直接使用 Chat Completions 路径搭配 Gemini 模型名，见《OpenAI 兼容》章节。
+  kapon 会自动处理 token 计数、用量统计和计费，你无需关心底层实现细节。
 </Callout>
