@@ -2,26 +2,26 @@ package relay
 
 import (
     "bytes"
-	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"math"
-	"net/http"
-	"one-api/common"
-	"one-api/common/config"
-	"one-api/common/logger"
-	"one-api/common/video"
-	"one-api/model"
-	providersBase "one-api/providers/base"
-	"one-api/relay/relay_util"
-	"one-api/types"
-	"strconv"
-	"strings"
-	"time"
+    "context"
+    "encoding/json"
+    "fmt"
+    "io"
+    "math"
+    "net/http"
+    "one-api/common"
+    "one-api/common/config"
+    "one-api/common/logger"
+    "one-api/common/video"
+    "one-api/model"
+    providersBase "one-api/providers/base"
+    "one-api/relay/relay_util"
+    "one-api/types"
+    "strconv"
+    "strings"
+    "time"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/datatypes"
+    "github.com/gin-gonic/gin"
+    "gorm.io/datatypes"
 )
 
 type soraTaskProperties struct {
@@ -113,13 +113,14 @@ func VideoCreate(c *gin.Context) {
 
     originalModel := strings.TrimSpace(req.Model)
     if originalModel == "" {
-        // 官方默认模型 sora-2
+        // 兼容旧行为：缺省走 OpenAI Sora
         originalModel = "sora-2"
     }
 
-    // 仅对外暴露官方模型：sora-2 / sora-2-pro
-    if m := strings.ToLower(originalModel); m != "sora-2" && m != "sora-2-pro" {
-        common.AbortWithMessage(c, http.StatusBadRequest, "invalid model: only 'sora-2' or 'sora-2-pro' are allowed")
+    // 模型白名单扩展：允许 Sora 与 Veo 族（veo-*）。
+    // 其余模型仍拒绝，以避免误选其它视频供应商。
+    if m := strings.ToLower(originalModel); !(m == "sora-2" || m == "sora-2-pro" || strings.HasPrefix(m, "veo-")) {
+        common.AbortWithMessage(c, http.StatusBadRequest, "invalid model: only 'sora-2', 'sora-2-pro' or 'veo-*' are allowed")
         return
     }
 
@@ -144,17 +145,25 @@ func VideoCreate(c *gin.Context) {
 		return
 	}
 
-	// 针对 NewAPI 渠道：按次计费，不依赖 seconds
-	isNewAPI := c.GetInt("channel_type") == config.ChannelTypeNewAPI
-	var quota *relay_util.Quota
-	var billingModel string
-	if isNewAPI {
-		billingModel = originalModel
-		quota = relay_util.NewQuota(c, billingModel, 0)
-	} else {
-		billingModel = buildSoraBillingModel(mappedModel, normalize.Resolution)
-		quota = relay_util.NewQuota(c, billingModel, req.Seconds)
-	}
+    // 针对 NewAPI 渠道：按次计费，不依赖 seconds
+    isNewAPI := c.GetInt("channel_type") == config.ChannelTypeNewAPI
+    var quota *relay_util.Quota
+    var billingModel string
+    if isNewAPI {
+        billingModel = originalModel
+        quota = relay_util.NewQuota(c, billingModel, 0)
+    } else {
+        // 计费模型：
+        // - Sora：继续使用 buildSoraBillingModel（按分辨率带价档）
+        // - Veo（veo-*）：直接使用 mappedModel（如 veo-3.1-generate-preview），在 quota 中按“秒×1000”换算
+        if strings.HasPrefix(strings.ToLower(mappedModel), "veo-") {
+            billingModel = mappedModel
+            quota = relay_util.NewQuota(c, billingModel, req.Seconds)
+        } else {
+            billingModel = buildSoraBillingModel(mappedModel, normalize.Resolution)
+            quota = relay_util.NewQuota(c, billingModel, req.Seconds)
+        }
+    }
 	if errWithCode := quota.PreQuotaConsumption(); errWithCode != nil {
 		newErr := FilterOpenAIErr(c, errWithCode)
 		relayResponseWithOpenAIErr(c, &newErr)
