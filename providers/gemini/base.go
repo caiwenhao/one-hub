@@ -180,17 +180,18 @@ func (p *GeminiProvider) detectVeoVendor() string {
     if p.Channel != nil && p.Channel.Plugin != nil {
         if plugin := p.Channel.Plugin.Data(); plugin != nil {
             if gm, ok := plugin["gemini_video"]; ok {
-                // plugin 的类型为 PluginType(map[string]map[string]interface{}),
-                // 这里取出的 gm 已经是 map[string]interface{}，无需再次断言
-                if v, ok3 := gm["vendor"].(string); ok3 && strings.EqualFold(v, "sutui") {
-                    return "sutui"
+                // plugin 的类型为 PluginType(map[string]map[string]interface{})
+                if v, ok3 := gm["vendor"].(string); ok3 {
+                    if strings.EqualFold(v, "sutui") { return "sutui" }
+                    if strings.EqualFold(v, "apimart") { return "apimart" }
                 }
             }
             // 兼容形式：plugin.gemini.video.vendor
             if gm, ok := plugin["gemini"]; ok {
                 if vm, ok3 := gm["video"].(map[string]any); ok3 {
-                    if v, ok4 := vm["vendor"].(string); ok4 && strings.EqualFold(v, "sutui") {
-                        return "sutui"
+                    if v, ok4 := vm["vendor"].(string); ok4 {
+                        if strings.EqualFold(v, "sutui") { return "sutui" }
+                        if strings.EqualFold(v, "apimart") { return "apimart" }
                     }
                 }
             }
@@ -199,6 +200,9 @@ func (p *GeminiProvider) detectVeoVendor() string {
     base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
     if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai")) {
         return "sutui"
+    }
+    if base != "" && strings.Contains(base, "apimart.ai") {
+        return "apimart"
     }
     return "google"
 }
@@ -347,6 +351,61 @@ func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any,
         return nil, common.StringErrorWrapperLocal("missing id from sutui response", "upstream_error", http.StatusBadGateway)
     }
     return map[string]any{ "name": fmt.Sprintf("operations/%s", resp.ID), "done": false }, nil
+}
+
+// 将 Veo 初始化映射到 Apimart 的 /v1/videos/generations
+// 要求：
+// - Authorization: Bearer <key>
+// - JSON: {model,prompt,duration=8,aspect_ratio,image_urls}
+func (p *GeminiProvider) relayPredictLongRunningViaApimart(modelName string, prompt string, seconds int, size string, refs []string) (string, *types.OpenAIErrorWithStatusCode) {
+    base := strings.TrimSuffix(p.GetBaseURL(), "/")
+    fullURL := base + "/v1/videos/generations"
+
+    // 模型映射：官方 -> apimart
+    m := strings.ToLower(strings.TrimSpace(modelName))
+    apimartModel := m
+    switch m {
+    case "veo-3.1-generate-preview":
+        apimartModel = "veo3.1" // 质量档
+    case "veo-3.1-fast-generate-preview":
+        apimartModel = "veo3.1-fast"
+    }
+
+    // AR 映射
+    ar, _ := parseSizeToGemini(size)
+    // Apimart 固定 duration=8
+    duration := 8
+    // image_urls 从 refs 直接透传
+
+    body := map[string]any{
+        "model":        apimartModel,
+        "prompt":       prompt,
+        "duration":     duration,
+        "aspect_ratio": ar,
+    }
+    if len(refs) > 0 {
+        body["image_urls"] = refs
+    }
+    // Apimart 暂不支持 1080p 指定，但通过 AR 控制画幅；忽略 res
+
+    headers := map[string]string{
+        "Authorization": fmt.Sprintf("Bearer %s", p.Channel.Key),
+        "Content-Type":  "application/json",
+    }
+    req, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+    if err != nil { return "", common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
+    defer req.Body.Close()
+
+    var resp struct{
+        Code int `json:"code"`
+        Data []struct{ Status string `json:"status"`; TaskID string `json:"task_id"` } `json:"data"`
+        Error any `json:"error"`
+    }
+    if _, e := p.Requester.SendRequest(req, &resp, false); e != nil { return "", e }
+    if len(resp.Data) == 0 || strings.TrimSpace(resp.Data[0].TaskID) == "" {
+        return "", common.StringErrorWrapperLocal("apimart missing task id", "upstream_error", http.StatusBadGateway)
+    }
+    return strings.TrimSpace(resp.Data[0].TaskID), nil
 }
 
 // RelayModelAction 透传任意 models/<model>:<action> 原生请求（非流式）。

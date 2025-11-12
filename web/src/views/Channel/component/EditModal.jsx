@@ -91,13 +91,11 @@ const OPENAI_UPSTREAM_OPTIONS = [
   { value: 'apimart', label: 'Apimart（Sora 聚合）' }
 ];
 
-// Gemini 上游供应商选项（官方原生 / 官方 OpenAI 兼容 / 第三方 OpenAI 兼容）
+// Gemini 上游供应商选项（简化版：只保留常用的供应商）
 const GEMINI_UPSTREAM_OPTIONS = [
-  { value: '', label: '默认（官方原生）' },
-  { value: 'official', label: '官方原生（/gemini 路由）' },
-  { value: 'google_openai', label: '官方（OpenAI 兼容）' },
-  { value: 'openrouter', label: 'OpenRouter（第三方 OpenAI 兼容）' },
-  { value: 'mountsea', label: 'MountSea（第三方 OpenAI 兼容）' }
+  { value: 'google', label: 'Google（官方）' },
+  { value: 'sutui', label: 'Sutui（速推）' },
+  { value: 'apimart', label: 'Apimart' }
 ];
 
 const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, modelOptions, prices }) => {
@@ -230,6 +228,12 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
     if (channelType === 57) {
       const group = typeConfig[channelType]?.modelGroup || 'Vidu';
       const bases = ['viduq2-pro', 'viduq2-turbo', 'viduq1', 'viduq1-classic', 'vidu2.0', 'vidu1.5'];
+      return bases.map((id) => ({ id, group }));
+    }
+    // Gemini：默认填充 Veo 官方视频模型
+    if (channelType === 25) {
+      const group = typeConfig[channelType]?.modelGroup || 'Google Gemini';
+      const bases = ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'];
       return bases.map((id) => ({ id, group }));
     }
 
@@ -518,6 +522,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
         loadChannel().then();
       } else {
         setHasTag(false);
+        // 新建时默认选择 OpenAI；用户切换到 Gemini 时将自动填充 apimart 与 Veo 模型
         initChannel(1);
         setInitialInput({ ...defaultConfig.input, is_edit: false });
       }
@@ -556,6 +561,24 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                         if (!option) return;
                         setFieldValue('type', option.value);
                         handleTypeChange(setFieldValue, option.value, values);
+                        // 当选择 Gemini 渠道时：默认 vendor=google，默认 BaseURL 与模型
+                        if (option.value === 25) {
+                          // plugin 结构可能尚未初始化，做保护性设置
+                          const plugin = values.plugin ? { ...values.plugin } : {};
+                          plugin.gemini_video = plugin.gemini_video || {};
+                          if (!plugin.gemini_video.vendor) plugin.gemini_video.vendor = 'google';
+                          setFieldValue('plugin', plugin);
+                          // 同步基础区上游下拉
+                          if (!values.gemini_upstream) setFieldValue('gemini_upstream', 'google');
+                          if (!values.base_url) setFieldValue('base_url', '');
+                          // 若未选择模型，自动填充 Veo 官方模型
+                          const hasModels = Array.isArray(values.models) ? values.models.length > 0 : !!values.models;
+                          if (!hasModels) {
+                            const defaults = basicModels(25);
+                            if (defaults.length > 0) setFieldValue('models', defaults);
+                            setFieldValue('test_model', 'veo-3.1-generate-preview');
+                          }
+                        }
                       }}
                       filterOptions={(opts, state) => {
                         const q = (state.inputValue || '').trim().toLowerCase();
@@ -579,6 +602,46 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                       openOnFocus
                       disabled={hasTag}
                     />
+                  </FormControl>
+                )}
+
+                {/* Gemini 上游供应商（简化版：只需一个下拉框） */}
+                {!isTag && values.type === 25 && (
+                  <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
+                    <InputLabel htmlFor="gemini-upstream-label">上游供应商</InputLabel>
+                    <Select
+                      id="gemini-upstream-label"
+                      name="gemini_upstream"
+                      label="上游供应商"
+                      value={values.gemini_upstream || 'google'}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setFieldValue('gemini_upstream', next);
+                        
+                        // 同步到 plugin 配置
+                        const plugin = values.plugin ? { ...values.plugin } : {};
+                        plugin.gemini_video = plugin.gemini_video || {};
+                        plugin.gemini_video.vendor = next;
+                        setFieldValue('plugin', plugin);
+                        
+                        // 根据供应商自动设置 base_url
+                        if (next === 'google') {
+                          setFieldValue('base_url', '');
+                        } else if (next === 'sutui') {
+                          setFieldValue('base_url', 'https://api.sora2.pub');
+                        } else if (next === 'apimart') {
+                          setFieldValue('base_url', 'https://api.apimart.ai');
+                        }
+                      }}
+                      MenuProps={{ PaperProps: { style: { maxHeight: 200 } } }}
+                    >
+                      {GEMINI_UPSTREAM_OPTIONS.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <FormHelperText>选择 Gemini 视频生成的上游供应商</FormHelperText>
                   </FormControl>
                 )}
 
@@ -777,61 +840,6 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                     </FormHelperText>
                   </FormControl>
                 )}
-
-                {/* Gemini 专用：上游供应商选择（官方原生 / 官方 OpenAI 兼容 / 第三方 OpenAI 兼容） */}
-                {!isTag && values.type === 25 && (
-                  <FormControl fullWidth sx={{ ...theme.typography.otherInput }}>
-                    <InputLabel id="gemini-upstream-label">上游供应商</InputLabel>
-                    <Select
-                      labelId="gemini-upstream-label"
-                      id="gemini-upstream"
-                      name="gemini_upstream"
-                      value={values.gemini_upstream || ''}
-                      label="上游供应商"
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setFieldValue('gemini_upstream', next);
-                        // 基础地址与插件开关联动：
-                        // - official / '' 走官方原生（/gemini），关闭 use_openai_api
-                        // - google_openai 使用官方域名 + 开启 use_openai_api（/{version}/chat/completions）
-                        // - openrouter/mountsea 使用对应第三方域名 + 开启 use_openai_api（/v1/chat/completions）
-                        if (next === 'official' || next === '') {
-                          setFieldValue('base_url', 'https://generativelanguage.googleapis.com');
-                          // 关闭 OpenAI 兼容插件
-                          setFieldValue('plugin.use_openai_api.enable', false);
-                        } else if (next === 'google_openai') {
-                          setFieldValue('base_url', 'https://generativelanguage.googleapis.com');
-                          setFieldValue('plugin.use_openai_api.enable', true);
-                        } else if (next === 'openrouter') {
-                          setFieldValue('base_url', 'https://openrouter.ai/api');
-                          setFieldValue('plugin.use_openai_api.enable', true);
-                        } else if (next === 'mountsea') {
-                          // MountSea 需根据实际部署端点覆盖
-                          setFieldValue('base_url', 'https://api.mountsea.ai');
-                          setFieldValue('plugin.use_openai_api.enable', true);
-                        }
-                        // Gemini 渠道不使用第三方聚合 upstream 字段，保持 custom_parameter 干净
-                        try {
-                          const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};
-                          if (obj && typeof obj === 'object' && 'upstream' in obj) delete obj.upstream;
-                          setFieldValue('custom_parameter', JSON.stringify(obj, null, 2));
-                        } catch (_) {
-                          // 不打断提交流程，交由用户自行修正 JSON
-                        }
-                      }}
-                    >
-                      {GEMINI_UPSTREAM_OPTIONS.map((opt) => (
-                        <MenuItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    <FormHelperText id="helper-tex-gemini-upstream-label">
-                      默认直连官方原生；可选官方 OpenAI 兼容或第三方（OpenRouter/MountSea）。选择兼容模式将自动启用插件“使用OpenAI API”。
-                    </FormHelperText>
-                  </FormControl>
-                )}
-
 
                 <FormControl fullWidth error={Boolean(touched.tag && errors.tag)} sx={{ ...theme.typography.otherInput }}>
                   <InputLabel htmlFor="channel-tag-label">{customizeT(inputLabel.tag)}</InputLabel>
@@ -1432,6 +1440,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                     <FormHelperText id="helper-tex-compatible_response-label">{customizeT(inputPrompt.compatible_response)}</FormHelperText>
                   </FormControl>
                 )}
+
                 {pluginList[values.type] &&
                   Object.keys(pluginList[values.type]).map((pluginId) => {
                     const plugin = pluginList[values.type][pluginId];
@@ -1477,6 +1486,10 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                               {Object.keys(plugin.params).map((paramId) => {
                                 const param = plugin.params[paramId];
                                 const name = `plugin.${pluginId}.${paramId}`;
+                                // 不再在插件面板重复渲染 Gemini vendor，下拉已提升到基础信息区（避免两个入口导致混乱）
+                                if (pluginId === 'gemini_video' && paramId === 'vendor') {
+                                  return null;
+                                }
                                 return param.type === 'bool' ? (
                                   <FormControl key={name} fullWidth sx={{ ...theme.typography.otherInput }}>
                                     <FormControlLabel

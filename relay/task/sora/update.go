@@ -37,6 +37,21 @@ func (t *SoraTask) GinResponse()                            {}
 
 func (t *SoraTask) UpdateTaskStatus(ctx context.Context, taskChannelM map[int][]string, taskM map[string]*model.Task) error {
     for channelID, ids := range taskChannelM {
+        // 仅处理 Sora 模型任务：根据 BillingModel 前缀做快速过滤，避免对非 OpenAI 渠道打印噪声日志
+        hasSora := false
+        for _, id := range ids {
+            if task := taskM[id]; task != nil {
+                bm := strings.ToLower(strings.TrimSpace(task.BillingModel))
+                if strings.HasPrefix(bm, "sora") || strings.HasPrefix(bm, "sora_video2") {
+                    hasSora = true
+                    break
+                }
+            }
+        }
+        if !hasSora {
+            // 本 channel 没有 Sora 前缀任务，跳过
+            continue
+        }
         channel := model.ChannelGroup.GetChannel(channelID)
         if channel == nil {
             for _, id := range ids {
@@ -52,7 +67,8 @@ func (t *SoraTask) UpdateTaskStatus(ctx context.Context, taskChannelM map[int][]
         provider := providers.GetProvider(channel, nil)
         openaiProv, ok := provider.(*openaip.OpenAIProvider)
         if !ok {
-            logger.LogError(ctx, "Sora task adaptor: provider not OpenAI")
+            // 非 OpenAI 渠道跳过（降低噪声等级）
+            logger.LogDebug(ctx, "Sora task adaptor: skip non-OpenAI provider")
             continue
         }
 

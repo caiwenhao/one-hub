@@ -270,32 +270,12 @@ const typeConfig = {
   },
   25: {
     inputLabel: {
-      other: '版本号',
       provider_models_list: '从Gemini获取模型列表'
     },
+    // 默认填充 Veo 官方模型（视频能力）。其余 Gemini 文本/多模态模型由用户按需添加。
     input: {
-      models: [
-        // 通用对话 / 推理
-        'gemini-2.5-pro',
-        'gemini-2.5-flash',
-        'gemini-2.5-flash-lite',
-        // 图像生成（Imagen）
-        'gemini-2.5-flash-image',
-        'imagen-4.0-generate-001',
-        'imagen-4.0-fast-generate-001',
-        'imagen-4.0-ultra-generate-001',
-        // 视频（Veo）
-        'veo-3.1-generate-preview',
-        'veo-3.1-fast-generate-preview',
-        // 辅助能力
-        'gemini-2.0-flash',
-        'gemini-2.0-flash-lite',
-        'gemini-embedding-001'
-      ],
-      test_model: 'gemini-2.5-pro'
-    },
-    prompt: {
-      other: '请输入版本号，例如：v1'
+      models: ['veo-3.1-generate-preview', 'veo-3.1-fast-generate-preview'],
+      test_model: 'veo-3.1-generate-preview'
     },
     modelGroup: 'Google Gemini'
   },

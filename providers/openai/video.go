@@ -731,9 +731,10 @@ func (p *OpenAIProvider) createMountSeaVideo(request *types.VideoCreateRequest) 
 		msReq.Images = append(msReq.Images, request.InputImage)
 	}
 
-	if request.InputReference != "" {
-		msReq.InputReference = request.InputReference
-	}
+    if len(request.InputReference) > 0 {
+        // 兼容：将统一 input_reference 追加进 Images；MountSea 侧会按参考图处理
+        msReq.Images = append(msReq.Images, request.InputReference...)
+    }
 
 	if request.RemixVideoID != "" {
 		msReq.RemixVideoID = request.RemixVideoID
@@ -922,6 +923,9 @@ func (p *OpenAIProvider) createApimartVideo(request *types.VideoCreateRequest) (
     if strings.TrimSpace(request.InputImage) != "" {
         collectedURLs = append(collectedURLs, request.InputImage)
     }
+    if len(request.InputReference) > 0 {
+        collectedURLs = append(collectedURLs, request.InputReference...)
+    }
 
     // 尝试解析 multipart（若为 multipart 则把文件上传到 S3 并生成 URL）
     contentType := ""
@@ -983,6 +987,8 @@ func (p *OpenAIProvider) createApimartVideo(request *types.VideoCreateRequest) (
                         case "size":
                             overrideSize = val
                         case "input_image", "input_images":
+                            if val != "" { collectedURLs = append(collectedURLs, val) }
+                        case "input_reference":
                             if val != "" { collectedURLs = append(collectedURLs, val) }
                         case "remove_watermark":
                             if strings.EqualFold(val, "true") || val == "1" { removeWatermark = true }

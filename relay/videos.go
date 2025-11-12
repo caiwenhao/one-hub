@@ -1,28 +1,46 @@
 package relay
 
 import (
-    "bytes"
-    "context"
-    "encoding/json"
-    "fmt"
-    "io"
-    "math"
-    "net/http"
-    "one-api/common"
-    "one-api/common/config"
-    "one-api/common/logger"
-    "one-api/common/video"
-    "one-api/model"
-    providersBase "one-api/providers/base"
-    "one-api/relay/relay_util"
-    "one-api/types"
-    "strconv"
-    "strings"
-    "time"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"math"
+	"mime"
+	"net/http"
+	"one-api/common"
+	"one-api/common/config"
+	"one-api/common/logger"
+	"one-api/common/storage"
+	"one-api/common/utils"
+	"one-api/common/video"
+	"one-api/model"
+	providersBase "one-api/providers/base"
+	"one-api/relay/relay_util"
+	"one-api/types"
+	"strconv"
+	"strings"
+	"time"
 
-    "github.com/gin-gonic/gin"
-    "gorm.io/datatypes"
+	"github.com/gin-gonic/gin"
+	"gorm.io/datatypes"
 )
+
+// filepath.Ext 的轻量封装，避免额外导入整个路径包
+func filepathExtSafe(name string) string {
+	// 找最后一个点
+	for i := len(name) - 1; i >= 0; i-- {
+		if name[i] == '.' {
+			return name[i:]
+		}
+		// 遇到路径分隔符则停止
+		if name[i] == '/' || name[i] == '\\' {
+			break
+		}
+	}
+	return ""
+}
 
 type soraTaskProperties struct {
 	Model        string `json:"model"`
@@ -35,20 +53,20 @@ type soraTaskProperties struct {
 }
 
 type soraVideoResponse struct {
-    ID                 string          `json:"id"`
-    Object             string          `json:"object"`
-    CreatedAt          int64           `json:"created_at,omitempty"`
-    CompletedAt        int64           `json:"completed_at,omitempty"`
-    ExpiresAt          int64           `json:"expires_at,omitempty"`
-    Status             string          `json:"status"`
-    Model              string          `json:"model,omitempty"`
-    Prompt             string          `json:"prompt,omitempty"`
-    Progress           int             `json:"progress"`
-    Seconds            string          `json:"seconds,omitempty"`
-    Size               string          `json:"size,omitempty"`
-    RemixedFromVideoID string          `json:"remixed_from_video_id,omitempty"`
-    Error              *soraVideoError `json:"error,omitempty"`
-    VideoURL           string          `json:"video_url,omitempty"`
+	ID                 string          `json:"id"`
+	Object             string          `json:"object"`
+	CreatedAt          int64           `json:"created_at,omitempty"`
+	CompletedAt        int64           `json:"completed_at,omitempty"`
+	ExpiresAt          int64           `json:"expires_at,omitempty"`
+	Status             string          `json:"status"`
+	Model              string          `json:"model,omitempty"`
+	Prompt             string          `json:"prompt,omitempty"`
+	Progress           int             `json:"progress"`
+	Seconds            string          `json:"seconds,omitempty"`
+	Size               string          `json:"size,omitempty"`
+	RemixedFromVideoID string          `json:"remixed_from_video_id,omitempty"`
+	Error              *soraVideoError `json:"error,omitempty"`
+	VideoURL           string          `json:"video_url,omitempty"`
 }
 
 type soraVideoError struct {
@@ -62,67 +80,135 @@ type soraVideoList struct {
 }
 
 func VideoCreate(c *gin.Context) {
-    var req types.VideoCreateRequest
-    contentType := strings.ToLower(strings.TrimSpace(c.Request.Header.Get("Content-Type")))
-    // 当为 multipart/form-data 且包含文件字段时，避免使用 ShouldBind 解析（会因文件字段类型报错）。
-    if strings.Contains(contentType, "multipart/form-data") {
-        // 读取原始请求体并缓存到上下文，供上游直透使用
-        raw, err := io.ReadAll(c.Request.Body)
-        if err != nil {
-            common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
-            return
-        }
-        _ = c.Request.Body.Close()
-        c.Set(config.GinRequestBodyKey, raw)
+	var req types.VideoCreateRequest
+	contentType := strings.ToLower(strings.TrimSpace(c.Request.Header.Get("Content-Type")))
+	// 当为 multipart/form-data 且包含文件字段时，避免使用 ShouldBind 解析（会因文件字段类型报错）。
+	if strings.Contains(contentType, "multipart/form-data") {
+		// 读取原始请求体并缓存到上下文，供上游直透使用
+		raw, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		_ = c.Request.Body.Close()
+		c.Set(config.GinRequestBodyKey, raw)
 
-        // 复位 Body 以便后续 ParseMultipartForm 读取
-        c.Request.Body = io.NopCloser(bytes.NewReader(raw))
-        // 解析表单文本字段（不触碰文件）
-        // 使用较小内存阈值，文件会落到临时目录（我们不访问文件内容）
-        if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
-            common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
-            return
-        }
-        form := c.Request.MultipartForm
-        if form != nil && form.Value != nil {
-            if v := strings.TrimSpace(firstOrEmpty(form.Value["model"])); v != "" {
-                req.Model = v
-            }
-            if v := strings.TrimSpace(firstOrEmpty(form.Value["prompt"])); v != "" {
-                req.Prompt = v
-            }
-            if v := strings.TrimSpace(firstOrEmpty(form.Value["seconds"])); v != "" {
-                if iv, e := strconv.Atoi(v); e == nil {
-                    req.Seconds = iv
-                }
-            }
-            if v := strings.TrimSpace(firstOrEmpty(form.Value["size"])); v != "" {
-                req.Size = v
-            }
-        }
-        // 调试输出：记录解析到的关键字段（不输出文件内容）
-        logger.LogDebug(c.Request.Context(), fmt.Sprintf("video.create.multipart parsed -> model=%s seconds=%d size=%s ct=%s", req.Model, req.Seconds, req.Size, c.Request.Header.Get("Content-Type")))
-        // 再次复位 Body，供后续上游直透读取原始数据
-        c.Request.Body = io.NopCloser(bytes.NewReader(raw))
-    } else {
-        if err := common.UnmarshalBodyReusable(c, &req); err != nil {
-            common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
-            return
-        }
-    }
+		// 复位 Body 以便后续 ParseMultipartForm 读取
+		c.Request.Body = io.NopCloser(bytes.NewReader(raw))
+		// 解析表单文本字段（不触碰文件）
+		// 使用较小内存阈值，文件会落到临时目录（我们不访问文件内容）
+		if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+			common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		form := c.Request.MultipartForm
+		collectedRefs := []string{}
+		if form != nil && form.Value != nil {
+			if v := strings.TrimSpace(firstOrEmpty(form.Value["model"])); v != "" {
+				req.Model = v
+			}
+			if v := strings.TrimSpace(firstOrEmpty(form.Value["prompt"])); v != "" {
+				req.Prompt = v
+			}
+			if v := strings.TrimSpace(firstOrEmpty(form.Value["seconds"])); v != "" {
+				if iv, e := strconv.Atoi(v); e == nil {
+					req.Seconds = iv
+				}
+			}
+			if v := strings.TrimSpace(firstOrEmpty(form.Value["size"])); v != "" {
+				req.Size = v
+			}
+			// 支持以文本字段传递 URL/DataURI 参考图
+			if vals, ok := form.Value["input_reference"]; ok {
+				for _, s := range vals {
+					s = strings.TrimSpace(s)
+					if s != "" {
+						collectedRefs = append(collectedRefs, s)
+					}
+				}
+			}
+			if vals, ok := form.Value["input_images"]; ok {
+				for _, s := range vals {
+					s = strings.TrimSpace(s)
+					if s != "" {
+						collectedRefs = append(collectedRefs, s)
+					}
+				}
+			}
+			if v := strings.TrimSpace(firstOrEmpty(form.Value["input_image"])); v != "" {
+				collectedRefs = append(collectedRefs, v)
+			}
+		}
+		// 解析文件字段：input_reference（可多次）
+		if form != nil && form.File != nil {
+			if fhs, ok := form.File["input_reference"]; ok {
+				const maxImageSize = 10 * 1024 * 1024
+				for _, fh := range fhs {
+					if fh == nil {
+						continue
+					}
+					// 打开并限制大小
+					f, err := fh.Open()
+					if err != nil {
+						continue
+					}
+					b, _ := io.ReadAll(f)
+					_ = f.Close()
+					if len(b) == 0 || len(b) > maxImageSize {
+						continue
+					}
+					// 识别扩展名
+					ext := ".jpg"
+					if fh.Filename != "" {
+						if mt := mime.TypeByExtension(strings.ToLower(filepathExtSafe(fh.Filename))); mt != "" {
+							// 保持 jpg/png/webp 三类
+							if strings.Contains(mt, "jpeg") {
+								ext = ".jpg"
+							}
+							if strings.Contains(mt, "png") {
+								ext = ".png"
+							}
+							if strings.Contains(mt, "webp") {
+								ext = ".webp"
+							}
+						}
+					}
+					key := utils.GetUUID() + ext
+					if url := storage.Upload(b, key); strings.TrimSpace(url) != "" {
+						collectedRefs = append(collectedRefs, url)
+					}
+				}
+			}
+		}
+		if len(collectedRefs) > 0 {
+			if req.InputReference == nil {
+				req.InputReference = []string{}
+			}
+			req.InputReference = append(req.InputReference, collectedRefs...)
+		}
+		// 调试输出：记录解析到的关键字段（不输出文件内容）
+		logger.LogDebug(c.Request.Context(), fmt.Sprintf("video.create.multipart parsed -> model=%s seconds=%d size=%s refs=%d ct=%s", req.Model, req.Seconds, req.Size, len(collectedRefs), c.Request.Header.Get("Content-Type")))
+		// 再次复位 Body，供后续上游直透读取原始数据
+		c.Request.Body = io.NopCloser(bytes.NewReader(raw))
+	} else {
+		if err := common.UnmarshalBodyReusable(c, &req); err != nil {
+			common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
 
-    originalModel := strings.TrimSpace(req.Model)
-    if originalModel == "" {
-        // 兼容旧行为：缺省走 OpenAI Sora
-        originalModel = "sora-2"
-    }
+	originalModel := strings.TrimSpace(req.Model)
+	if originalModel == "" {
+		// 兼容旧行为：缺省走 OpenAI Sora
+		originalModel = "sora-2"
+	}
 
-    // 模型白名单扩展：允许 Sora 与 Veo 族（veo-*）。
-    // 其余模型仍拒绝，以避免误选其它视频供应商。
-    if m := strings.ToLower(originalModel); !(m == "sora-2" || m == "sora-2-pro" || strings.HasPrefix(m, "veo-")) {
-        common.AbortWithMessage(c, http.StatusBadRequest, "invalid model: only 'sora-2', 'sora-2-pro' or 'veo-*' are allowed")
-        return
-    }
+	// 模型白名单扩展：允许 Sora 与 Veo 族（veo-*）。
+	// 其余模型仍拒绝，以避免误选其它视频供应商。
+	if m := strings.ToLower(originalModel); !(m == "sora-2" || m == "sora-2-pro" || strings.HasPrefix(m, "veo-")) {
+		common.AbortWithMessage(c, http.StatusBadRequest, "invalid model: only 'sora-2', 'sora-2-pro' or 'veo-*' are allowed")
+		return
+	}
 
 	normalize := normalizeSoraSizeInfo(req.Size)
 	if req.Seconds <= 0 {
@@ -145,25 +231,25 @@ func VideoCreate(c *gin.Context) {
 		return
 	}
 
-    // 针对 NewAPI 渠道：按次计费，不依赖 seconds
-    isNewAPI := c.GetInt("channel_type") == config.ChannelTypeNewAPI
-    var quota *relay_util.Quota
-    var billingModel string
-    if isNewAPI {
-        billingModel = originalModel
-        quota = relay_util.NewQuota(c, billingModel, 0)
-    } else {
-        // 计费模型：
-        // - Sora：继续使用 buildSoraBillingModel（按分辨率带价档）
-        // - Veo（veo-*）：直接使用 mappedModel（如 veo-3.1-generate-preview），在 quota 中按“秒×1000”换算
-        if strings.HasPrefix(strings.ToLower(mappedModel), "veo-") {
-            billingModel = mappedModel
-            quota = relay_util.NewQuota(c, billingModel, req.Seconds)
-        } else {
-            billingModel = buildSoraBillingModel(mappedModel, normalize.Resolution)
-            quota = relay_util.NewQuota(c, billingModel, req.Seconds)
-        }
-    }
+	// 针对 NewAPI 渠道：按次计费，不依赖 seconds
+	isNewAPI := c.GetInt("channel_type") == config.ChannelTypeNewAPI
+	var quota *relay_util.Quota
+	var billingModel string
+	if isNewAPI {
+		billingModel = originalModel
+		quota = relay_util.NewQuota(c, billingModel, 0)
+	} else {
+		// 计费模型：
+		// - Sora：继续使用 buildSoraBillingModel（按分辨率带价档）
+		// - Veo（veo-*）：直接使用 mappedModel（如 veo-3.1-generate-preview），在 quota 中按“秒×1000”换算
+		if strings.HasPrefix(strings.ToLower(mappedModel), "veo-") {
+			billingModel = mappedModel
+			quota = relay_util.NewQuota(c, billingModel, req.Seconds)
+		} else {
+			billingModel = buildSoraBillingModel(mappedModel, normalize.Resolution)
+			quota = relay_util.NewQuota(c, billingModel, req.Seconds)
+		}
+	}
 	if errWithCode := quota.PreQuotaConsumption(); errWithCode != nil {
 		newErr := FilterOpenAIErr(c, errWithCode)
 		relayResponseWithOpenAIErr(c, &newErr)
@@ -268,19 +354,19 @@ func VideoRetrieve(c *gin.Context) {
 		return
 	}
 
-    if job.Object == "" {
-        job.Object = "video"
-    }
-    // 始终优先使用本地任务保存的官方模型名，避免上游内部 SKU 外泄
-    if strings.TrimSpace(props.Model) != "" {
-        job.Model = props.Model
-    } else if strings.TrimSpace(job.Model) == "" {
-        if mappedModel != "" {
-            job.Model = mappedModel
-        } else {
-            job.Model = "sora-2"
-        }
-    }
+	if job.Object == "" {
+		job.Object = "video"
+	}
+	// 始终优先使用本地任务保存的官方模型名，避免上游内部 SKU 外泄
+	if strings.TrimSpace(props.Model) != "" {
+		job.Model = props.Model
+	} else if strings.TrimSpace(job.Model) == "" {
+		if mappedModel != "" {
+			job.Model = mappedModel
+		} else {
+			job.Model = "sora-2"
+		}
+	}
 	if job.Size == "" {
 		if props.Resolution != "" {
 			job.Size = props.Resolution
@@ -468,10 +554,10 @@ func VideoRemix(c *gin.Context) {
 	}
 
 	saveSoraTask(c, provider.GetChannel().Id, job, props)
-	
+
 	// 代理视频URL（隐藏真实供应商域名）
 	proxyVideoURLs(job)
-	
+
 	c.JSON(http.StatusOK, newSoraVideoResponse(job))
 }
 
@@ -780,31 +866,31 @@ func newSoraVideoResponse(job *types.VideoJob) *soraVideoResponse {
 	}
 	resp.Size = size
 
-    resp.Error = convertSoraVideoError(job.Error)
-    // 附加 video_url（若上游已返回结果）
-    if job.Result != nil && strings.TrimSpace(job.Result.VideoURL) != "" {
-        resp.VideoURL = strings.TrimSpace(job.Result.VideoURL)
-    }
-    return resp
+	resp.Error = convertSoraVideoError(job.Error)
+	// 附加 video_url（若上游已返回结果）
+	if job.Result != nil && strings.TrimSpace(job.Result.VideoURL) != "" {
+		resp.VideoURL = strings.TrimSpace(job.Result.VideoURL)
+	}
+	return resp
 }
 
 func convertSoraVideoError(err *types.VideoJobError) *soraVideoError {
-    if err == nil {
-        return nil
-    }
-    code := stringifySoraErrorCode(err.Code)
-    if code == "" && strings.TrimSpace(err.Message) == "" {
-        return nil
-    }
-    // 对外隐藏上游供应商标识
-    msg := err.Message
-    if msg != "" {
-        msg = sanitizeProviderMarks(msg)
-    }
-    return &soraVideoError{
-        Code:    code,
-        Message: msg,
-    }
+	if err == nil {
+		return nil
+	}
+	code := stringifySoraErrorCode(err.Code)
+	if code == "" && strings.TrimSpace(err.Message) == "" {
+		return nil
+	}
+	// 对外隐藏上游供应商标识
+	msg := err.Message
+	if msg != "" {
+		msg = sanitizeProviderMarks(msg)
+	}
+	return &soraVideoError{
+		Code:    code,
+		Message: msg,
+	}
 }
 
 func stringifySoraErrorCode(code any) string {
@@ -838,10 +924,10 @@ func clampSoraProgress(val int) int {
 }
 
 func firstOrEmpty(arr []string) string {
-    if len(arr) > 0 {
-        return arr[0]
-    }
-    return ""
+	if len(arr) > 0 {
+		return arr[0]
+	}
+	return ""
 }
 
 // proxyVideoURLs 将视频结果中的真实URL替换为CF Workers代理URL
