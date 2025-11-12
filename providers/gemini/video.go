@@ -14,6 +14,41 @@ import (
 // 不做别名归一化：直接返回原模型名
 func normalizeVeoModel(model string) string { return model }
 
+func ifEmpty(s string, def string) string {
+    if strings.TrimSpace(s) == "" { return def }
+    return s
+}
+
+func anyToFloat(v any) float64 {
+    switch t := v.(type) {
+    case nil:
+        return 0
+    case float64:
+        return t
+    case float32:
+        return float64(t)
+    case int:
+        return float64(t)
+    case int32:
+        return float64(t)
+    case int64:
+        return float64(t)
+    case uint:
+        return float64(t)
+    case uint32:
+        return float64(t)
+    case uint64:
+        return float64(t)
+    default:
+        return 0
+    }
+}
+
+func firstNonZero(a int, b int) int {
+    if a != 0 { return a }
+    return b
+}
+
 // parseSizeToGemini 将 1280x720/720x1280/1920x1080/1080x1920 转为 (aspectRatio,resolution)
 func parseSizeToGemini(size string) (string, string) {
     s := strings.ToLower(strings.TrimSpace(size))
@@ -126,6 +161,61 @@ func (p *GeminiProvider) CreateVideo(request *types.VideoCreateRequest) (*types.
     }
     var id string
     switch vendor {
+    case "sutui":
+        // 走 Sutui 的 OpenAI 风格 /v1/videos
+        base := strings.TrimSuffix(p.GetBaseURL(), "/")
+        fullURL := base + "/v1/videos"
+        // 映射官方 Veo → Sutui 型号
+        sutuiModel := "veo3.1-pro"
+        if strings.Contains(strings.ToLower(modelName), "fast-generate-preview") { sutuiModel = "veo3.1" }
+        headers := map[string]string{"Authorization": fmt.Sprintf("Bearer %s", p.Channel.Key)}
+        // 按原请求类型决定直透或 JSON
+        ct := ""
+        if p.Context != nil && p.Context.Request != nil { ct = p.Context.Request.Header.Get("Content-Type") }
+        var httpReq *http.Request
+        if strings.Contains(strings.ToLower(ct), "multipart/form-data") {
+            if raw, ok := p.GetRawBody(); ok {
+                headers["Content-Type"] = ct
+                r, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
+                if e != nil { return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError) }
+                httpReq = r
+            } else {
+                return nil, common.StringErrorWrapperLocal("request body not found", "request_body_not_found", http.StatusInternalServerError)
+            }
+        } else {
+            body := map[string]any{"model": sutuiModel}
+            if strings.TrimSpace(request.Prompt) != "" { body["prompt"] = request.Prompt }
+            if request.Seconds > 0 { body["seconds"] = request.Seconds }
+            if strings.TrimSpace(request.Size) != "" { body["size"] = request.Size }
+            r, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+            if e != nil { return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError) }
+            httpReq = r
+        }
+        defer httpReq.Body.Close()
+        var resp struct {
+            ID        string `json:"id"`
+            Object    string `json:"object"`
+            Model     string `json:"model"`
+            Status    string `json:"status"`
+            Progress  any    `json:"progress"`
+            CreatedAt int64  `json:"created_at"`
+            Seconds   int    `json:"seconds"`
+            Size      string `json:"size"`
+        }
+        if _, e := p.Requester.SendRequest(httpReq, &resp, false); e != nil { return nil, e }
+        job := &types.VideoJob{
+            ID:        resp.ID,
+            Object:    ifEmpty(resp.Object, "video"),
+            CreatedAt: resp.CreatedAt,
+            Status:    ifEmpty(resp.Status, "queued"),
+            Model:     modelName,
+            Prompt:    request.Prompt,
+            Progress:  anyToFloat(resp.Progress),
+            Seconds:   firstNonZero(resp.Seconds, request.Seconds),
+            Size:      ifEmpty(resp.Size, request.Size),
+            Quality:   "standard",
+        }
+        return job, nil
     case "apimart":
         if extendURI != "" {
             return nil, common.StringErrorWrapperLocal("extend video is not supported for apimart vendor", "not_implemented", http.StatusNotImplemented)
@@ -177,7 +267,15 @@ func (p *GeminiProvider) CreateVideo(request *types.VideoCreateRequest) (*types.
 func (p *GeminiProvider) RetrieveVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
     vendor := p.detectVeoVendor()
     var data map[string]any
-    if vendor == "apimart" {
+    if vendor == "sutui" {
+        base := strings.TrimSuffix(p.GetBaseURL(), "/")
+        fullURL := fmt.Sprintf("%s/v1/videos/%s", base, strings.TrimSpace(videoID))
+        headers := map[string]string{"Authorization": fmt.Sprintf("Bearer %s", p.Channel.Key)}
+        req, err := p.Requester.NewRequest(http.MethodGet, fullURL, p.Requester.WithHeader(headers))
+        if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
+        if req.Body != nil { defer req.Body.Close() }
+        if _, e := p.Requester.SendRequest(req, &data, false); e != nil { return nil, e }
+    } else if vendor == "apimart" {
         // GET /v1/tasks/{id}
         base := strings.TrimSuffix(p.GetBaseURL(), "/")
         fullURL := fmt.Sprintf("%s/v1/tasks/%s", base, strings.TrimSpace(videoID))
@@ -209,7 +307,18 @@ func (p *GeminiProvider) RetrieveVideo(videoID string) (*types.VideoJob, *types.
     // 基本骨架
     job := &types.VideoJob{ ID: strings.TrimSpace(videoID), Object: "video" }
 
-    if vendor == "apimart" {
+    if vendor == "sutui" {
+        // 适配 sutui 查询结构（与 OpenAI 风格对齐）
+        if st, ok := data["status"].(string); ok { job.Status = strings.ToLower(strings.TrimSpace(st)) } else { job.Status = "in_progress" }
+        if prog, ok := data["progress"].(float64); ok { job.Progress = prog } else if prog2, ok2 := data["progress"].(int); ok2 { job.Progress = float64(prog2) }
+        if sec, ok := data["seconds"].(float64); ok { job.Seconds = int(sec) } else if s2, ok2 := data["seconds"].(int); ok2 { job.Seconds = s2 }
+        if sz, ok := data["size"].(string); ok { job.Size = strings.TrimSpace(sz) }
+        if u, ok := data["video_url"].(string); ok && strings.TrimSpace(u) != "" {
+            job.VideoURL = strings.TrimSpace(u)
+            job.Result = &types.VideoJobResult{ VideoURL: job.VideoURL }
+        }
+        return job, nil
+    } else if vendor == "apimart" {
         // 适配 apimart 任务查询结构
         // 典型：{ code:200, data:{ id,status,progress,result:{videos:[{url,expires_at}]}, ... } }
         var node any
@@ -327,7 +436,7 @@ func (p *GeminiProvider) DownloadVideo(videoID string, variant string) (*http.Re
     // 直连视频 URL：google 需要 x-goog-api-key；apimart 一般无需额外头
     vendor := p.detectVeoVendor()
     var headers map[string]string
-    if vendor == "apimart" || vendor == "ezlinkai" {
+    if vendor == "sutui" || vendor == "apimart" || vendor == "ezlinkai" {
         headers = map[string]string{}
     } else {
         headers = p.GetRequestHeaders()

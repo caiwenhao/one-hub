@@ -197,33 +197,82 @@ func VideoCreate(c *gin.Context) {
 		}
 	}
 
-	originalModel := strings.TrimSpace(req.Model)
-	if originalModel == "" {
-		// 兼容旧行为：缺省走 OpenAI Sora
-		originalModel = "sora-2"
-	}
+    originalModel := strings.TrimSpace(req.Model)
+    if originalModel == "" {
+        // 兼容旧行为：缺省走 OpenAI Sora
+        originalModel = "sora-2"
+    }
 
-	// 模型白名单扩展：允许 Sora 与 Veo 族（veo-*）。
-	// 其余模型仍拒绝，以避免误选其它视频供应商。
-	if m := strings.ToLower(originalModel); !(m == "sora-2" || m == "sora-2-pro" || strings.HasPrefix(m, "veo-")) {
-		common.AbortWithMessage(c, http.StatusBadRequest, "invalid model: only 'sora-2', 'sora-2-pro' or 'veo-*' are allowed")
-		return
-	}
+    // 渠道内部适配：对外统一接受 Sutui 风格的 veo3*，在内部路由到官方 Veo 两个可用模型：
+    // - veo3                -> veo-3.1-fast-generate-preview
+    // - veo3.1              -> veo-3.1-generate-preview
+    // - veo3-pro            -> veo-3.1-generate-preview
+    // - veo3.1-pro          -> veo-3.1-generate-preview
+    // - veo3.1-components   -> veo-3.1-generate-preview（多图参考，强制 16:9）
+    selectModel := originalModel
+    lowerOrig := strings.ToLower(originalModel)
+    switch lowerOrig {
+    case "veo3":
+        selectModel = "veo-3.1-fast-generate-preview"  // 快速首帧 → fast
+    case "veo3.1":
+        selectModel = "veo-3.1-fast-generate-preview"  // 快速首尾帧 → fast
+    case "veo3-pro", "veo3.1-pro":
+        selectModel = "veo-3.1-generate-preview"       // 高质量 → standard
+    case "veo3.1-components":
+        selectModel = "veo-3.1-generate-preview"       // 多图参考 → standard（并强制 16:9）
+    }
+
+    // veo3.1-components 要求 16:9，若未提供或提供为竖版，强制覆盖为 1600x900
+    if lowerOrig == "veo3.1-components" {
+        s := strings.ReplaceAll(strings.ToLower(strings.TrimSpace(req.Size)), " ", "")
+        mustFix := (s == "")
+        if !mustFix && strings.Contains(s, "x") {
+            parts := strings.Split(s, "x")
+            if len(parts) == 2 {
+                w, _ := strconv.Atoi(parts[0])
+                h, _ := strconv.Atoi(parts[1])
+                if h > w { // 竖版，强制改横版 16:9
+                    mustFix = true
+                }
+            }
+        }
+        if mustFix {
+            req.Size = "1600x900"
+        }
+    }
+
+    // 模型白名单扩展：允许 Sora 与 Veo 族（veo-* 与 sutui 的 veo3*）；内部路由后 selectModel 可能已变更为 veo-3.1-*
+    // 其余模型仍拒绝，以避免误选其它视频供应商。
+    if m := strings.ToLower(originalModel); !(m == "sora-2" || m == "sora-2-pro" || strings.HasPrefix(strings.ToLower(selectModel), "veo-") || strings.HasPrefix(m, "veo3")) {
+        common.AbortWithMessage(c, http.StatusBadRequest, "invalid model: only 'sora-2', 'sora-2-pro', 'veo-*' or 'veo3*' are allowed")
+        return
+    }
 
 	normalize := normalizeSoraSizeInfo(req.Size)
 	if req.Seconds <= 0 {
 		req.Seconds = defaultSoraDuration()
 	}
 
-	provider, mappedModel, err := GetProvider(c, originalModel)
+    // 用内部路由后的 selectModel 选择渠道，以便仅在渠道侧维护官方 Veo 名称
+	provider, mappedModel, err := GetProvider(c, selectModel)
 	if err != nil {
 		common.AbortWithMessage(c, http.StatusServiceUnavailable, err.Error())
 		return
 	}
 	if mappedModel == "" {
-		mappedModel = originalModel
+		mappedModel = selectModel
 	}
 	req.Model = mappedModel
+
+	// 调试日志：记录渠道与模型映射、基础地址
+	func() {
+		ch := provider.GetChannel()
+		base := ch.GetBaseURL()
+		logger.LogDebug(c.Request.Context(), fmt.Sprintf(
+			"video.debug.select -> channel_id=%d type=%d base=%s original=%s select=%s mapped=%s", 
+			ch.Id, ch.Type, base, originalModel, selectModel, mappedModel,
+		))
+	}()
 
 	videoProvider, ok := provider.(providersBase.VideoInterface)
 	if !ok {
@@ -235,21 +284,22 @@ func VideoCreate(c *gin.Context) {
 	isNewAPI := c.GetInt("channel_type") == config.ChannelTypeNewAPI
 	var quota *relay_util.Quota
 	var billingModel string
-	if isNewAPI {
-		billingModel = originalModel
-		quota = relay_util.NewQuota(c, billingModel, 0)
-	} else {
-		// 计费模型：
-		// - Sora：继续使用 buildSoraBillingModel（按分辨率带价档）
-		// - Veo（veo-*）：直接使用 mappedModel（如 veo-3.1-generate-preview），在 quota 中按“秒×1000”换算
-		if strings.HasPrefix(strings.ToLower(mappedModel), "veo-") {
-			billingModel = mappedModel
-			quota = relay_util.NewQuota(c, billingModel, req.Seconds)
-		} else {
-			billingModel = buildSoraBillingModel(mappedModel, normalize.Resolution)
-			quota = relay_util.NewQuota(c, billingModel, req.Seconds)
-		}
-	}
+    if isNewAPI {
+        billingModel = originalModel
+        quota = relay_util.NewQuota(c, billingModel, 0)
+    } else {
+        // 计费模型：
+        // - Sora：继续使用 buildSoraBillingModel（按分辨率带价档）
+        // - Veo（veo-*）：直接使用 mappedModel（如 veo-3.1-generate-preview），在 quota 中按“秒×1000”换算
+        // - Sutui Veo3（veo3*，按次计费）：直接使用 mappedModel，价格类型为 times，由配额器按次结算
+        if strings.HasPrefix(strings.ToLower(mappedModel), "veo-") || strings.HasPrefix(strings.ToLower(mappedModel), "veo3") {
+            billingModel = mappedModel
+            quota = relay_util.NewQuota(c, billingModel, req.Seconds)
+        } else {
+            billingModel = buildSoraBillingModel(mappedModel, normalize.Resolution)
+            quota = relay_util.NewQuota(c, billingModel, req.Seconds)
+        }
+    }
 	if errWithCode := quota.PreQuotaConsumption(); errWithCode != nil {
 		newErr := FilterOpenAIErr(c, errWithCode)
 		relayResponseWithOpenAIErr(c, &newErr)

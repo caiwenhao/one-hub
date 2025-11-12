@@ -1,15 +1,16 @@
 package openai
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"one-api/common"
-	"one-api/common/config"
-	"one-api/common/requester"
-	"one-api/model"
-	"one-api/types"
-	"strings"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "one-api/common"
+    "one-api/common/logger"
+    "one-api/common/config"
+    "one-api/common/requester"
+    "one-api/model"
+    "one-api/types"
+    "strings"
 
 	"one-api/providers/base"
 )
@@ -281,12 +282,22 @@ func (p *OpenAIProvider) mergeCustomParams(requestMap map[string]interface{}, cu
 
 // 修改GetRequestTextBody函数中的对应部分
 func (p *OpenAIProvider) GetRequestTextBody(relayMode int, ModelName string, request any) (*http.Request, *types.OpenAIErrorWithStatusCode) {
-	url, errWithCode := p.GetSupportedAPIUri(relayMode)
-	if errWithCode != nil {
-		return nil, errWithCode
-	}
-	// 获取请求地址
-	fullRequestURL := p.GetFullRequestURL(url, ModelName)
+    url, errWithCode := p.GetSupportedAPIUri(relayMode)
+    if errWithCode != nil {
+        return nil, errWithCode
+    }
+    // 获取请求地址（对视频强制使用 BaseProvider 以避免 GeminiProvider 覆盖为 models:action）
+    var fullRequestURL string
+    if relayMode == config.RelayModeOpenAIVideo {
+        fullRequestURL = p.BaseProvider.GetFullRequestURL(url, ModelName)
+    } else {
+        fullRequestURL = p.GetFullRequestURL(url, ModelName)
+    }
+
+    // 调试：打印目标 URL（避免泄露 body），帮助诊断是否误走到 models:predictLongRunning
+    if relayMode == config.RelayModeOpenAIVideo {
+        logger.SysDebug(fmt.Sprintf("video.getreq.url -> url=%s full=%s", url, fullRequestURL))
+    }
 
 	// 获取请求头
 	headers := p.GetRequestHeaders()

@@ -189,22 +189,35 @@ func (s stringOrArray) String() string {
 }
 
 func (p *OpenAIProvider) CreateVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
-	// NewAPI 渠道：将 OpenAI 标准 /v1/videos 请求映射为供应商 /v1/videos/generations
-	if p.Channel != nil && p.Channel.Type == config.ChannelTypeNewAPI {
-		return p.createNewAPIVideoFromOpenAI(request)
-	}
-	// 根据渠道配置与 BaseURL 识别供应商，分别适配官方与 MountSea 聚合
-	switch p.detectSoraVendor() {
-	case soraVendorMountSea:
-		return p.createMountSeaVideo(request)
-	case soraVendorSutui:
-		return p.createSutuiVideo(request)
-	case soraVendorApimart:
-		return p.createApimartVideo(request)
-	default:
-		// 统一遵循 OpenAI 标准视频路由：/v1/videos
-		return p.createOfficialVideo(request)
-	}
+    // 强化调试：记录入口关键信息
+    ct := ""
+    if p.Context != nil && p.Context.Request != nil {
+        ct = p.Context.Request.Header.Get("Content-Type")
+    }
+    base := strings.TrimSpace(p.GetBaseURL())
+    vendor := p.detectSoraVendor()
+    logger.SysDebug(fmt.Sprintf("video.create.entry -> base=%s vendor=%s model=%s ct=%s", base, vendor, request.Model, ct))
+
+    // NewAPI 渠道：将 OpenAI 标准 /v1/videos 请求映射为供应商 /v1/videos/generations
+    if p.Channel != nil && p.Channel.Type == config.ChannelTypeNewAPI {
+        return p.createNewAPIVideoFromOpenAI(request)
+    }
+    // 根据渠道配置与 BaseURL 识别供应商，分别适配官方与 MountSea 聚合
+    switch p.detectSoraVendor() {
+    case soraVendorMountSea:
+        logger.SysDebug("video.create.branch -> mountsea")
+        return p.createMountSeaVideo(request)
+    case soraVendorSutui:
+        logger.SysDebug("video.create.branch -> sutui")
+        return p.createSutuiVideo(request)
+    case soraVendorApimart:
+        logger.SysDebug("video.create.branch -> apimart")
+        return p.createApimartVideo(request)
+    default:
+        // 统一遵循 OpenAI 标准视频路由：/v1/videos
+        logger.SysDebug("video.create.branch -> official")
+        return p.createOfficialVideo(request)
+    }
 }
 
 func (p *OpenAIProvider) RetrieveVideo(videoID string) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
@@ -236,23 +249,36 @@ func (p *OpenAIProvider) DownloadVideo(videoID string, variant string) (*http.Re
 }
 
 func (p *OpenAIProvider) detectSoraVendor() string {
-	if p.Channel != nil && p.Channel.Plugin != nil {
-		if plugin := p.Channel.Plugin.Data(); plugin != nil {
-			if soraConfig, ok := plugin["sora"]; ok {
-				if vendor, ok := soraConfig["vendor"].(string); ok && vendor != "" {
-					return strings.ToLower(vendor)
-				}
-			}
-		}
-	}
+    if p.Channel != nil && p.Channel.Plugin != nil {
+        if plugin := p.Channel.Plugin.Data(); plugin != nil {
+            if soraConfig, ok := plugin["sora"]; ok {
+                if vendor, ok := soraConfig["vendor"].(string); ok && vendor != "" {
+                    return strings.ToLower(vendor)
+                }
+            }
+            // 兼容 Gemini 渠道的视频上游选择：plugin.gemini_video.vendor 或 plugin.gemini.video.vendor
+            if gm, ok := plugin["gemini_video"]; ok {
+                if v, ok2 := gm["vendor"].(string); ok2 && strings.TrimSpace(v) != "" {
+                    return strings.ToLower(v)
+                }
+            }
+            if gm, ok := plugin["gemini"]; ok {
+                if vm, ok3 := gm["video"].(map[string]any); ok3 {
+                    if v, ok4 := vm["vendor"].(string); ok4 && strings.TrimSpace(v) != "" {
+                        return strings.ToLower(v)
+                    }
+                }
+            }
+        }
+    }
 
 	base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
 	if base != "" && strings.Contains(base, "mountsea") {
 		return soraVendorMountSea
 	}
-	if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai") || strings.Contains(base, "sora2.pub")) {
-		return soraVendorSutui
-	}
+    if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai") || strings.Contains(base, "sora2.pub")) {
+        return soraVendorSutui
+    }
 	if base != "" && strings.Contains(base, "apimart") {
 		return soraVendorApimart
 	}
@@ -272,7 +298,8 @@ func (p *OpenAIProvider) createOfficialVideo(request *types.VideoCreateRequest) 
         if errWithCode != nil {
             return nil, errWithCode
         }
-        fullURL := p.GetFullRequestURL(urlPath, request.Model)
+        // 强制使用 BaseProvider 构造标准 OpenAI 路径，避免 GeminiProvider 的 GetFullRequestURL 覆盖成 /v1beta/models/:action
+        fullURL := p.BaseProvider.GetFullRequestURL(urlPath, request.Model)
         // 透传原始 body
         raw, ok := p.GetRawBody()
         if !ok {
@@ -629,7 +656,8 @@ func (p *OpenAIProvider) ListVideos(after string, limit int, order string) (*typ
 	if p.detectSoraVendor() != soraVendorOfficial {
 		return nil, common.StringErrorWrapperLocal("list videos is not supported for this channel", "unsupported_api", http.StatusNotImplemented)
 	}
-	base := strings.TrimSuffix(p.GetFullRequestURL("", ""), "/")
+    // 使用 BaseProvider 路径拼接，避免被 GeminiProvider 的覆盖逻辑影响
+    base := strings.TrimSuffix(p.BaseProvider.GetFullRequestURL("", ""), "/")
 	videosPath := strings.TrimSuffix(p.Config.Videos, "/")
 	fullURL := fmt.Sprintf("%s%s", base, videosPath)
 	q := url.Values{}
@@ -693,7 +721,7 @@ func (p *OpenAIProvider) DeleteVideo(videoID string) (*types.VideoJob, *types.Op
 }
 
 func (p *OpenAIProvider) buildOfficialVideoURL(videoID string, overridePath string) string {
-	baseURL := strings.TrimSuffix(p.GetFullRequestURL("", ""), "/")
+    baseURL := strings.TrimSuffix(p.BaseProvider.GetFullRequestURL("", ""), "/")
 	if overridePath != "" {
 		overridePath = strings.TrimPrefix(overridePath, "/")
 		return fmt.Sprintf("%s/%s", baseURL, overridePath)
@@ -1149,15 +1177,40 @@ func (p *OpenAIProvider) createSutuiVideo(request *types.VideoCreateRequest) (*t
 		}
 	}
 
-	// 构造 URL
-	urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
+    // 调试：记录进入 sutui 适配器
+    logger.SysDebug(fmt.Sprintf("sutui.video.create -> base=%s model(in)=%s seconds=%d size=%s", p.GetBaseURL(), request.Model, request.Seconds, strings.TrimSpace(request.Size)))
+
+    // 官方 Veo -> Sutui veo3.* 模型映射（仅限 Veo 系列；Sora 维持原逻辑）
+    if m := strings.ToLower(strings.TrimSpace(request.Model)); strings.HasPrefix(m, "veo-") {
+        // 官方 Veo → Sutui 细分映射：
+        // - veo-3.1-fast-generate-preview   -> veo3.1（快速系）
+        // - veo-3.1-generate-preview        -> veo3.1-pro（高质量）
+        if strings.Contains(m, "fast-generate-preview") {
+            request.Model = "veo3.1"
+        } else {
+            request.Model = "veo3.1-pro"
+        }
+    }
+
+    // 构造 URL
+    urlPath, errWithCode := p.GetSupportedAPIUri(config.RelayModeOpenAIVideo)
 	if errWithCode != nil {
 		return nil, errWithCode
 	}
-	fullURL := p.GetFullRequestURL(urlPath, request.Model)
+    fullURL := p.BaseProvider.GetFullRequestURL(urlPath, request.Model)
 
-	// 透传原始 Content-Type，尤其是 multipart 边界
-	headers := p.GetRequestHeaders()
+    // 透传原始 Content-Type，尤其是 multipart 边界
+    headers := p.GetRequestHeaders()
+    // Sutui 采用 OpenAI 风格鉴权：Authorization: Bearer <key>
+    if headers == nil { headers = map[string]string{} }
+    delete(headers, "x-goog-api-key")
+    headers["Authorization"] = fmt.Sprintf("Bearer %s", p.Channel.Key)
+    // 调试：打印即将请求的 URL 与 header 键名
+    func() {
+        keys := make([]string, 0, len(headers))
+        for k := range headers { keys = append(keys, k) }
+        logger.SysDebug(fmt.Sprintf("sutui.video.create -> url=%s headers=%v", fullURL, keys))
+    }()
 	contentType := ""
 	if p.Context != nil && p.Context.Request != nil {
 		contentType = p.Context.Request.Header.Get("Content-Type")

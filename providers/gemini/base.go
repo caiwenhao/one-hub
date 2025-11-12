@@ -7,6 +7,7 @@ import (
     "io"
     "net/http"
     "one-api/common"
+    "one-api/common/logger"
     img "one-api/common/image"
     "one-api/common/requester"
     "one-api/model"
@@ -88,6 +89,9 @@ func getConfig(useOpenaiAPI bool, version string, baseURL string) base.ProviderC
         ChatCompletions:   fmt.Sprintf("/%s/chat/completions", version),
         ModelList:         "/models",
         ImagesGenerations: "1",
+        // 补齐 Videos 路径，确保当 GeminiProvider 参与 OpenAI 风格的视频创建时，
+        // OpenAIProvider.CreateVideo 能拿到 /v1/videos（例如上游为 Sutui/OpenAI 兼容）。
+        Videos:            "/v1/videos",
     }
 
     // 若用户设置了自定义 BaseURL，则覆盖
@@ -151,8 +155,8 @@ func cleaningError(errorInfo *GeminiError, key string) {
 }
 
 func (p *GeminiProvider) GetFullRequestURL(requestURL string, modelName string) string {
-	baseURL := strings.TrimSuffix(p.GetBaseURL(), "/")
-	version := "v1beta"
+    baseURL := strings.TrimSuffix(p.GetBaseURL(), "/")
+    version := "v1beta"
 
 	if p.Channel.Other != "" {
 		version = p.Channel.Other
@@ -163,7 +167,11 @@ func (p *GeminiProvider) GetFullRequestURL(requestURL string, modelName string) 
 		version = inputVersion
 	}
 
-	return fmt.Sprintf("%s/%s/models/%s:%s", baseURL, version, modelName, requestURL)
+    full := fmt.Sprintf("%s/%s/models/%s:%s", baseURL, version, modelName, requestURL)
+    if strings.Contains(strings.ToLower(requestURL), "/v1/videos") || strings.Contains(strings.ToLower(full), "/v1/videos") {
+        logger.SysDebug(fmt.Sprintf("gemini.getfullurl.warn -> requestURL=%s model=%s full=%s", requestURL, modelName, full))
+    }
+    return full
 
 }
 
@@ -201,7 +209,8 @@ func (p *GeminiProvider) detectVeoVendor() string {
         }
     }
     base := strings.ToLower(strings.TrimSpace(p.GetBaseURL()))
-    if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai")) {
+    // 识别 Sutui 系列域名：sutui / st-ai / sora2.pub
+    if base != "" && (strings.Contains(base, "sutui") || strings.Contains(base, "st-ai") || strings.Contains(base, "sora2.pub")) {
         return "sutui"
     }
     if base != "" && strings.Contains(base, "apimart.ai") {
@@ -258,13 +267,17 @@ func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any,
     base := strings.TrimSuffix(p.GetBaseURL(), "/")
     fullURL := base + "/v1/videos"
 
-    headers := p.GetRequestHeaders()
+    // Sutui 使用 OpenAI 风格鉴权（Bearer），不要使用 x-goog-api-key
+    headers := map[string]string{}
+    p.CommonRequestHeaders(headers)
+    headers["Authorization"] = fmt.Sprintf("Bearer %s", p.Channel.Key)
     contentType := ""
     if p.Context != nil && p.Context.Request != nil {
         contentType = p.Context.Request.Header.Get("Content-Type")
     }
     if contentType != "" { headers["Content-Type"] = contentType }
 
+    logger.SysDebug(fmt.Sprintf("gemini.veo.sutui.init -> base=%s model=%s", p.GetBaseURL(), modelName))
     var httpReq *http.Request
     // multipart 直透
     if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
@@ -338,16 +351,39 @@ func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any,
             }
         }
 
-        body := map[string]any{}
-        if modelName != "" { body["model"] = modelName }
-        if prompt != "" { body["prompt"] = prompt }
-        if seconds > 0 { body["seconds"] = seconds }
-        if size != "" { body["size"] = size }
+    // 官方 Veo -> Sutui veo3.* 模型映射
+    // - veo-3.1-fast-generate-preview    -> veo3.1
+    // - veo-3.1-generate-preview         -> veo3.1
+    sutuiModel := modelName
+    low := strings.ToLower(strings.TrimSpace(modelName))
+    switch low {
+    case "veo-3.1-fast-generate-preview":
+        sutuiModel = "veo3.1"      // 快速系
+    case "veo-3.1-generate-preview":
+        sutuiModel = "veo3.1-pro"  // 高质量
+    default:
+        if strings.Contains(low, "fast-generate-preview") {
+            sutuiModel = "veo3.1"
+        } else if strings.HasPrefix(low, "veo-") {
+            sutuiModel = "veo3.1-pro"
+        }
+    }
+
+    body := map[string]any{}
+    if sutuiModel != "" { body["model"] = sutuiModel }
+    if prompt != "" { body["prompt"] = prompt }
+    if seconds > 0 { body["seconds"] = seconds }
+    if size != "" { body["size"] = size }
         r, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
         if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
         httpReq = r
     }
     if httpReq.Body != nil { defer httpReq.Body.Close() }
+    func() {
+        keys := []string{}
+        for k := range headers { keys = append(keys, k) }
+        logger.SysDebug(fmt.Sprintf("gemini.veo.sutui.init -> url=%s headers=%v", fullURL, keys))
+    }()
 
     var resp struct{ ID string `json:"id"` }
     if _, e := p.Requester.SendRequest(httpReq, &resp, false); e != nil {

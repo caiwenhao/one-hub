@@ -502,6 +502,27 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
         if (data.type === 27 && !data.minimax_upstream) data.minimax_upstream = 'official';
         if (data.type === 1 && !data.openai_upstream) data.openai_upstream = 'official';
 
+        // Gemini：根据已保存的 plugin.gemini_video.vendor 或 base_url 推断 gemini_upstream，便于回显
+        if (data.type === 25) {
+          let vendor = 'google';
+          try {
+            if (data.plugin && typeof data.plugin === 'object') {
+              const gv = data.plugin.gemini_video && data.plugin.gemini_video.vendor;
+              const gv2 = data.plugin.gemini && data.plugin.gemini.video && data.plugin.gemini.video.vendor;
+              if (typeof gv === 'string' && gv.trim() !== '') vendor = gv.trim();
+              else if (typeof gv2 === 'string' && gv2.trim() !== '') vendor = gv2.trim();
+            }
+          } catch (_) {}
+          if (!vendor || vendor === '') {
+            const base = (data.base_url || '').toLowerCase();
+            if (base.includes('sora2.pub') || base.includes('sutui') || base.includes('st-ai')) vendor = 'sutui';
+            else if (base.includes('apimart')) vendor = 'apimart';
+            else if (base.includes('ezlinkai')) vendor = 'ezlinkai';
+            else vendor = 'google';
+          }
+          data.gemini_upstream = vendor;
+        }
+
         initChannel(data.type);
         setInitialInput(data);
 

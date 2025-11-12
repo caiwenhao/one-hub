@@ -104,7 +104,7 @@ func ListGeminiModelsByToken(c *gin.Context) {
         methods := []string{}
         lower := strings.ToLower(modelName)
         switch {
-        case strings.HasPrefix(lower, "veo-"):
+        case strings.HasPrefix(lower, "veo-") || strings.HasPrefix(lower, "veo3"):
             // Veo 系列：长任务初始化使用 :predictLongRunning（与官方文档一致）
             methods = []string{"predictLongRunning"}
         case strings.HasPrefix(lower, "imagen-"):
