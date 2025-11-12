@@ -92,20 +92,35 @@ func ListGeminiModelsByToken(c *gin.Context) {
 	}
 	sort.Strings(models)
 
-	var geminiModels []gemini.ModelDetails
-	for _, modelName := range models {
-		// Get the price to check if it's a Gemini model (channel_type=25)
-		price := model.PricingInstance.GetPrice(modelName)
-		if price.ChannelType == config.ChannelTypeGemini {
-			geminiModels = append(geminiModels, gemini.ModelDetails{
-				Name:        fmt.Sprintf("models/%s", modelName),
-				DisplayName: cases.Title(language.Und).String(strings.ReplaceAll(modelName, "-", " ")),
-				SupportedGenerationMethods: []string{
-					"generateContent",
-				},
-			})
-		}
-	}
+    var geminiModels []gemini.ModelDetails
+    for _, modelName := range models {
+        // 仅展示 Gemini 品牌模型（channel_type=25）
+        price := model.PricingInstance.GetPrice(modelName)
+        if price.ChannelType != config.ChannelTypeGemini {
+            continue
+        }
+
+        // 根据模型前缀补充官方“supportedGenerationMethods”
+        methods := []string{}
+        lower := strings.ToLower(modelName)
+        switch {
+        case strings.HasPrefix(lower, "veo-"):
+            // Veo 系列：长任务初始化使用 :predictLongRunning（与官方文档一致）
+            methods = []string{"predictLongRunning"}
+        case strings.HasPrefix(lower, "imagen-"):
+            // Imagen 系列：使用 :predict
+            methods = []string{"predict"}
+        default:
+            // 其他 Gemin 系列：聊天/多模态
+            methods = []string{"generateContent"}
+        }
+
+        geminiModels = append(geminiModels, gemini.ModelDetails{
+            Name:        fmt.Sprintf("models/%s", modelName),
+            DisplayName: cases.Title(language.Und).String(strings.ReplaceAll(modelName, "-", " ")),
+            SupportedGenerationMethods: methods,
+        })
+    }
 
 	c.JSON(200, gemini.ModelListResponse{
 		Models: geminiModels,
