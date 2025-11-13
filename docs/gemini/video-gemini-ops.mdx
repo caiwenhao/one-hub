@@ -1,0 +1,31 @@
+---
+title: "查询（Gemini 风格）"
+description: "使用 GET /gemini/{version}/operations/{operation_id} 查询长任务状态。"
+openapi: 'GET /gemini/v1beta/operations/{operation_id}'
+---
+
+用于轮询 `predictLongRunning` 提交的视频任务状态。
+
+## 认证
+
+- `x-goog-api-key: <Token>`
+
+```bash
+export BASE_URL="https://models.kapon.cloud"
+export TOKEN="oh-xxxxxxxxxxxxxxxx"
+export OP_ID="abc123xyz"  # 创建时返回的 operations/{id}
+```
+
+## cURL 示例
+
+```bash
+curl "$BASE_URL/gemini/v1beta/operations/$OP_ID" \
+  -H "x-goog-api-key: $TOKEN"
+```
+
+完成后响应会包含 `response.generateVideoResponse.generatedSamples[0].video.uri` 与可选的 `metadata`（如 `durationSeconds`、`size`）。
+
+<Callout type="tip">
+  若你的客户端需要按秒计费，可从 `metadata.durationSeconds` 读取；若缺失，可在业务侧用任务上下文回填。
+</Callout>
+

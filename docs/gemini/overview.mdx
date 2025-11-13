@@ -49,6 +49,9 @@ curl "$BASE_URL/v1/chat/completions" \
   <Card title="视频（OpenAI 风格）" icon="video" href="/gemini/video">
     使用统一的 OpenAI 接口 /v1/videos 创建与查询视频任务。
   </Card>
+  <Card title="视频（Gemini 风格）" icon="film" href="/gemini/video-gemini">
+    使用 /gemini/{version}/models/{model}:predictLongRunning 提交任务。
+  </Card>
   <Card title="OpenAI 兼容" icon="code" href="/gemini/openai-compat">
     使用 OpenAI 风格接口调用 Gemini 模型。
   </Card>
@@ -60,6 +63,9 @@ curl "$BASE_URL/v1/chat/completions" \
   </Card>
   <Card title="下载视频" icon="download" href="/gemini/video-content">
     GET /v1/videos/{id}/content，下载成片。
+  </Card>
+  <Card title="查询（Gemini 风格）" icon="magnifying-glass" href="/gemini/video-gemini-ops">
+    GET /gemini/{version}/operations/{id}，轮询长任务。
   </Card>
 </CardGroup>
 

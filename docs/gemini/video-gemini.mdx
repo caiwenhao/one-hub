@@ -1,0 +1,103 @@
+---
+title: "视频（Gemini 风格）"
+description: "使用 Gemini 原生接口 /gemini/{version}/models/{model}:predictLongRunning 创建视频任务。"
+openapi: 'POST /gemini/v1beta/models/{model}:predictLongRunning'
+---
+
+本页介绍 Gemini 原生风格的视频创建接口，适用于需要直接使用 Gemini 模型协议的场景。
+
+## 认证
+
+- `x-goog-api-key: <Token>`
+
+```bash
+export BASE_URL="https://models.kapon.cloud"
+export TOKEN="oh-xxxxxxxxxxxxxxxx"
+```
+
+## 创建视频任务
+
+```bash
+curl -X POST "$BASE_URL/gemini/v1beta/models/veo-3.1-generate-preview:predictLongRunning" \
+  -H "x-goog-api-key: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instances": [
+      {
+        "prompt": "a drone rises from a beach at sunset, cinematic"
+      }
+    ],
+    "parameters": {
+      "durationSeconds": 6,
+      "aspectRatio": "16:9",
+      "resolution": "720p"
+    }
+  }'
+```
+
+成功返回：
+
+```json
+{
+  "name": "operations/abc123xyz",
+  "done": false
+}
+```
+
+## 参考图（可选）
+
+- 单图：在 `instances[0].image.uri` 传入图像 URL（支持 http/https/data:URI）。
+- 两图：可在 `instances[0].image.uri` + `parameters.lastFrame.uri` 传入首尾帧。
+- 多图：附加 `parameters.referenceImages`（数组），示例：
+
+```json
+{
+  "instances": [
+    {
+      "prompt": "night city with neon rain",
+      "image": { "uri": "https://example.com/ref1.jpg" }
+    }
+  ],
+  "parameters": {
+    "durationSeconds": 6,
+    "aspectRatio": "16:9",
+    "resolution": "720p",
+    "lastFrame": { "uri": "https://example.com/ref2.jpg" },
+    "referenceImages": [
+      { "image": { "uri": "https://example.com/ref3.jpg" } }
+    ]
+  }
+}
+```
+
+## 查询进度（Operations）
+
+使用 `GET /gemini/v1beta/operations/{operation_id}` 轮询任务状态，详见《查询（Gemini 风格）》页面。
+
+## 结果结构
+
+当 `done` 为 `true` 时，典型响应：
+
+```json
+{
+  "name": "operations/abc123xyz",
+  "done": true,
+  "response": {
+    "generateVideoResponse": {
+      "generatedSamples": [
+        {
+          "video": { "uri": "https://.../video.mp4" },
+          "metadata": { "durationSeconds": 6, "size": "1280x720" }
+        }
+      ]
+    }
+  }
+}
+```
+
+## 建议
+
+- 1080p 通常与 8 秒配合更稳；720p 场景常用 4/6/8 秒。
+- 参考图与目标宽高比保持一致（横版/竖版一致性）。
+- 轮询间隔使用指数退避（6–10s 起步）。
+
