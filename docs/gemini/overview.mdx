@@ -46,14 +46,20 @@ curl "$BASE_URL/v1/chat/completions" \
   <Card title="图像生成" icon="image" href="/gemini/images">
     Imagen 系列模型的文生图能力。
   </Card>
-  <Card title="视频生成" icon="video" href="/gemini/video">
-    Veo 系列模型的视频生成与查询。
+  <Card title="视频（OpenAI 风格）" icon="video" href="/gemini/video">
+    使用统一的 OpenAI 接口 /v1/videos 创建与查询视频任务。
   </Card>
   <Card title="OpenAI 兼容" icon="code" href="/gemini/openai-compat">
     使用 OpenAI 风格接口调用 Gemini 模型。
   </Card>
   <Card title="故障排查" icon="wrench" href="/gemini/troubleshooting">
     常见问题与解决方案。
+  </Card>
+  <Card title="查询视频" icon="magnifying-glass" href="/gemini/video-get">
+    GET /v1/videos/{id}，查看状态与元数据。
+  </Card>
+  <Card title="下载视频" icon="download" href="/gemini/video-content">
+    GET /v1/videos/{id}/content，下载成片。
   </Card>
 </CardGroup>
 

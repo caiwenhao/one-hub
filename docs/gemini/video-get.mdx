@@ -1,0 +1,35 @@
+---
+title: "查询视频（OpenAI 风格）"
+description: "使用 GET /v1/videos/{id} 查询视频任务进度与元数据。"
+openapi: 'GET /v1/videos/{video_id}'
+---
+
+本页提供标准 OpenAI 风格的查询接口调试面板与示例，仅需携带 Bearer Token。
+
+## 认证
+
+- `Authorization: Bearer <Token>`
+
+```bash
+export BASE_URL="https://models.kapon.cloud/v1"
+export TOKEN="oh-xxxxxxxxxxxxxxxx"
+export VIDEO_ID="video_xxx"  # 创建任务后返回的 id
+```
+
+## cURL 示例
+
+```bash
+curl "$BASE_URL/videos/$VIDEO_ID" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+响应字段包含：
+
+- `status`：queued/in_progress/completed/failed
+- `progress`：0–100（若上游未提供，可能为 0）
+- `video_url` 或 `result.video_url`：完成后返回的直链（已由网关代理）
+
+<Callout type="info">
+  若需要在计费端明确时长，可在查询时追加 `?duration=6` 指定秒数。
+</Callout>
+
