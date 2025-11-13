@@ -53,15 +53,20 @@ func docClaudeModels(*gin.Context) {}
 // Gemini endpoints
 
 // @Summary      Gemini model actions (chat/images/video)
-// @Description  仅支持官方 Google Gemini 端点。开启渠道插件“使用OpenAI API”后，将对接 Google 的 OpenAI 兼容接口；否则走 Gemini 原生 generateContent/streamGenerateContent。Imagen 使用 :predict，Veo 使用 :predictLongRunning。
+// @Description  官方 Gemini 风格入口：generateContent / streamGenerateContent / :predict / :predictLongRunning。
+// @Description  - Chat：`gemini-*-*:generateContent` 或 `...:streamGenerateContent?alt=sse`
+// @Description  - Imagen：`imagen-*-*:predict`
+// @Description  - Veo：`veo-*-*:predictLongRunning`（返回 operations/*，后续用 /gemini/{version}/operations/{id} 轮询）
+// @Description  认证可二选一：`Authorization: Bearer <token>` 或 `x-goog-api-key: <token>`
 // @Tags         Gemini
 // @Accept       json
+// @Accept       multipart/form-data
 // @Produce      json
 // @Security     BearerAuth
 // @Param        version path string true "API Version (e.g. v1beta)"
 // @Param        model   path string true "Full model action, e.g.: gemini-2.5-flash:generateContent | gemini-2.5-flash:streamGenerateContent?alt=sse | imagen-4.0-generate-001:predict | veo-3.1-generate-preview:predictLongRunning"
 // @Param        X-Goog-Api-Key header string false "Google API key (可选，亦可使用 Authorization: Bearer)"
-// @Param        request body map[string]interface{} true "Request body (generateContent/predict)"
+// @Param        request body map[string]interface{} true "Request body (generateContent/predict). Veo 推荐：{instances:[{prompt, image?}], parameters:{durationSeconds, aspectRatio, resolution?, lastFrame?, referenceImages?}}"
 // @Success      200 {object} map[string]interface{}
 // @Router       /gemini/{version}/models/{model} [post]
 func docGeminiGenerate(*gin.Context) {}
@@ -77,7 +82,7 @@ func docGeminiGenerate(*gin.Context) {}
 func docGeminiListModels(*gin.Context) {}
 
 // @Summary      Gemini operations polling (Veo long-running jobs)
-// @Description  转发 /gemini/{version}/operations/*name 到 Gemini 原生 operations 资源；当渠道为 Gemini 原生 Provider 时使用其 BaseURL 构建请求。
+// @Description  轮询 Veo 的长任务状态，配合 `:predictLongRunning` 使用。
 // @Tags         Gemini
 // @Produce      json
 // @Security     BearerAuth
