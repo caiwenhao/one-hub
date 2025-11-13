@@ -5,6 +5,8 @@ import (
     "encoding/json"
     "fmt"
     "io"
+    "mime"
+    "mime/multipart"
     "net/http"
     "one-api/common"
     "one-api/common/logger"
@@ -279,17 +281,26 @@ func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any,
 
     logger.SysDebug(fmt.Sprintf("gemini.veo.sutui.init -> base=%s model=%s", p.GetBaseURL(), modelName))
     var httpReq *http.Request
-    // multipart 直透
+    // multipart：仅改写 model 字段为 sutui 值，其它（含 seconds）保持
     if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
         raw, ok := p.GetRawBody()
         if !ok {
             return nil, common.StringErrorWrapperLocal("request body not found", "request_body_not_found", http.StatusInternalServerError)
         }
-        r, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
-        if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
-        httpReq = r
+        bodyReader, newCT, err := p.rewriteMultipartModelForSutui(raw, contentType, modelName)
+        if err != nil || bodyReader == nil || strings.TrimSpace(newCT) == "" {
+            // 解析失败则回退直透，避免阻断
+            r, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
+            if e != nil { return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError) }
+            httpReq = r
+        } else {
+            headers["Content-Type"] = newCT
+            r, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(bodyReader), p.Requester.WithHeader(headers))
+            if e != nil { return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError) }
+            httpReq = r
+        }
     } else {
-        // JSON 映射（与官方文档对齐，支持两种入参形态）：
+        // 将官方 JSON 形态解析后，改写为 Sutui 需要的 multipart/form-data：
         // 1) 官方形态：
         //    {
         //      "instances": [{ "prompt": "..." }],
@@ -369,12 +380,16 @@ func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any,
         }
     }
 
-    body := map[string]any{}
-    if sutuiModel != "" { body["model"] = sutuiModel }
-    if prompt != "" { body["prompt"] = prompt }
-    if seconds > 0 { body["seconds"] = seconds }
-    if size != "" { body["size"] = size }
-        r, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+        // 组装 multipart 表单（文本字段）
+        var form bytes.Buffer
+        builder := p.Requester.CreateFormBuilder(&form)
+        if sutuiModel != "" { _ = builder.WriteField("model", sutuiModel) }
+        if prompt != "" { _ = builder.WriteField("prompt", prompt) }
+        if seconds > 0 { _ = builder.WriteField("seconds", strconv.Itoa(seconds)) }
+        if size != "" { _ = builder.WriteField("size", size) }
+        _ = builder.Close()
+        headers["Content-Type"] = builder.FormDataContentType()
+        r, err := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(&form), p.Requester.WithHeader(headers))
         if err != nil { return nil, common.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError) }
         httpReq = r
     }
@@ -393,6 +408,77 @@ func (p *GeminiProvider) relayPredictLongRunningViaSutui(modelName string) (any,
         return nil, common.StringErrorWrapperLocal("missing id from sutui response", "upstream_error", http.StatusBadGateway)
     }
     return map[string]any{ "name": fmt.Sprintf("operations/%s", resp.ID), "done": false }, nil
+}
+
+// rewriteMultipartModelForSutui: 在 sutui 场景只改写 multipart 表单的 model 值，不动 seconds 与其它字段/文件。
+func (p *GeminiProvider) rewriteMultipartModelForSutui(raw []byte, contentType string, modelName string) (io.Reader, string, error) {
+    mediaType, params, err := mime.ParseMediaType(contentType)
+    if err != nil || !strings.HasPrefix(strings.ToLower(mediaType), "multipart/") {
+        return nil, "", fmt.Errorf("invalid multipart content-type")
+    }
+    boundary := strings.TrimSpace(params["boundary"])
+    if boundary == "" { return nil, "", fmt.Errorf("missing boundary") }
+
+    // 模型映射函数
+    mapModel := func(in string) string {
+        m := strings.ToLower(strings.TrimSpace(in))
+        if strings.HasPrefix(m, "veo3") { return in }
+        if strings.Contains(m, "fast-generate-preview") { return "veo3.1" }
+        if strings.HasPrefix(m, "veo-") { return "veo3.1-pro" }
+        // 兜底：参考路径模型
+        low := strings.ToLower(strings.TrimSpace(modelName))
+        if strings.Contains(low, "fast-generate-preview") { return "veo3.1" }
+        if strings.HasPrefix(low, "veo-") { return "veo3.1-pro" }
+        return in
+    }
+
+    // 读取原表单
+    mr := multipart.NewReader(bytes.NewReader(raw), boundary)
+    type filePart struct{ field, filename string; data []byte }
+    fields := map[string][]string{}
+    files := []filePart{}
+    for {
+        part, e := mr.NextPart()
+        if e == io.EOF { break }
+        if e != nil { return nil, "", e }
+        name := part.FormName()
+        if name == "" { _ = part.Close(); continue }
+        if fn := part.FileName(); fn != "" {
+            b, e2 := io.ReadAll(part); _ = part.Close()
+            if e2 != nil { return nil, "", e2 }
+            files = append(files, filePart{field: name, filename: fn, data: b})
+            continue
+        }
+        b, e3 := io.ReadAll(part); _ = part.Close()
+        if e3 != nil { return nil, "", e3 }
+        fields[name] = append(fields[name], string(b))
+    }
+
+    // 计算目标模型
+    target := ""
+    if arr, ok := fields["model"]; ok && len(arr) > 0 {
+        target = mapModel(arr[0])
+    } else {
+        target = mapModel("")
+    }
+
+    // 重建表单
+    var buf bytes.Buffer
+    builder := p.Requester.CreateFormBuilder(&buf)
+    if strings.TrimSpace(target) != "" {
+        if err := builder.WriteField("model", target); err != nil { return nil, "", err }
+    }
+    for k, vals := range fields {
+        if strings.EqualFold(k, "model") { continue }
+        for _, v := range vals {
+            if err := builder.WriteField(k, v); err != nil { return nil, "", err }
+        }
+    }
+    for _, f := range files {
+        if err := builder.CreateFormFileReader(f.field, bytes.NewReader(f.data), f.filename); err != nil { return nil, "", err }
+    }
+    _ = builder.Close()
+    return &buf, builder.FormDataContentType(), nil
 }
 
 // 将 Veo 初始化映射到 Apimart 的 /v1/videos/generations
