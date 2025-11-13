@@ -1,6 +1,7 @@
 package gemini
 
 import (
+    "bytes"
     "fmt"
     "net/http"
     "one-api/common"
@@ -175,19 +176,41 @@ func (p *GeminiProvider) CreateVideo(request *types.VideoCreateRequest) (*types.
         var httpReq *http.Request
         if strings.Contains(strings.ToLower(ct), "multipart/form-data") {
             if raw, ok := p.GetRawBody(); ok {
-                headers["Content-Type"] = ct
-                r, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
-                if e != nil { return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError) }
-                httpReq = r
+                // 在 sutui 下，仅改写 multipart 中的 model，不动 seconds 与其它字段
+                bodyReader, newCT, err := p.rewriteMultipartModelForSutui(raw, ct, modelName)
+                if err != nil || bodyReader == nil || strings.TrimSpace(newCT) == "" {
+                    // 回退直透
+                    headers["Content-Type"] = ct
+                    r, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(raw), p.Requester.WithHeader(headers))
+                    if e != nil { return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError) }
+                    httpReq = r
+                } else {
+                    headers["Content-Type"] = newCT
+                    r, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(bodyReader), p.Requester.WithHeader(headers))
+                    if e != nil { return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError) }
+                    httpReq = r
+                }
             } else {
                 return nil, common.StringErrorWrapperLocal("request body not found", "request_body_not_found", http.StatusInternalServerError)
             }
         } else {
-            body := map[string]any{"model": sutuiModel}
-            if strings.TrimSpace(request.Prompt) != "" { body["prompt"] = request.Prompt }
-            if request.Seconds > 0 { body["seconds"] = request.Seconds }
-            if strings.TrimSpace(request.Size) != "" { body["size"] = request.Size }
-            r, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(body), p.Requester.WithHeader(headers))
+            // Sutui /v1/videos 要求 multipart/form-data，这里将 JSON 形态改写为表单
+            // 仅传文本字段（如需参考图请使用 multipart 上传 input_reference 文件字段）
+            var form bytes.Buffer
+            builder := p.Requester.CreateFormBuilder(&form)
+            _ = builder.WriteField("model", sutuiModel)
+            if strings.TrimSpace(request.Prompt) != "" {
+                _ = builder.WriteField("prompt", request.Prompt)
+            }
+            if request.Seconds > 0 {
+                _ = builder.WriteField("seconds", strconv.Itoa(request.Seconds))
+            }
+            if strings.TrimSpace(request.Size) != "" {
+                _ = builder.WriteField("size", request.Size)
+            }
+            _ = builder.Close()
+            headers["Content-Type"] = builder.FormDataContentType()
+            r, e := p.Requester.NewRequest(http.MethodPost, fullURL, p.Requester.WithBody(&form), p.Requester.WithHeader(headers))
             if e != nil { return nil, common.ErrorWrapper(e, "new_request_failed", http.StatusInternalServerError) }
             httpReq = r
         }
