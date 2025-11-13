@@ -1,231 +1,117 @@
 ---
-title: "视频生成"
-description: "使用 Veo 系列模型进行视频生成与任务查询。"
-openapi: 'POST /gemini/v1beta/models/{model}:predictLongRunning'
+title: "视频（OpenAI 风格）"
+description: "使用 OpenAI 标准接口 /v1/videos 进行 Veo 视频生成与任务查询。"
+openapi: 'POST /v1/videos'
 ---
 
-`POST /gemini/v1beta/models/{model}:predictLongRunning` 用于创建视频生成任务，支持文生视频、图生视频等多种模式。
+本文档使用统一的 OpenAI 风格接口，不涉及任何上游供应商信息。你可以直接用 Bearer Token 调用 `/v1/videos` 创建任务，并用 `/v1/videos/{id}` 查询进度、`/v1/videos/{id}/content` 下载成片。
 
-## 创建视频任务
+## 认证
 
-```bash
-curl -X POST "$BASE_URL/gemini/v1beta/models/veo-2.0:predictLongRunning" \
-  -H "x-goog-api-key: $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "input": {
-      "prompt": "a drone rises from a beach at sunset, cinematic, 8s"
-    },
-    "config": {
-      "durationSeconds": 8,
-      "aspectRatio": "16:9"
-    }
-  }'
-```
-
-## 响应示例
-
-```json
-{
-  "name": "operations/abc123xyz",
-  "done": false
-}
-```
-
-返回的 `name` 字段是任务 ID，用于后续查询任务状态。
-
-## 查询任务状态
-
-使用 `GET /gemini/v1beta/operations/{operation_id}` 查询任务进度：
+- `Authorization: Bearer <Token>`
 
 ```bash
-curl "$BASE_URL/gemini/v1beta/operations/abc123xyz?model=veo-2.0" \
-  -H "x-goog-api-key: $TOKEN"
+export BASE_URL="https://models.kapon.cloud/v1"
+export TOKEN="oh-xxxxxxxxxxxxxxxx"
 ```
 
-<Note>
-  `model` 参数用于选择渠道，建议与创建任务时使用的模型保持一致。
-</Note>
+## 可用模型
 
-## 任务完成响应
+- `veo-3.1-fast-generate-preview`（快速出片）
+- `veo-3.1-generate-preview`（标准质量）
 
-当 `done` 为 `true` 时，表示任务已完成：
+> 后续如有新增型号，可在“可用模型”接口或控制台查看，无需改动调用方式。
 
-```json
-{
-  "name": "operations/abc123xyz",
-  "done": true,
-  "response": {
-    "generateVideoResponse": {
-      "generatedSamples": [
-        {
-          "video": {
-            "uri": "https://models.kapon.cloud/proxy/video/abc123xyz"
-          },
-          "metadata": {
-            "durationSeconds": 8,
-            "size": "1920x1080"
-          }
-        }
-      ]
-    }
-  }
-}
-```
+## 文生视频（JSON）
 
-## 下载视频
-
-从响应中获取视频 URL 后，可以直接下载：
+注意：`seconds` 需以字符串提交（JSON 标签为 `,string`）。
 
 ```bash
-curl -L "https://models.kapon.cloud/proxy/video/abc123xyz" \
-  --output video.mp4
-```
-
-<Callout type="info">
-  kapon 会自动代理视频 URL，确保下载链接的稳定性和安全性。
-</Callout>
-
-## 宽高比设置
-
-通过 `aspectRatio` 参数控制视频比例：
-
-```json
-{
-  "input": {
-    "prompt": "city traffic time-lapse"
-  },
-  "config": {
-    "durationSeconds": 8,
-    "aspectRatio": "9:16"
-  }
-}
-```
-
-支持的宽高比：
-
-- `16:9`：横向宽屏（1920x1080）
-- `9:16`：竖向（1080x1920）
-- `1:1`：正方形（1080x1080）
-
-## 时长设置
-
-通过 `durationSeconds` 参数设置视频时长：
-
-```json
-{
-  "input": {
-    "prompt": "ocean waves"
-  },
-  "config": {
-    "durationSeconds": 4
-  }
-}
-```
-
-<Note>
-  不同模型支持的时长范围不同，通常为 2-8 秒。具体限制请参考模型文档。
-</Note>
-
-## 图生视频
-
-提供参考图像进行视频生成：
-
-```json
-{
-  "input": {
-    "prompt": "camera zooms in slowly",
-    "image": {
-      "bytesBase64Encoded": "<BASE64_IMAGE_DATA>"
-    }
-  },
-  "config": {
-    "durationSeconds": 8,
-    "aspectRatio": "16:9"
-  }
-}
-```
-
-## 视频续写
-
-基于已有视频进行续写：
-
-```json
-{
-  "input": {
-    "prompt": "continue the scene",
-    "video": {
-      "bytesBase64Encoded": "<BASE64_VIDEO_DATA>"
-    }
-  },
-  "config": {
-    "durationSeconds": 8
-  }
-}
-```
-
-## 轮询最佳实践
-
-建议使用指数退避策略轮询任务状态：
-
-```python
-import time
-import requests
-
-def wait_for_video(operation_id, token, max_wait=300):
-    base_url = "https://models.kapon.cloud"
-    headers = {"x-goog-api-key": token}
-    
-    wait_time = 2
-    elapsed = 0
-    
-    while elapsed < max_wait:
-        url = f"{base_url}/gemini/v1beta/operations/{operation_id}?model=veo-2.0"
-        resp = requests.get(url, headers=headers)
-        data = resp.json()
-        
-        if data.get("done"):
-            return data
-        
-        time.sleep(wait_time)
-        elapsed += wait_time
-        wait_time = min(wait_time * 1.5, 30)  # 最多等待30秒
-    
-    raise TimeoutError("Video generation timeout")
-```
-
-## OpenAI 兼容方式
-
-也可以使用 OpenAI 风格的视频接口（如果你的渠道支持）：
-
-```bash
-curl -X POST "$BASE_URL/v1/videos" \
+curl -X POST "$BASE_URL/videos" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "veo-2.0",
-    "prompt": "sunset over mountains",
-    "duration": 8,
-    "size": "1920x1080"
+    "model": "veo-3.1-fast-generate-preview",
+    "prompt": "a cinematic lion at sunset",
+    "seconds": "6",
+    "size": "1280x720"
   }'
 ```
 
-## 计费说明
+成功时返回：
 
-视频生成按时长计费：
+```json
+{
+  "id": "video_xxx",
+  "object": "video",
+  "model": "veo-3.1-fast-generate-preview",
+  "status": "queued",
+  "progress": 0,
+  "created_at": 1761234567,
+  "seconds": "6",
+  "size": "1280x720"
+}
+```
 
-- 计费单位：秒
-- 计费时机：任务完成时
-- kapon 会自动从响应中提取视频时长进行计费
+## 图生视频（multipart）
 
-<Callout type="tip">
-  如果响应中无法解析时长，可以在查询时添加 `?duration=8` 参数明确指定计费时长。
+通过 `input_reference` 字段上传 1–3 张参考图（可重复多次）：
+
+```bash
+curl -X POST "$BASE_URL/videos" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "model=veo-3.1-fast-generate-preview" \
+  -F "prompt=Neon rain street, cinematic" \
+  -F "seconds=6" \
+  -F "size=1280x720" \
+  -F "input_reference=@tmp/veo_refs/ref1_1280x720.jpg" \
+  -F "input_reference=@tmp/veo_refs/ref2_720x1280.jpg"
+```
+
+## 查询任务
+
+```bash
+curl "$BASE_URL/videos/{video_id}" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+完成后响应会包含直链：`video_url`（或 `result.video_url`）。
+
+## 下载视频
+
+```bash
+curl -L "$BASE_URL/videos/{video_id}/content" \
+  -H "Authorization: Bearer $TOKEN" \
+  --output out.mp4
+```
+
+<Callout type="info">
+  网关会统一代理视频直链，保证下载稳定性与安全性；无需关心实际存储来源。
 </Callout>
 
-## 常见参数
+## API 调试面板（可直接试用）
 
-- `prompt`：视频描述文本（必填）
-- `durationSeconds`：视频时长（秒）
-- `aspectRatio`：宽高比（16:9、9:16、1:1）
-- `image`：参考图像（图生视频）
-- `video`：参考视频（视频续写）
+本页已嵌入 `POST /v1/videos` 的调试面板（见页首）。你可以：
+
+- 选择模型与参数，发起创建请求；
+- 复制返回的 `id`，再用 cURL 调用查询/下载接口；
+- 若你使用 SDK，也可直接复用同样的请求体结构。
+
+## 参数说明
+
+- `model`：视频生成模型（必填）
+- `prompt`：文本提示词（建议英文或中英混合）
+- `seconds`：视频时长（秒，JSON 需以字符串提交）
+- `size`：分辨率（如 `1280x720`、`720x1280`、`1920x1080`、`1080x1920`）
+- `input_reference`：参考图（multipart 下可重复 1–3 次）
+- `extend_from`：基于历史成片续写（部分型号/时长可能受限）
+
+## 最佳实践
+
+- 1080p 场景建议配合 8 秒时长；其余尺寸常用 4/6/8 秒。
+- 图生视频优先提供与目标画幅一致的参考图（横版/竖版）。
+- 轮询查询时使用 6–10 秒退避，避免过于频繁的请求。
+
+## 计费
+
+按视频时长（秒）计费。若响应无法解析到时长，可在查询时追加 `?duration=6` 明确计费秒数。
