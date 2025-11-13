@@ -309,6 +309,8 @@ const typeConfig = {
         'MiniMax-M1',
         'MiniMax-Text-01',
         // 语音（TTS）
+        'speech-2.6-hd',
+        'speech-2.6-turbo',
         'speech-2.5-hd-preview',
         'speech-02-hd',
         'speech-01-hd',

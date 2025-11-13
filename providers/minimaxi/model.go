@@ -18,6 +18,9 @@ func (p *MiniMaxProvider) GetModelList() ([]string, error) {
         "MiniMax-M1",
         "MiniMax-Text-01",
         // 语音（TTS）
+        // 2.6 新版语音模型：与 02 同价位，保持静态清单可见性，便于前端选择
+        "speech-2.6-hd",
+        "speech-2.6-turbo",
         "speech-2.5-hd-preview",
         "speech-02-hd",
         "speech-01-hd",

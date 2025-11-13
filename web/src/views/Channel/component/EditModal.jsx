@@ -689,13 +689,20 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                         } else if (next === 'official' || next === '') {
                           setFieldValue('base_url', 'https://api.minimaxi.com');
                         }
-                        // 同步 custom_parameter 顶层 upstream，方便后端/视频客户端解析
+                        // 同步 custom_parameter 顶层 upstream，方便后端/视频/语音客户端解析
                         try {
                           const obj = values.custom_parameter ? JSON.parse(values.custom_parameter) : {};
                           if (next && next !== 'official') {
                             obj.upstream = next;
                           } else {
                             if (obj && typeof obj === 'object' && 'upstream' in obj) delete obj.upstream;
+                          }
+                          // 音频能力：为 PPInfra 写入 audio.upstream=ppinfra（后端也支持顶层 upstream；此处仅增强可读性与显式性）
+                          if (!obj.audio || typeof obj.audio !== 'object') obj.audio = {};
+                          if (next === 'ppinfra') {
+                            obj.audio.upstream = 'ppinfra';
+                          } else if (obj.audio && 'upstream' in obj.audio) {
+                            delete obj.audio.upstream;
                           }
                           // 简化视频配置：选中聚合上游时，自动注入 video 段的合理默认值（用户可继续编辑）
                           if (!obj.video || typeof obj.video !== 'object') obj.video = {};

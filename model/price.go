@@ -542,9 +542,12 @@ func GetDefaultPrice() []*Price {
 		// minimaxi 语音（按字符计费；此处沿用 tokens 计量，等价视 1 字符 = 1 token）
 		// 同步 T2A（HD 档：3.5 元 / 万字符 → 0.35 / 1k；Turbo 档：2 元 / 万字符 → 0.2 / 1k）
 		// base = 人民币单价(每1k) / RMBRate
+		// 2.6 版本与 02 系列定价一致
+		"speech-2.6-hd":            {[]float64{25, 25}, config.ChannelTypeMiniMax},               // 0.35 / 1k chars
 		"speech-2.5-hd-preview":    {[]float64{25, 25}, config.ChannelTypeMiniMax},               // 0.35 / 1k chars
 		"speech-02-hd":             {[]float64{25, 25}, config.ChannelTypeMiniMax},               // 0.35 / 1k chars
 		"speech-01-hd":             {[]float64{25, 25}, config.ChannelTypeMiniMax},               // 0.35 / 1k chars
+		"speech-2.6-turbo":         {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
 		"speech-2.5-turbo-preview": {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
 		"speech-02-turbo":          {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
 		"speech-01-turbo":          {[]float64{14.285714, 14.285714}, config.ChannelTypeMiniMax}, // 0.2 / 1k chars
