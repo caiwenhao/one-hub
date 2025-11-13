@@ -118,8 +118,22 @@
             "pages": [
               "gemini/generate-content",
               "gemini/embeddings",
-              "gemini/images",
-              "gemini/video"
+              "gemini/images"
+            ]
+          },
+          {
+            "group": "OpenAI 风格 API",
+            "pages": [
+              "gemini/video",
+              "gemini/video-get",
+              "gemini/video-content"
+            ]
+          },
+          {
+            "group": "Gemini 原生 API",
+            "pages": [
+              "gemini/video-gemini",
+              "gemini/video-gemini-ops"
             ]
           },
           {
