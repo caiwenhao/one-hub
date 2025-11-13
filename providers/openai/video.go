@@ -109,9 +109,9 @@ type apimartTaskInfo struct {
 }
 
 type apimartError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Type    string `json:"type"`
+    Code    stringOrInt `json:"code"`
+    Message string `json:"message"`
+    Type    string `json:"type"`
 }
 
 type apimartTaskResponse struct {
@@ -185,7 +185,39 @@ func (s *stringOrArray) UnmarshalJSON(data []byte) error {
 }
 
 func (s stringOrArray) String() string {
-	return string(s)
+    return string(s)
+}
+
+// stringOrInt 兼容上游返回的 code 既可能为数字也可能为字符串的情况
+type stringOrInt string
+
+func (s *stringOrInt) UnmarshalJSON(data []byte) error {
+    if len(data) == 0 {
+        *s = ""
+        return nil
+    }
+    // 字符串场景
+    if data[0] == '"' {
+        var v string
+        if err := json.Unmarshal(data, &v); err != nil {
+            return err
+        }
+        *s = stringOrInt(v)
+        return nil
+    }
+    // 数字场景（int/float 均转为其字符串表示）
+    var num json.Number
+    if err := json.Unmarshal(data, &num); err == nil {
+        *s = stringOrInt(num.String())
+        return nil
+    }
+    // 兜底：尝试按普通字符串解析
+    var v string
+    if err := json.Unmarshal(data, &v); err == nil {
+        *s = stringOrInt(v)
+        return nil
+    }
+    return fmt.Errorf("invalid stringOrInt value")
 }
 
 func (p *OpenAIProvider) CreateVideo(request *types.VideoCreateRequest) (*types.VideoJob, *types.OpenAIErrorWithStatusCode) {
@@ -1877,26 +1909,26 @@ func mapApimartStatus(status string) string {
 }
 
 func apimartErrorToOpenAI(err *apimartError, code int) *types.OpenAIErrorWithStatusCode {
-	if err == nil {
-		err = &apimartError{
-			Code:    code,
-			Message: "upstream error",
-			Type:    "upstream_error",
-		}
-	}
-	statusCode := code
+    if err == nil {
+        err = &apimartError{
+            Code:    stringOrInt(fmt.Sprintf("%d", code)),
+            Message: "upstream error",
+            Type:    "upstream_error",
+        }
+    }
+    statusCode := code
 	if statusCode < 400 || statusCode > 599 {
 		statusCode = http.StatusBadGateway
 	}
-	return &types.OpenAIErrorWithStatusCode{
-		OpenAIError: types.OpenAIError{
-			Message: err.Message,
-			Code:    fmt.Sprintf("%d", err.Code),
-			Type:    err.Type,
-		},
-		StatusCode: statusCode,
-		LocalError: true,
-	}
+    return &types.OpenAIErrorWithStatusCode{
+        OpenAIError: types.OpenAIError{
+            Message: err.Message,
+            Code:    string(err.Code),
+            Type:    err.Type,
+        },
+        StatusCode: statusCode,
+        LocalError: true,
+    }
 }
 
 func normalizeSoraSize(size string) soraSizeInfo {
