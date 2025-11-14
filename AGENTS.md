@@ -1,22 +1,16 @@
-<!-- OPENSPEC:START -->
-# OpenSpec Instructions
-
-These instructions are for AI assistants working in this project.
+# Project AI Assistant Working Guidelines
 
 Always prioritize the use of built-in tools and MCP tools to assist with tasks.
 
-Always open `@/openspec/AGENTS.md` when the request:
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
+## Non-Negotiable Requirements
+1. Always review the existing code (covering both frontend and backend); analyze, organize, and confirm the requirements (clearly define scope, dependencies, impact areas, and risks).
+2. When information is insufficient, use built-in online tools or MCP tools to gather and validate information, and record key sources and conclusions.
+3. Solution design must align with the project's current reality, explicitly considering the existing frontend and backend implementations and constraints; provide a short-term Minimum Viable Product (MVP) and a mid-to-long-term evolution plan, explaining trade-offs.
+4. Before implementation, produce a complete task list (with executable granularity and acceptance criteria); after completing each phase, provide a follow-up recommended task list.
 
-Use `@/openspec/AGENTS.md` to learn:
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
+## Operating Principles
+- Strictly minimize the change scope; modify only files directly related to the task.
+- For new dependencies or breaking changes, present them in the proposal first and obtain approval.
+- Prefer built-in tools and MCP tools for search, execution, generation, and verification to ensure reproducibility and rollback.
 
-Keep this managed block so 'openspec update' can refresh the instructions.
-
-** Most Important:Always respond in Chinese-simplified **
-
-<!-- OPENSPEC:END -->
+**Most Important: Always respond in Simplified Chinese.**
