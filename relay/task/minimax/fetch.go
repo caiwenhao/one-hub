@@ -1,16 +1,17 @@
 package minimax
 
 import (
-	"encoding/json"
-	"net/http"
-	"strings"
-	"time"
+    "encoding/json"
+    "net/http"
+    "strings"
+    "time"
 
-	"one-api/common/config"
-	"one-api/model"
-	"one-api/providers"
-	miniProvider "one-api/providers/minimaxi"
-	"one-api/relay"
+    "one-api/common/config"
+    "one-api/common/utils"
+    "one-api/model"
+    "one-api/providers"
+    miniProvider "one-api/providers/minimaxi"
+    "one-api/relay"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,16 +23,31 @@ import (
 // 3) 回填：若响应含 file_id/直链，入库 artifact，后续文件下载可 O(1) 命中
 // 4) 兜底（可选）：若 DB 未命中，可按“组内所有 MiniMax 渠道”穷举上游查询，命中则补写 task 映射/或至少写 artifact
 func RelayTaskFetch(c *gin.Context) {
-	taskID := c.Param("task_id")
-	if taskID == "" {
-		taskID = c.Query("task_id")
-	}
-	if taskID == "" {
-		StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
-		return
-	}
+    taskID := c.Param("task_id")
+    if taskID == "" {
+        taskID = c.Query("task_id")
+    }
+    if taskID == "" {
+        StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
+        return
+    }
 
-	userID := c.GetInt("id")
+    userID := c.GetInt("id")
+
+    // 支持平台任务ID：task_<ULID> 或历史 base36
+    if strings.HasPrefix(strings.ToLower(taskID), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformMiniMax, userID, utils.StripTaskPrefix(taskID)); t != nil {
+            taskID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformMiniMax && t.UserId == userID {
+            taskID = t.TaskID
+        }
+    } else if utils.IsULID(taskID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformMiniMax, userID, taskID); t != nil {
+            taskID = t.TaskID
+        }
+    }
 
 	// DB-First: 先按 (platform,user,task_id) 查任务映射
 	task := model.GetByUserAndTaskId(userID, taskID)

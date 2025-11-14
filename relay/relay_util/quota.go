@@ -34,7 +34,11 @@ type Quota struct {
 
 	startTime         time.Time
 	firstResponseTime time.Time
-	extraBillingData  map[string]ExtraBillingData
+    extraBillingData  map[string]ExtraBillingData
+
+    // 扩展：记录平台 & 上游任务ID（用于日志排障与导出）
+    platformTaskID string
+    upstreamTaskID string
 }
 
 func NewQuota(c *gin.Context, modelName string, promptTokens int) *Quota {
@@ -239,6 +243,13 @@ func (q *Quota) GetLogMeta(usage *types.Usage) map[string]any {
         "output_ratio": q.price.GetOutput(),
     }
 
+    if strings.TrimSpace(q.platformTaskID) != "" {
+        meta["platform_task_id"] = q.platformTaskID
+    }
+    if strings.TrimSpace(q.upstreamTaskID) != "" {
+        meta["upstream_task_id"] = q.upstreamTaskID
+    }
+
     // 标注 MiniMax 上游来源（official/ppinfra），用于对账与观测
     if q.channelId > 0 {
         if ch, err := model.GetChannelById(q.channelId); err == nil && ch != nil {
@@ -311,6 +322,12 @@ func (q *Quota) GetLogMeta(usage *types.Usage) map[string]any {
 	}
 
 	return meta
+}
+
+// SetTaskIDs 在消费日志中写入平台/上游任务ID
+func (q *Quota) SetTaskIDs(platformID, upstreamID string) {
+    q.platformTaskID = platformID
+    q.upstreamTaskID = upstreamID
 }
 
 func (q *Quota) getRequestTime() int {

@@ -1,15 +1,18 @@
 package relay
 
 import (
-	"io"
-	"net/http"
-	"strings"
+    "io"
+    "encoding/json"
+    "net/http"
+    "strings"
 
-	"one-api/common"
-	"one-api/common/config"
-	"one-api/common/logger"
-	"one-api/relay/relay_util"
-	"one-api/types"
+    "one-api/common"
+    "one-api/common/config"
+    // "one-api/common/logger"
+    "one-api/common/utils"
+    "one-api/model"
+    "one-api/relay/relay_util"
+    "one-api/types"
 
 	"github.com/gin-gonic/gin"
 )
@@ -63,7 +66,7 @@ func VideoGenerationsCreate(c *gin.Context) {
 		return
 	}
 
-	// 直透上游 /v1/videos/generations
+    // 直透上游 /v1/videos/generations，并在成功时包装 task_id 为平台ID
 	base := strings.TrimSuffix(provider.GetChannel().GetBaseURL(), "/")
 	if base == "" {
 		base = "https://api.openai.com" // 兜底；newapi 一般会配置第三方域名
@@ -86,8 +89,8 @@ func VideoGenerationsCreate(c *gin.Context) {
 	}
 
 	// 不做 OpenAI 错误包装，保持上游 JSON 结构
-	resp, errWithCode := provider.GetRequester().SendRequestRaw(httpReq)
-	if errWithCode != nil {
+    resp, errWithCode := provider.GetRequester().SendRequestRaw(httpReq)
+    if errWithCode != nil {
 		quota.Undo(c)
 		// 仍以原始结构返回（尽量）
 		status := errWithCode.StatusCode
@@ -101,16 +104,45 @@ func VideoGenerationsCreate(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	for key, values := range resp.Header {
-		for _, v := range values {
-			c.Writer.Header().Add(key, v)
-		}
-	}
-	c.Status(resp.StatusCode)
-	if _, copyErr := io.Copy(c.Writer, resp.Body); copyErr != nil {
-		logger.LogError(c.Request.Context(), "copy_video_generations_failed:"+copyErr.Error())
-	}
-
-	// 成功则按次消耗
-	quota.Consume(c, &types.Usage{PromptTokens: 0, TotalTokens: 0}, false)
+    // 尝试读取 JSON 并改写 data[].task_id
+    body, _ := io.ReadAll(resp.Body)
+    _ = resp.Body.Close()
+    var vendor map[string]any
+    if json.Unmarshal(body, &vendor) == nil {
+        // 预期结构：{"code":0, "data":[{"task_id":"...",...}]}
+        if arr, ok := vendor["data"].([]any); ok && len(arr) > 0 {
+            first, _ := arr[0].(map[string]any)
+            if first != nil {
+                if upID, ok2 := first["task_id"].(string); ok2 && strings.TrimSpace(upID) != "" {
+                    // 落库任务（按 Sora 平台对齐视频）
+                    task := &model.Task{
+                        PlatformTaskID: utils.NewPlatformULID(),
+                        TaskID:         upID,
+                        Platform:       model.TaskPlatformSora,
+                        UserId:         c.GetInt("id"),
+                        TokenID:        c.GetInt("token_id"),
+                        ChannelId:      provider.GetChannel().Id,
+                        Action:         "video.generate.vendor",
+                        Status:         model.TaskStatusSubmitted,
+                        SubmitTime:     c.GetTime("requestStartTime").Unix(),
+                        CreatedAt:      c.GetTime("requestStartTime").Unix(),
+                        UpdatedAt:      c.GetTime("requestStartTime").Unix(),
+                    }
+                    _ = task.Insert()
+                    platformID := utils.AddTaskPrefix(task.PlatformTaskID)
+                    first["task_id"] = platformID
+                    vendor["data"] = arr
+                    patched, _ := json.Marshal(vendor)
+                    c.Data(resp.StatusCode, "application/json", patched)
+                    quota.Consume(c, &types.Usage{PromptTokens: 0, TotalTokens: 0}, false)
+                    return
+                }
+            }
+        }
+    }
+    // 回退：原样转发
+    for key, values := range resp.Header { for _, v := range values { c.Writer.Header().Add(key, v) } }
+    c.Status(resp.StatusCode)
+    c.Writer.Write(body)
+    quota.Consume(c, &types.Usage{PromptTokens: 0, TotalTokens: 0}, false)
 }

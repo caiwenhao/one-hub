@@ -1,13 +1,15 @@
 package kling
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "time"
+    "strings"
 
-	"one-api/common/logger"
-	"one-api/model"
+    "one-api/common/logger"
+    "one-api/common/utils"
+    "one-api/model"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
@@ -476,8 +478,9 @@ func CreateMultiElementsTask(c *gin.Context) {
 	}
 
 	userId := c.GetInt("id")
-	task := &model.Task{
-		TaskID:         taskID,
+    task := &model.Task{
+        PlatformTaskID: utils.NewPlatformULID(),
+        TaskID:         taskID,
 		ExternalTaskID: req.ExternalTaskID,
 		Platform:       model.TaskPlatformKling,
 		UserId:         userId,
@@ -499,13 +502,15 @@ func CreateMultiElementsTask(c *gin.Context) {
 		logger.SysError(fmt.Sprintf("保存多模态任务失败: %v", err))
 	}
 
-	officialData := &OfficialMultiElementsTaskData{
-		TaskID:        taskID,
-		TaskStatus:    taskStatus,
-		TaskStatusMsg: taskStatusMsg,
-		SessionID:     sessionID,
-		CreatedAt:     createdAt,
-		UpdatedAt:     updatedAt,
+    // 统一以平台任务ID返回
+    platformID := utils.AddTaskPrefix(task.PlatformTaskID)
+    officialData := &OfficialMultiElementsTaskData{
+        TaskID:        platformID,
+        TaskStatus:    taskStatus,
+        TaskStatusMsg: taskStatusMsg,
+        SessionID:     sessionID,
+        CreatedAt:     createdAt,
+        UpdatedAt:     updatedAt,
 		TaskInfo: &OfficialTaskInfo{
 			ExternalTaskID: req.ExternalTaskID,
 		},
@@ -522,16 +527,31 @@ func CreateMultiElementsTask(c *gin.Context) {
 
 // GetMultiElementsTask 查询多模态视频编辑单个任务
 func GetMultiElementsTask(c *gin.Context) {
-	taskID := c.Param("id")
-	userId := c.GetInt("id")
-	actions := resolveActionsByPath(c.FullPath())
+    taskID := c.Param("id")
+    userId := c.GetInt("id")
+    actions := resolveActionsByPath(c.FullPath())
 
 	// 支持通过external_task_id查询
 	var task *model.Task
 	var err error
 
-	// 先尝试通过task_id查询
-	task, err = model.GetTaskByTaskIdAndActions(model.TaskPlatformKling, userId, taskID, actions)
+    // 平台任务ID支持：task_<ULID> 或历史 base36
+    if strings.HasPrefix(strings.ToLower(taskID), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformKling, userId, utils.StripTaskPrefix(taskID)); t != nil {
+            taskID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformKling && t.UserId == userId {
+            taskID = t.TaskID
+        }
+    } else if utils.IsULID(taskID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformKling, userId, taskID); t != nil {
+            taskID = t.TaskID
+        }
+    }
+
+    // 先尝试通过task_id查询
+    task, err = model.GetTaskByTaskIdAndActions(model.TaskPlatformKling, userId, taskID, actions)
 	if err != nil || task == nil {
 		// 再尝试通过external_task_id查询
 		tasks, errList := model.GetTasksByExternalTaskIDAndActions(model.TaskPlatformKling, userId, taskID, actions)
@@ -718,11 +738,12 @@ func convertToMultiElementsFormat(task *model.Task) *OfficialMultiElementsTaskDa
 		json.Unmarshal(task.Data, &klingResp)
 	}
 
-	officialData := &OfficialMultiElementsTaskData{
-		TaskID:        task.TaskID,
-		TaskStatus:    string(task.Status),
-		CreatedAt:     task.CreatedAt,
-		UpdatedAt:     task.UpdatedAt,
+    platformID := utils.AddTaskPrefix(task.PlatformTaskID)
+    officialData := &OfficialMultiElementsTaskData{
+        TaskID:        platformID,
+        TaskStatus:    string(task.Status),
+        CreatedAt:     task.CreatedAt,
+        UpdatedAt:     task.UpdatedAt,
 		TaskStatusMsg: task.FailReason,
 		TaskInfo: &OfficialTaskInfo{
 			ExternalTaskID: task.ExternalTaskID,

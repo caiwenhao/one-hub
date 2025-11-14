@@ -2,10 +2,12 @@ package relay
 
 import (
     "io"
+    "encoding/json"
     "net/http"
     "one-api/common"
     "one-api/common/config"
-    "one-api/common/logger"
+    // "one-api/common/logger"
+    "one-api/common/utils"
     "one-api/model"
     providersBase "one-api/providers/base"
     "one-api/types"
@@ -94,27 +96,41 @@ func (r *relayImageGenerations) send() (err *types.OpenAIErrorWithStatusCode, do
             defer req.Body.Close()
         }
 
-        // 直透响应
-        resp, errWith := r.provider.GetRequester().SendRequestRaw(req)
-        if errWith != nil {
+    // 直透响应
+    resp, errWith := r.provider.GetRequester().SendRequestRaw(req)
+    if errWith != nil {
             err = errWith
             done = true
             return
         }
-        defer resp.Body.Close()
+    defer resp.Body.Close()
 
-        for key, values := range resp.Header {
-            for _, v := range values {
-                r.c.Writer.Header().Add(key, v)
+    // 尝试包装 JSON 的 task_id → 平台ID
+    body, _ := io.ReadAll(resp.Body)
+    var vendor map[string]any
+    if json.Unmarshal(body, &vendor) == nil {
+        if arr, ok := vendor["data"].([]any); ok && len(arr) > 0 {
+            if first, okm := arr[0].(map[string]any); okm {
+                if upID, ok2 := first["task_id"].(string); ok2 && strings.TrimSpace(upID) != "" {
+                    // 仅做映射，平台统一归到 Sora 平台下（图像）
+                    task := &model.Task{ PlatformTaskID: utils.NewPlatformULID(), TaskID: upID, Platform: model.TaskPlatformSora, UserId: r.c.GetInt("id"), TokenID: r.c.GetInt("token_id"), ChannelId: r.provider.GetChannel().Id, Action: "image.generate.vendor", Status: model.TaskStatusSubmitted, SubmitTime: r.c.GetTime("requestStartTime").Unix(), CreatedAt: r.c.GetTime("requestStartTime").Unix(), UpdatedAt: r.c.GetTime("requestStartTime").Unix(), }
+                    _ = model.CreateTask(task)
+                    first["task_id"] = utils.AddTaskPrefix(task.PlatformTaskID)
+                    vendor["data"] = arr
+                    patched, _ := json.Marshal(vendor)
+                    r.c.Data(resp.StatusCode, "application/json", patched)
+                    done = true
+                    return
+                }
             }
         }
-        r.c.Status(resp.StatusCode)
-        if _, copyErr := io.Copy(r.c.Writer, resp.Body); copyErr != nil {
-            logger.LogError(r.c.Request.Context(), "copy_newapi_image_failed:"+copyErr.Error())
-        }
-        // 已直接写回响应
-        done = true
-        return
+    }
+
+    for key, values := range resp.Header { for _, v := range values { r.c.Writer.Header().Add(key, v) } }
+    r.c.Status(resp.StatusCode)
+    r.c.Writer.Write(body)
+    done = true
+    return
     }
 
     // 其他渠道：按 OpenAI 标准处理

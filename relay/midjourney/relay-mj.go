@@ -4,22 +4,23 @@
 package midjourney
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"io"
-	"log"
-	"net/http"
-	"one-api/common"
-	"one-api/common/logger"
-	"one-api/controller"
-	"one-api/model"
-	provider "one-api/providers/midjourney"
-	"one-api/relay"
-	"one-api/relay/relay_util"
-	"one-api/types"
-	"strings"
-	"time"
+    "bytes"
+    "context"
+    "encoding/json"
+    "io"
+    "log"
+    "net/http"
+    "one-api/common"
+    "one-api/common/logger"
+    "one-api/controller"
+    "one-api/model"
+    "one-api/common/utils"
+    provider "one-api/providers/midjourney"
+    "one-api/relay"
+    "one-api/relay/relay_util"
+    "one-api/types"
+    "strings"
+    "time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -104,7 +105,7 @@ func RelayMidjourneyNotify(c *gin.Context) *provider.MidjourneyResponse {
 }
 
 func coverMidjourneyTaskDto(originTask *model.Midjourney) (midjourneyTask provider.MidjourneyDto) {
-	midjourneyTask.MjId = originTask.MjId
+    midjourneyTask.MjId = utils.AddTaskPrefix(originTask.PlatformTaskID)
 	midjourneyTask.Progress = originTask.Progress
 	midjourneyTask.PromptEn = originTask.PromptEn
 	midjourneyTask.State = originTask.State
@@ -206,8 +207,8 @@ func RelaySwapFace(c *gin.Context) *provider.MidjourneyResponse {
 		midjResponse = &mjResp.Response
 	}
 
-	midjourneyTask := &model.Midjourney{
-		UserId:      userId,
+    midjourneyTask := &model.Midjourney{
+        UserId:      userId,
 		TokenID:     tokenId,
 		Code:        midjResponse.Code,
 		Action:      provider.MjActionSwapFace,
@@ -225,8 +226,9 @@ func RelaySwapFace(c *gin.Context) *provider.MidjourneyResponse {
 		FailReason:  "",
 		ChannelId:   c.GetInt("channel_id"),
 		Quota:       quota,
-		Mode:        mjModelType,
-	}
+        Mode:        mjModelType,
+        PlatformTaskID: utils.NewPlatformULID(),
+    }
 	err = midjourneyTask.Insert()
 	if err != nil {
 		return provider.MidjourneyErrorWrapper(provider.MjRequestError, "insert_midjourney_task_failed")
@@ -234,8 +236,12 @@ func RelaySwapFace(c *gin.Context) *provider.MidjourneyResponse {
 	// 开始激活任务
 	controller.ActivateUpdateMidjourneyTaskBulk()
 
-	c.Writer.WriteHeader(mjResp.StatusCode)
-	respBody, err := json.Marshal(midjResponse)
+    // 覆盖返回中的 result 为平台任务ID
+    c.Writer.WriteHeader(mjResp.StatusCode)
+    platformID := utils.AddTaskPrefix(midjourneyTask.PlatformTaskID)
+    patched := *midjResponse
+    patched.Result = strings.ReplaceAll(patched.Result, midjourneyTask.MjId, platformID)
+    respBody, err := json.Marshal(&patched)
 	if err != nil {
 		return provider.MidjourneyErrorWrapper(provider.MjRequestError, "unmarshal_response_body_failed")
 	}
@@ -249,7 +255,15 @@ func RelaySwapFace(c *gin.Context) *provider.MidjourneyResponse {
 func RelayMidjourneyTaskImageSeed(c *gin.Context) *provider.MidjourneyResponse {
 	taskId := c.Param("id")
 	userId := c.GetInt("id")
-	originTask := model.GetByMJId(userId, taskId)
+    // 支持平台任务ID：task_<ULID>/裸ULID
+    originTask := model.GetByMJId(userId, taskId)
+    if originTask == nil {
+        if strings.HasPrefix(strings.ToLower(taskId), utils.PlatformTaskPrefix) {
+            originTask = model.GetByPlatformMJId(userId, utils.StripTaskPrefix(taskId))
+        } else if utils.IsULID(taskId) {
+            originTask = model.GetByPlatformMJId(userId, taskId)
+        }
+    }
 	if originTask == nil {
 		return provider.MidjourneyErrorWrapper(provider.MjRequestError, "task_no_found")
 	}
@@ -291,7 +305,7 @@ func RelayMidjourneyTask(c *gin.Context, relayMode int) *provider.MidjourneyResp
 				Description: "task_no_found",
 			}
 		}
-		midjourneyTask := coverMidjourneyTaskDto(originTask)
+    midjourneyTask := coverMidjourneyTaskDto(originTask)
 		respBody, err = json.Marshal(midjourneyTask)
 		if err != nil {
 			return &provider.MidjourneyResponse{
@@ -409,7 +423,14 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *provider.MidjourneyRe
 			midjRequest.Action = provider.MjActionModal
 		}
 
-		originTask := model.GetByMJId(userId, mjId)
+    originTask := model.GetByMJId(userId, mjId)
+    if originTask == nil {
+        if strings.HasPrefix(strings.ToLower(mjId), utils.PlatformTaskPrefix) {
+            originTask = model.GetByPlatformMJId(userId, utils.StripTaskPrefix(mjId))
+        } else if utils.IsULID(mjId) {
+            originTask = model.GetByPlatformMJId(userId, mjId)
+        }
+    }
 		if originTask == nil {
 			return provider.MidjourneyErrorWrapper(provider.MjRequestError, "task_not_found")
 		} else if originTask.Status != "SUCCESS" && relayMode != provider.RelayModeMidjourneyModal {
@@ -503,8 +524,8 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *provider.MidjourneyRe
 	// 23-队列已满，请稍后再试 {"code":23,"description":"队列已满，请稍后尝试","result":"14001929738841620","properties":{"discordInstanceId":"1118138338562560102"}}
 	// 24-prompt包含敏感词 {"code":24,"description":"可能包含敏感词","properties":{"promptEn":"nude body","bannedWord":"nude"}}
 	// other: 提交错误，description为错误描述
-	midjourneyTask := &model.Midjourney{
-		UserId:      userId,
+    midjourneyTask := &model.Midjourney{
+        UserId:      userId,
 		TokenID:     tokenId,
 		Code:        midjResponse.Code,
 		Action:      midjRequest.Action,
@@ -522,8 +543,9 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *provider.MidjourneyRe
 		FailReason:  "",
 		ChannelId:   c.GetInt("channel_id"),
 		Quota:       quota,
-		Mode:        mjModelType,
-	}
+        Mode:        mjModelType,
+        PlatformTaskID: utils.NewPlatformULID(),
+    }
 
 	if midjResponse.Code != 1 && midjResponse.Code != 21 && midjResponse.Code != 22 {
 		//非1-提交成功,21-任务已存在和22-排队中，则记录错误原因
@@ -577,7 +599,10 @@ func RelayMidjourneySubmit(c *gin.Context, relayMode int) *provider.MidjourneyRe
 	}
 
 	//resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
-	bodyReader := io.NopCloser(bytes.NewBuffer(responseBody))
+    // 替换响应中的 result 为平台任务ID
+    platformID2 := utils.AddTaskPrefix(midjourneyTask.PlatformTaskID)
+    responseBody = []byte(strings.ReplaceAll(string(responseBody), midjourneyTask.MjId, platformID2))
+    bodyReader := io.NopCloser(bytes.NewBuffer(responseBody))
 
 	//for k, v := range resp.Header {
 	//	c.Writer.Header().Set(k, v[0])

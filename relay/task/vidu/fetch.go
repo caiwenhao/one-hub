@@ -1,24 +1,40 @@
 package vidu
 
 import (
-	"net/http"
-	"one-api/model"
-	"one-api/providers"
-	viduProvider "one-api/providers/vidu"
+    "net/http"
+    "strings"
+    "one-api/common/utils"
+    "one-api/model"
+    "one-api/providers"
+    viduProvider "one-api/providers/vidu"
 
 	"github.com/gin-gonic/gin"
 )
 
 func RelayTaskFetch(c *gin.Context) {
-	taskId := c.Param("task_id")
-	if taskId == "" {
-		StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
-		return
-	}
+    taskId := c.Param("task_id")
+    if taskId == "" {
+        StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
+        return
+    }
 
-	// 获取用户任务
-	userId := c.GetInt("id")
-	task := model.GetByUserAndTaskId(userId, taskId)
+    // 支持平台任务ID：task_<ULID> 或历史 base36
+    userId := c.GetInt("id")
+    if strings.HasPrefix(strings.ToLower(taskId), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformVidu, userId, utils.StripTaskPrefix(taskId)); t != nil {
+            taskId = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskId); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformVidu && t.UserId == userId {
+            taskId = t.TaskID
+        }
+    } else if utils.IsULID(taskId) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformVidu, userId, taskId); t != nil {
+            taskId = t.TaskID
+        }
+    }
+    // 获取用户任务（此处按上游ID查找）
+    task := model.GetByUserAndTaskId(userId, taskId)
 	if task == nil {
 		StringError(c, http.StatusNotFound, "task_not_found", "task not found")
 		return
@@ -56,15 +72,29 @@ func RelayTaskFetch(c *gin.Context) {
 
 // 取消任务接口
 func RelayTaskCancel(c *gin.Context) {
-	taskId := c.Param("task_id")
-	if taskId == "" {
-		StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
-		return
-	}
+    taskId := c.Param("task_id")
+    if taskId == "" {
+        StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
+        return
+    }
 
-	// 获取用户任务
-	userId := c.GetInt("id")
-	task := model.GetByUserAndTaskId(userId, taskId)
+    // 支持平台任务ID：task_<ULID> 或历史 base36
+    userId := c.GetInt("id")
+    if strings.HasPrefix(strings.ToLower(taskId), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformVidu, userId, utils.StripTaskPrefix(taskId)); t != nil {
+            taskId = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskId); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformVidu && t.UserId == userId {
+            taskId = t.TaskID
+        }
+    } else if utils.IsULID(taskId) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformVidu, userId, taskId); t != nil {
+            taskId = t.TaskID
+        }
+    }
+    // 获取用户任务
+    task := model.GetByUserAndTaskId(userId, taskId)
 	if task == nil {
 		StringError(c, http.StatusNotFound, "task_not_found", "task not found")
 		return

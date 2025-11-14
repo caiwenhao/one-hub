@@ -123,6 +123,58 @@ func changeTaskIDColumnType() *gormigrate.Migration {
         },
     }
 }
+
+// 为 tasks 表新增 platform_task_id 列（varchar(32)）
+func addPlatformTaskIDColumn() *gormigrate.Migration {
+    return &gormigrate.Migration{
+        ID: "20251114_add_platform_task_id",
+        Migrate: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Task{}) {
+                return nil
+            }
+            if tx.Migrator().HasColumn(&Task{}, "platform_task_id") {
+                return nil
+            }
+            if err := tx.Migrator().AddColumn(&Task{}, "platform_task_id"); err != nil {
+                logger.SysLog("新增 tasks.platform_task_id 字段失败: " + err.Error())
+                return err
+            }
+            return nil
+        },
+        Rollback: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Task{}) || !tx.Migrator().HasColumn(&Task{}, "platform_task_id") {
+                return nil
+            }
+            return tx.Migrator().DropColumn(&Task{}, "platform_task_id")
+        },
+    }
+}
+
+// 为 midjourney 表新增 platform_task_id 列
+func addMJPlatformTaskIDColumn() *gormigrate.Migration {
+    return &gormigrate.Migration{
+        ID: "20251114_add_mj_platform_task_id",
+        Migrate: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Midjourney{}) {
+                return nil
+            }
+            if tx.Migrator().HasColumn(&Midjourney{}, "platform_task_id") {
+                return nil
+            }
+            if err := tx.Migrator().AddColumn(&Midjourney{}, "platform_task_id"); err != nil {
+                logger.SysLog("新增 midjourney.platform_task_id 字段失败: " + err.Error())
+                return err
+            }
+            return nil
+        },
+        Rollback: func(tx *gorm.DB) error {
+            if !tx.Migrator().HasTable(&Midjourney{}) || !tx.Migrator().HasColumn(&Midjourney{}, "platform_task_id") {
+                return nil
+            }
+            return tx.Migrator().DropColumn(&Midjourney{}, "platform_task_id")
+        },
+    }
+}
 func addOwnedByTypeToPrice() *gormigrate.Migration {
 	return &gormigrate.Migration{
 		ID: "202411300002",
@@ -170,6 +222,8 @@ func migrationBefore(db *gorm.DB) error {
         removeKeyIndexMigration(),
         changeTokenKeyColumnType(),
         changeTaskIDColumnType(),
+        addPlatformTaskIDColumn(),
+        addMJPlatformTaskIDColumn(),
         addOwnedByTypeToPrice(),
     })
     return m.Migrate()

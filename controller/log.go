@@ -452,13 +452,13 @@ func ExportLogsCSV(c *gin.Context) {
 		return
 	}
 
-	w := csv.NewWriter(c.Writer)
-	header := []string{"时间", "用户", "渠道", "模型", "令牌"}
-	if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
-		header = append(header, "金额(货币)")
-	}
-	header = append(header, "请求耗时(s)", "来源IP", "流式")
-	_ = w.Write(header)
+    w := csv.NewWriter(c.Writer)
+    header := []string{"时间", "用户", "渠道", "模型", "令牌", "平台任务ID", "上游任务ID"}
+    if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
+        header = append(header, "金额(货币)")
+    }
+    header = append(header, "请求耗时(s)", "来源IP", "流式")
+    _ = w.Write(header)
 
 	// 分批导出，避免占用过多内存
 	const batchSize = 1000
@@ -486,13 +486,27 @@ func ExportLogsCSV(c *gin.Context) {
 			}
 			_, quotaCurrency := quotaValuesForCSV(r.Quota)
 
-			rec := []string{
-				createdAt,
-				username,
-				channel,
-				r.ModelName,
-				r.TokenName,
-			}
+            // 从 metadata 中提取任务ID
+            platformTaskID := ""
+            upstreamTaskID := ""
+            if m := r.Metadata.Data(); m != nil {
+                if v, ok := m["platform_task_id"].(string); ok {
+                    platformTaskID = v
+                }
+                if v, ok := m["upstream_task_id"].(string); ok {
+                    upstreamTaskID = v
+                }
+            }
+
+            rec := []string{
+                createdAt,
+                username,
+                channel,
+                r.ModelName,
+                r.TokenName,
+                platformTaskID,
+                upstreamTaskID,
+            }
 			if quotaCurrency != "" {
 				rec = append(rec, quotaCurrency)
 			}
@@ -530,13 +544,13 @@ func ExportUserLogsCSV(c *gin.Context) {
 	}
 
     w := csv.NewWriter(c.Writer)
-    // 非管理员导出：包含“渠道”列，但仅输出 channel_id
-    header := []string{"时间", "用户", "渠道", "模型", "令牌"}
-	if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
-		header = append(header, "金额(货币)")
-	}
-	header = append(header, "请求耗时(s)", "来源IP", "流式")
-	_ = w.Write(header)
+    // 非管理员导出：包含“渠道”列（仅 id），新增“平台任务ID”列
+    header := []string{"时间", "用户", "渠道", "模型", "令牌", "平台任务ID"}
+    if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
+        header = append(header, "金额(货币)")
+    }
+    header = append(header, "请求耗时(s)", "来源IP", "流式")
+    _ = w.Write(header)
 
 	const batchSize = 1000
 	for page := 0; ; page++ {
@@ -561,12 +575,21 @@ func ExportUserLogsCSV(c *gin.Context) {
             if r.ChannelId > 0 {
                 channelIDStr = strconv.Itoa(r.ChannelId)
             }
+            // 从 metadata 中提取平台任务ID
+            platformTaskID := ""
+            if m := r.Metadata.Data(); m != nil {
+                if v, ok := m["platform_task_id"].(string); ok {
+                    platformTaskID = v
+                }
+            }
+
             rec := []string{
                 createdAt,
                 r.Username,
                 channelIDStr,
                 r.ModelName,
                 r.TokenName,
+                platformTaskID,
             }
 			if quotaCurrency != "" {
 				rec = append(rec, quotaCurrency)

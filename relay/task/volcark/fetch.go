@@ -1,23 +1,39 @@
 package volcark
 
 import (
-	"net/http"
-	"one-api/model"
-	"one-api/providers"
-	volcarkProvider "one-api/providers/volcark"
+    "net/http"
+    "strings"
+    "one-api/common/utils"
+    "one-api/model"
+    "one-api/providers"
+    volcarkProvider "one-api/providers/volcark"
 
 	"github.com/gin-gonic/gin"
 )
 
 func RelayTaskFetch(c *gin.Context) {
-	taskID := c.Param("task_id")
-	if taskID == "" {
-		StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
-		return
-	}
+    taskID := c.Param("task_id")
+    if taskID == "" {
+        StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
+        return
+    }
 
-	userID := c.GetInt("id")
-	task := model.GetByUserAndTaskId(userID, taskID)
+    userID := c.GetInt("id")
+    // 支持平台任务ID：task_<ULID> 或历史 base36
+    if strings.HasPrefix(strings.ToLower(taskID), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformVolcArk, userID, utils.StripTaskPrefix(taskID)); t != nil {
+            taskID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformVolcArk && t.UserId == userID {
+            taskID = t.TaskID
+        }
+    } else if utils.IsULID(taskID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformVolcArk, userID, taskID); t != nil {
+            taskID = t.TaskID
+        }
+    }
+    task := model.GetByUserAndTaskId(userID, taskID)
 	if task == nil {
 		StringError(c, http.StatusNotFound, "task_not_found", "task not found")
 		return
@@ -89,14 +105,28 @@ func RelayTaskList(c *gin.Context) {
 }
 
 func RelayTaskCancel(c *gin.Context) {
-	taskID := c.Param("task_id")
-	if taskID == "" {
-		StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
-		return
-	}
+    taskID := c.Param("task_id")
+    if taskID == "" {
+        StringError(c, http.StatusBadRequest, "invalid_request", "task_id is required")
+        return
+    }
 
-	userID := c.GetInt("id")
-	task := model.GetByUserAndTaskId(userID, taskID)
+    userID := c.GetInt("id")
+    // 支持平台任务ID：task_<ULID> 或历史 base36
+    if strings.HasPrefix(strings.ToLower(taskID), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformVolcArk, userID, utils.StripTaskPrefix(taskID)); t != nil {
+            taskID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformVolcArk && t.UserId == userID {
+            taskID = t.TaskID
+        }
+    } else if utils.IsULID(taskID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformVolcArk, userID, taskID); t != nil {
+            taskID = t.TaskID
+        }
+    }
+    task := model.GetByUserAndTaskId(userID, taskID)
 	if task == nil {
 		StringError(c, http.StatusNotFound, "task_not_found", "task not found")
 		return

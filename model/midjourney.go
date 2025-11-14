@@ -44,8 +44,9 @@ type Midjourney struct {
 	Quota       int    `json:"quota"`
 	Buttons     string `json:"buttons"`
 	Properties  string `json:"properties"`
-	Mode        string `json:"mode,omitempty"`
-	TokenID     int    `json:"token_id" gorm:"default:0"`
+    Mode        string `json:"mode,omitempty"`
+    TokenID     int    `json:"token_id" gorm:"default:0"`
+    PlatformTaskID string `json:"platform_task_id" gorm:"type:varchar(32);index"`
 }
 
 // TaskQueryParams 用于包含所有搜索条件的结构体，可以根据需求添加更多字段
@@ -135,6 +136,15 @@ func GetByOnlyMJId(mjId string) *Midjourney {
 		return nil
 	}
 	return mj
+}
+
+func GetByPlatformMJId(userId int, platformTaskID string) *Midjourney {
+    var mj *Midjourney
+    err := DB.Where("user_id = ? and platform_task_id = ?", userId, platformTaskID).First(&mj).Error
+    if err != nil {
+        return nil
+    }
+    return mj
 }
 
 func GetByMJId(userId int, mjId string) *Midjourney {

@@ -1,17 +1,19 @@
 package task
 
 import (
-	"fmt"
-	"math"
-	"net/http"
-	"one-api/common/config"
-	"one-api/common/logger"
-	"one-api/metrics"
-	"one-api/model"
-	"one-api/relay/relay_util"
-	"one-api/relay/task/base"
-	"one-api/types"
-	"strings"
+    "fmt"
+    "math"
+    "net/http"
+    "one-api/common/config"
+    "one-api/common/logger"
+    "one-api/metrics"
+    "one-api/model"
+    "one-api/common/utils"
+    "one-api/relay/relay_util"
+    "one-api/relay/task/base"
+    "one-api/types"
+    "strings"
+    "reflect"
 
 	"github.com/gin-gonic/gin"
 )
@@ -110,20 +112,52 @@ func RelayTaskSubmit(c *gin.Context) {
 }
 
 func CompletedTask(quotaInstance *relay_util.Quota, taskAdaptor base.TaskInterface, c *gin.Context) {
-	quotaInstance.Consume(c, &types.Usage{CompletionTokens: 0, PromptTokens: 1, TotalTokens: 1}, false)
+    // 先入库拿到自增主键，生成平台任务ID；再消费配额并回填日志中 task_id
+    task := taskAdaptor.GetTask()
+    task.Quota = int(quotaInstance.GetInputRatio() * 1000)
+    task.BillingGroupRatio = quotaInstance.GetGroupRatio()
+    task.BillingModel = taskAdaptor.GetModelName()
 
-	task := taskAdaptor.GetTask()
-	task.Quota = int(quotaInstance.GetInputRatio() * 1000)
-	task.BillingGroupRatio = quotaInstance.GetGroupRatio()
-	task.BillingModel = taskAdaptor.GetModelName()
+    // 设置平台任务ID（ULID）
+    if strings.TrimSpace(task.PlatformTaskID) == "" {
+        task.PlatformTaskID = utils.NewPlatformULID()
+    }
 
-	err := task.Insert()
-	if err != nil {
-		logger.SysError(fmt.Sprintf("task error: %s", err.Error()))
-	}
+    if err := task.Insert(); err != nil {
+        logger.SysError(fmt.Sprintf("task insert error: %s", err.Error()))
+    }
 
-	// 激活任务
-	ActivateUpdateTaskBulk()
+    // 在日志中写入 platform_task_id / upstream_task_id，并覆盖返回体
+    if task.ID > 0 {
+        platformID := utils.AddTaskPrefix(task.PlatformTaskID)
+        quotaInstance.SetTaskIDs(platformID, task.TaskID)
+        // 尝试覆盖响应体中的 ID/task_id 字段为平台ID
+        if resp := taskAdaptor.GetResponse(); resp != nil {
+            if m, ok := resp.(map[string]any); ok {
+                if _, exists := m["task_id"]; exists { m["task_id"] = platformID }
+                if _, exists := m["id"]; exists { m["id"] = platformID }
+                taskAdaptor.SetResponse(m)
+            } else {
+                rv := reflect.ValueOf(resp)
+                if rv.Kind() == reflect.Pointer { rv = rv.Elem() }
+                if rv.IsValid() && rv.CanAddr() {
+                    if f := rv.FieldByName("TaskID"); f.IsValid() && f.CanSet() && f.Kind() == reflect.String {
+                        f.SetString(platformID)
+                    }
+                    if f := rv.FieldByName("ID"); f.IsValid() && f.CanSet() && f.Kind() == reflect.String {
+                        f.SetString(platformID)
+                    }
+                }
+                taskAdaptor.SetResponse(resp)
+            }
+        }
+    }
+
+    // 在拿到平台ID后再进行消费，以便日志带上两个ID
+    quotaInstance.Consume(c, &types.Usage{CompletionTokens: 0, PromptTokens: 1, TotalTokens: 1}, false)
+
+    // 激活任务
+    ActivateUpdateTaskBulk()
 }
 
 func GetRelayMode(c *gin.Context) int {

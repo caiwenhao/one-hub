@@ -20,7 +20,7 @@ type TaskBase struct {
 	Task          *model.Task
 	OriginTaskID  string
 	BaseProvider  base.ProviderInterface
-	Response      any
+    Response      any
 }
 
 type TaskInterface interface {
@@ -32,7 +32,11 @@ type TaskInterface interface {
 	GetTask() *model.Task
 	SetProvider() *TaskError
 	GetProvider() base.ProviderInterface
-	GinResponse()
+    GinResponse()
+
+    // 新增：允许上层在 CompletedTask 之后读写响应体（覆盖 task_id）
+    GetResponse() any
+    SetResponse(any)
 
 	UpdateTaskStatus(ctx context.Context, taskChannelM map[int][]string, taskM map[string]*model.Task) error
 }
@@ -97,8 +101,11 @@ func (t *TaskBase) HandleOriginTaskID() error {
 }
 
 func (t *TaskBase) GinResponse() {
-	t.C.JSON(200, t.Response)
+    t.C.JSON(200, t.Response)
 }
+
+func (t *TaskBase) GetResponse() any { return t.Response }
+func (t *TaskBase) SetResponse(v any) { t.Response = v }
 
 type TaskError struct {
 	Code       string `json:"code"`

@@ -1,20 +1,21 @@
 package relay
 
 import (
-	"encoding/json"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"path"
-	"strings"
-	"time"
+    "encoding/json"
+    "io"
+    "io/ioutil"
+    "net/http"
+    "net/url"
+    "path"
+    "strings"
+    "time"
 
-	"one-api/common"
-	"one-api/common/config"
-	"one-api/common/logger"
-	"one-api/common/storage"
-	"one-api/common/utils"
+    "one-api/common"
+    "one-api/common/config"
+    "one-api/common/logger"
+    "one-api/common/storage"
+    "one-api/common/utils"
+    "one-api/model"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,11 +32,26 @@ func NewAPITaskRetrieve(c *gin.Context) {
 	// 仅允许 NewAPI 渠道类型
 	c.Set("allow_channel_type", []int{config.ChannelTypeNewAPI})
 
-	taskID := strings.TrimSpace(c.Param("id"))
-	if taskID == "" {
-		common.AbortWithMessage(c, http.StatusBadRequest, "task id is required")
-		return
-	}
+    taskID := strings.TrimSpace(c.Param("id"))
+    if taskID == "" {
+        common.AbortWithMessage(c, http.StatusBadRequest, "task id is required")
+        return
+    }
+
+    // 支持平台任务ID：task_<ULID>/裸ULID/旧base36 → 转为上游ID
+    if strings.HasPrefix(strings.ToLower(taskID), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformSora, c.GetInt("id"), utils.StripTaskPrefix(taskID)); t != nil {
+            taskID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformSora && t.UserId == c.GetInt("id") {
+            taskID = t.TaskID
+        }
+    } else if utils.IsULID(taskID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformSora, c.GetInt("id"), taskID); t != nil {
+            taskID = t.TaskID
+        }
+    }
 
 	// 选择一个 NewAPI 渠道。使用一个常见模型名进行选路（要求该渠道包含该模型）。
 	provider, _, err := GetProvider(c, "sora-2")

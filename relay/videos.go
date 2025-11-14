@@ -329,13 +329,8 @@ func VideoCreate(c *gin.Context) {
 		job.Size = normalize.Resolution
 	}
 
-	usage := &types.Usage{}
-	if !isNewAPI {
-		usage.PromptTokens = req.Seconds
-		usage.TotalTokens = req.Seconds
-	}
-	quota.Consume(c, usage, false)
-
+	// 在消费前先落库，得到平台任务ID，用于统一对外返回与日志对照
+	upstreamID := job.ID
 	props := soraTaskProperties{
 		Model:        originalModel,
 		Resolution:   normalize.Resolution,
@@ -345,7 +340,22 @@ func VideoCreate(c *gin.Context) {
 		BillingModel: billingModel,
 		Prompt:       req.Prompt,
 	}
-	saveSoraTask(c, provider.GetChannel().Id, job, props)
+    task := saveSoraTask(c, provider.GetChannel().Id, job, props)
+    if task != nil {
+        platformID := utils.AddTaskPrefix(task.PlatformTaskID)
+        // 覆盖返回体 ID 为平台任务ID
+        job.ID = platformID
+        // 在日志中记录双ID
+        quota.SetTaskIDs(platformID, upstreamID)
+    }
+
+	usage := &types.Usage{}
+	if !isNewAPI {
+		usage.PromptTokens = req.Seconds
+		usage.TotalTokens = req.Seconds
+	}
+	quota.Consume(c, usage, false)
+    // 二次保存已移除，避免重复入库
 
 	// 代理视频URL（隐藏真实供应商域名）
 	proxyVideoURLs(job)
@@ -360,10 +370,32 @@ func VideoRetrieve(c *gin.Context) {
 		return
 	}
 
-	task, err := model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
-	if err != nil {
-		common.AbortWithMessage(c, http.StatusInternalServerError, err.Error())
-		return
+	// 支持平台任务ID：task_<base36>
+    var task *model.Task
+    var err error
+    if strings.HasPrefix(strings.ToLower(videoID), utils.PlatformTaskPrefix) {
+        pid := utils.StripTaskPrefix(videoID)
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformSora, c.GetInt("id"), pid); t != nil {
+            task = t
+            videoID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(videoID); ok { // 兼容历史 base36 样式
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformSora && t.UserId == c.GetInt("id") {
+            task = t
+            videoID = t.TaskID // 改为上游ID
+        }
+    } else if utils.IsULID(videoID) { // 兼容未带前缀的 ULID
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformSora, c.GetInt("id"), videoID); t != nil {
+            task = t
+            videoID = t.TaskID
+        }
+    }
+	if task == nil {
+		task, err = model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
+		if err != nil {
+			common.AbortWithMessage(c, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	var (
@@ -436,6 +468,8 @@ func VideoRetrieve(c *gin.Context) {
 	}
 
 	if task != nil {
+		// 统一返回平台任务ID
+		job.ID = utils.EncodePlatformTaskID(task.ID)
 		updateSoraTask(task, job)
 	}
 
@@ -452,10 +486,32 @@ func VideoDownload(c *gin.Context) {
 		return
 	}
 
-	task, err := model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
-	if err != nil {
-		common.AbortWithMessage(c, http.StatusInternalServerError, err.Error())
-		return
+	// 支持平台任务ID：task_<base36>
+    var task *model.Task
+    var err error
+    if strings.HasPrefix(strings.ToLower(videoID), utils.PlatformTaskPrefix) {
+        pid := utils.StripTaskPrefix(videoID)
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformSora, c.GetInt("id"), pid); t != nil {
+            task = t
+            videoID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(videoID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformSora && t.UserId == c.GetInt("id") {
+            task = t
+            videoID = t.TaskID
+        }
+    } else if utils.IsULID(videoID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformSora, c.GetInt("id"), videoID); t != nil {
+            task = t
+            videoID = t.TaskID
+        }
+    }
+	if task == nil {
+		task, err = model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
+		if err != nil {
+			common.AbortWithMessage(c, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	modelName := ""
@@ -520,7 +576,27 @@ func VideoRemix(c *gin.Context) {
 
 	// 优先根据历史任务锁定渠道与属性
 	var props soraTaskProperties
-	task, _ := model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
+	// 支持平台任务ID
+    var task *model.Task
+    if strings.HasPrefix(strings.ToLower(videoID), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformSora, c.GetInt("id"), utils.StripTaskPrefix(videoID)); t != nil {
+            task = t
+            videoID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(videoID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformSora && t.UserId == c.GetInt("id") {
+            task = t
+            videoID = t.TaskID
+        }
+    } else if utils.IsULID(videoID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformSora, c.GetInt("id"), videoID); t != nil {
+            task = t
+            videoID = t.TaskID
+        }
+    }
+    if task == nil {
+        task, _ = model.GetTaskByTaskId(model.TaskPlatformSora, c.GetInt("id"), videoID)
+    }
 	if task != nil {
 		props = parseSoraTaskProperties(task.Properties)
 		c.Set("specific_channel_id", task.ChannelId)
@@ -584,9 +660,8 @@ func VideoRemix(c *gin.Context) {
 		job.CreatedAt = time.Now().Unix()
 	}
 
-	usage := &types.Usage{PromptTokens: seconds, TotalTokens: seconds}
-	quota.Consume(c, usage, false)
-
+	// 先保存 remix 任务，得到平台ID，再记录日志中的双ID
+	upstreamID := job.ID
 	// 若历史 props 缺失，构建默认属性保存
 	if props.Model == "" {
 		normalize := normalizeSoraSizeInfo("")
@@ -603,7 +678,15 @@ func VideoRemix(c *gin.Context) {
 		props.Prompt = req.Prompt
 	}
 
-	saveSoraTask(c, provider.GetChannel().Id, job, props)
+	taskSaved := saveSoraTask(c, provider.GetChannel().Id, job, props)
+	if taskSaved != nil {
+		platformID := utils.EncodePlatformTaskID(taskSaved.ID)
+		job.ID = platformID
+		quota.SetTaskIDs(platformID, upstreamID)
+	}
+
+	usage := &types.Usage{PromptTokens: seconds, TotalTokens: seconds}
+	quota.Consume(c, usage, false)
 
 	// 代理视频URL（隐藏真实供应商域名）
 	proxyVideoURLs(job)
@@ -692,20 +775,21 @@ func VideoDelete(c *gin.Context) {
 	c.JSON(http.StatusOK, newSoraVideoResponse(job))
 }
 
-func saveSoraTask(c *gin.Context, channelID int, job *types.VideoJob, props soraTaskProperties) {
-	if job == nil || job.ID == "" {
-		return
-	}
+func saveSoraTask(c *gin.Context, channelID int, job *types.VideoJob, props soraTaskProperties) *model.Task {
+    if job == nil || job.ID == "" {
+        return nil
+    }
 	if props.Prompt == "" && job.Prompt != "" {
 		props.Prompt = job.Prompt
 	}
 
-	task := &model.Task{
-		TaskID:        job.ID,
-		Platform:      model.TaskPlatformSora,
-		UserId:        c.GetInt("id"),
-		TokenID:       c.GetInt("token_id"),
-		ChannelId:     channelID,
+    task := &model.Task{
+        PlatformTaskID: utils.NewPlatformULID(),
+        TaskID:        job.ID,
+        Platform:      model.TaskPlatformSora,
+        UserId:        c.GetInt("id"),
+        TokenID:       c.GetInt("token_id"),
+        ChannelId:     channelID,
 		SubmitTime:    submitTimeFromJob(job),
 		Status:        mapVideoStatus(job.Status),
 		Progress:      int(math.Round(job.Progress)),
@@ -727,9 +811,11 @@ func saveSoraTask(c *gin.Context, channelID int, job *types.VideoJob, props sora
 		task.FinishTime = time.Now().Unix()
 	}
 
-	if err := task.Insert(); err != nil {
-		logger.LogError(c.Request.Context(), "save_sora_task_failed:"+err.Error())
-	}
+    if err := task.Insert(); err != nil {
+        logger.LogError(c.Request.Context(), "save_sora_task_failed:"+err.Error())
+        return task
+    }
+    return task
 }
 
 func updateSoraTask(task *model.Task, job *types.VideoJob) {

@@ -1,14 +1,16 @@
 package kling
 
 import (
-	"crypto/rand"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
+    "crypto/rand"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "time"
+    "strings"
 
-	"one-api/common/logger"
-	"one-api/model"
+    "one-api/common/logger"
+    "one-api/common/utils"
+    "one-api/model"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
@@ -118,17 +120,32 @@ func CreateOfficialImage2Video(c *gin.Context) {
 
 // GetOfficialTask 官方API - 查询单个任务
 func GetOfficialTask(c *gin.Context) {
-	taskID := c.Param("id")
-	userId := c.GetInt("id")
+    taskID := c.Param("id")
+    userId := c.GetInt("id")
 
-	actions := resolveActionsByPath(c.FullPath())
+    actions := resolveActionsByPath(c.FullPath())
 
 	// 支持通过external_task_id查询
 	var task *model.Task
 	var err error
 
-	// 先尝试通过task_id查询
-	task, err = model.GetTaskByTaskIdAndActions(model.TaskPlatformKling, userId, taskID, actions)
+    // 平台任务ID支持：task_<ULID> 或历史 base36 → 转为上游ID
+    if strings.HasPrefix(strings.ToLower(taskID), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformKling, userId, utils.StripTaskPrefix(taskID)); t != nil {
+            taskID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformKling && t.UserId == userId {
+            taskID = t.TaskID
+        }
+    } else if utils.IsULID(taskID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformKling, userId, taskID); t != nil {
+            taskID = t.TaskID
+        }
+    }
+
+    // 先尝试通过task_id查询
+    task, err = model.GetTaskByTaskIdAndActions(model.TaskPlatformKling, userId, taskID, actions)
 	if err != nil || task == nil {
 		// 再尝试通过external_task_id查询
 		tasks, errList := model.GetTasksByExternalTaskIDAndActions(model.TaskPlatformKling, userId, taskID, actions)
@@ -488,9 +505,10 @@ func handleVideoTask(c *gin.Context, internalReq *KlingTask, action, externalTas
 		}
 	}
 
-	// 落库任务
-	task := &model.Task{
-		TaskID:         taskID,
+    // 落库任务
+    task := &model.Task{
+        PlatformTaskID: utils.NewPlatformULID(),
+        TaskID:         taskID,
 		ExternalTaskID: externalTaskID,
 		Platform:       model.TaskPlatformKling,
 		UserId:         userId,
@@ -504,17 +522,17 @@ func handleVideoTask(c *gin.Context, internalReq *KlingTask, action, externalTas
 	}
 
 	// 保存任务数据（无返回时组装一个最小响应）
-	if resp == nil {
-		resp = &KlingResponse[KlingTaskData]{
-			Code:    0,
-			Message: "success",
-			Data: KlingTaskData{
-				TaskID:     taskID,
-				TaskStatus: taskStatus,
-				CreatedAt:  createdAt,
-				UpdatedAt:  updatedAt,
-			},
-		}
+    if resp == nil {
+        resp = &KlingResponse[KlingTaskData]{
+            Code:    0,
+            Message: "success",
+            Data: KlingTaskData{
+                TaskID:     taskID,
+                TaskStatus: taskStatus,
+                CreatedAt:  createdAt,
+                UpdatedAt:  updatedAt,
+            },
+        }
 	} else {
 		resp.Data.TaskID = taskID
 		resp.Data.TaskStatus = taskStatus
@@ -522,34 +540,36 @@ func handleVideoTask(c *gin.Context, internalReq *KlingTask, action, externalTas
 		resp.Data.UpdatedAt = updatedAt
 	}
 
-	taskData, _ := json.Marshal(resp)
-	task.Data = datatypes.JSON(taskData)
+    taskData, _ := json.Marshal(resp)
+    task.Data = datatypes.JSON(taskData)
 
-	if err := model.CreateTask(task); err != nil {
-		logger.SysError(fmt.Sprintf("保存任务失败: %v", err))
-	}
+    if err := model.CreateTask(task); err != nil {
+        logger.SysError(fmt.Sprintf("保存任务失败: %v", err))
+    }
 
-	// 转换响应格式
-	officialData := &OfficialTaskData{
-		TaskID:     taskID,
-		TaskStatus: taskStatus,
-		CreatedAt:  createdAt,
-		UpdatedAt:  updatedAt,
-		TaskResult: officialResult,
-		TaskInfo: &OfficialTaskInfo{
-			ExternalTaskID: externalTaskID,
-		},
-	}
+    // 转换响应格式
+    // 统一以平台任务ID对外展示
+    platformID := utils.AddTaskPrefix(task.PlatformTaskID)
+    officialData := &OfficialTaskData{
+        TaskID:     platformID,
+        TaskStatus: taskStatus,
+        CreatedAt:  createdAt,
+        UpdatedAt:  updatedAt,
+        TaskResult: officialResult,
+        TaskInfo: &OfficialTaskInfo{
+            ExternalTaskID: externalTaskID,
+        },
+    }
 
-	return &TaskResponse{
-		StatusCode: http.StatusOK,
-		Response: OfficialResponse{
-			Code:      0,
-			Message:   "success",
-			RequestID: generateRequestID(),
-			Data:      officialData,
-		},
-	}
+    return &TaskResponse{
+        StatusCode: http.StatusOK,
+        Response: OfficialResponse{
+            Code:      0,
+            Message:   "success",
+            RequestID: generateRequestID(),
+            Data:      officialData,
+        },
+    }
 }
 
 // 转换函数
@@ -594,16 +614,18 @@ func convertToOfficialFormat(task *model.Task) *OfficialTaskData {
 		json.Unmarshal(task.Data, &klingResp)
 	}
 
-	officialData := &OfficialTaskData{
-		TaskID:        task.TaskID,
-		TaskStatus:    string(task.Status),
-		CreatedAt:     task.CreatedAt,
-		UpdatedAt:     task.UpdatedAt,
-		TaskStatusMsg: task.FailReason,
-		TaskInfo: &OfficialTaskInfo{
-			ExternalTaskID: task.ExternalTaskID,
-		},
-	}
+    // 对外统一返回平台任务ID
+    platformID := utils.EncodePlatformTaskID(task.ID)
+    officialData := &OfficialTaskData{
+        TaskID:        platformID,
+        TaskStatus:    string(task.Status),
+        CreatedAt:     task.CreatedAt,
+        UpdatedAt:     task.UpdatedAt,
+        TaskStatusMsg: task.FailReason,
+        TaskInfo: &OfficialTaskInfo{
+            ExternalTaskID: task.ExternalTaskID,
+        },
+    }
 
 	// 转换任务状态
 	switch task.Status {

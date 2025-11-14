@@ -1,13 +1,15 @@
 package kling
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "time"
+    "strings"
 
-	"one-api/common/logger"
-	"one-api/model"
+    "one-api/common/logger"
+    "one-api/common/utils"
+    "one-api/model"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
@@ -114,16 +116,31 @@ func CreateOfficialMultiImage2Image(c *gin.Context) {
 
 // GetOfficialImageTask 官方API - 查询单个图像任务
 func GetOfficialImageTask(c *gin.Context) {
-	taskID := c.Param("id")
-	userId := c.GetInt("id")
-	actions := resolveActionsByPath(c.FullPath())
+    taskID := c.Param("id")
+    userId := c.GetInt("id")
+    actions := resolveActionsByPath(c.FullPath())
 
 	// 支持通过external_task_id查询
 	var task *model.Task
 	var err error
 
-	// 先尝试通过task_id查询
-	task, err = model.GetTaskByTaskIdAndActions(model.TaskPlatformKling, userId, taskID, actions)
+    // 平台任务ID支持：task_<ULID> 或历史 base36 → 转为上游ID
+    if strings.HasPrefix(strings.ToLower(taskID), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformKling, userId, utils.StripTaskPrefix(taskID)); t != nil {
+            taskID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformKling && t.UserId == userId {
+            taskID = t.TaskID
+        }
+    } else if utils.IsULID(taskID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformKling, userId, taskID); t != nil {
+            taskID = t.TaskID
+        }
+    }
+
+    // 先尝试通过task_id查询
+    task, err = model.GetTaskByTaskIdAndActions(model.TaskPlatformKling, userId, taskID, actions)
 	if err != nil || task == nil {
 		// 再尝试通过external_task_id查询
 		tasks, errList := model.GetTasksByExternalTaskIDAndActions(model.TaskPlatformKling, userId, taskID, actions)
@@ -150,16 +167,30 @@ func GetOfficialImageTask(c *gin.Context) {
 
 // GetOfficialMultiImage2ImageTask 官方API - 查询单个多图参考生图任务
 func GetOfficialMultiImage2ImageTask(c *gin.Context) {
-	taskID := c.Param("id")
-	userId := c.GetInt("id")
-	actions := resolveActionsByPath(c.FullPath())
+    taskID := c.Param("id")
+    userId := c.GetInt("id")
+    actions := resolveActionsByPath(c.FullPath())
 
 	// 支持通过external_task_id查询
 	var task *model.Task
 	var err error
 
-	// 先尝试通过task_id查询
-	task, err = model.GetTaskByTaskIdAndActions(model.TaskPlatformKling, userId, taskID, actions)
+    if strings.HasPrefix(strings.ToLower(taskID), utils.PlatformTaskPrefix) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformKling, userId, utils.StripTaskPrefix(taskID)); t != nil {
+            taskID = t.TaskID
+        }
+    } else if id, ok := utils.DecodePlatformTaskID(taskID); ok {
+        if t, _ := model.GetTaskByID(id); t != nil && t.Platform == model.TaskPlatformKling && t.UserId == userId {
+            taskID = t.TaskID
+        }
+    } else if utils.IsULID(taskID) {
+        if t, _ := model.GetTaskByPlatformTaskID(model.TaskPlatformKling, userId, taskID); t != nil {
+            taskID = t.TaskID
+        }
+    }
+
+    // 先尝试通过task_id查询
+    task, err = model.GetTaskByTaskIdAndActions(model.TaskPlatformKling, userId, taskID, actions)
 	if err != nil || task == nil {
 		// 再尝试通过external_task_id查询
 		tasks, errList := model.GetTasksByExternalTaskIDAndActions(model.TaskPlatformKling, userId, taskID, actions)
@@ -409,16 +440,17 @@ func convertToOfficialImageFormat(task *model.Task) *OfficialImageTaskData {
 		json.Unmarshal(task.Data, &klingResp)
 	}
 
-	officialData := &OfficialImageTaskData{
-		TaskID:        task.TaskID,
-		TaskStatus:    string(task.Status),
-		CreatedAt:     task.CreatedAt,
-		UpdatedAt:     task.UpdatedAt,
-		TaskStatusMsg: task.FailReason,
-		TaskInfo: &OfficialTaskInfo{
-			ExternalTaskID: task.ExternalTaskID,
-		},
-	}
+    platformID := utils.AddTaskPrefix(task.PlatformTaskID)
+    officialData := &OfficialImageTaskData{
+        TaskID:        platformID,
+        TaskStatus:    string(task.Status),
+        CreatedAt:     task.CreatedAt,
+        UpdatedAt:     task.UpdatedAt,
+        TaskStatusMsg: task.FailReason,
+        TaskInfo: &OfficialTaskInfo{
+            ExternalTaskID: task.ExternalTaskID,
+        },
+    }
 
 	// 如果任务成功，解析生成的图片
 	if task.Status == model.TaskStatusSuccess && klingResp.Data.TaskResult != nil {
@@ -517,8 +549,9 @@ func handleImageTask(c *gin.Context, internalReq *KlingTask, action, externalTas
 
 	// 保存任务到数据库
 	now := time.Now().UnixMilli()
-	task := &model.Task{
-		TaskID:         resp.Data.TaskID,
+    task := &model.Task{
+        PlatformTaskID: utils.NewPlatformULID(),
+        TaskID:         resp.Data.TaskID,
 		ExternalTaskID: externalTaskID,
 		Platform:       model.TaskPlatformKling,
 		UserId:         userId,
@@ -539,16 +572,17 @@ func handleImageTask(c *gin.Context, internalReq *KlingTask, action, externalTas
 		logger.SysError(fmt.Sprintf("保存任务失败: %v", err))
 	}
 
-	// 转换响应格式
-	officialData := &OfficialImageTaskData{
-		TaskID:     resp.Data.TaskID,
-		TaskStatus: resp.Data.TaskStatus,
-		CreatedAt:  resp.Data.CreatedAt,
-		UpdatedAt:  resp.Data.UpdatedAt,
-		TaskInfo: &OfficialTaskInfo{
-			ExternalTaskID: externalTaskID,
-		},
-	}
+    // 转换响应格式（统一平台任务ID）
+    platformID := utils.AddTaskPrefix(task.PlatformTaskID)
+    officialData := &OfficialImageTaskData{
+        TaskID:     platformID,
+        TaskStatus: resp.Data.TaskStatus,
+        CreatedAt:  resp.Data.CreatedAt,
+        UpdatedAt:  resp.Data.UpdatedAt,
+        TaskInfo: &OfficialTaskInfo{
+            ExternalTaskID: externalTaskID,
+        },
+    }
 
 	return &TaskImageResponse{
 		StatusCode: http.StatusOK,
@@ -610,8 +644,9 @@ func handleMultiImage2ImageTask(c *gin.Context, internalReq *KlingTask, action, 
 
 	// 保存任务到数据库
 	now := time.Now().UnixMilli()
-	task := &model.Task{
-		TaskID:         resp.Data.TaskID,
+    task := &model.Task{
+        PlatformTaskID: utils.NewPlatformULID(),
+        TaskID:         resp.Data.TaskID,
 		ExternalTaskID: externalTaskID,
 		Platform:       model.TaskPlatformKling,
 		UserId:         userId,
@@ -632,16 +667,17 @@ func handleMultiImage2ImageTask(c *gin.Context, internalReq *KlingTask, action, 
 		logger.SysError(fmt.Sprintf("保存任务失败: %v", err))
 	}
 
-	// 转换响应格式
-	officialData := &OfficialImageTaskData{
-		TaskID:     resp.Data.TaskID,
-		TaskStatus: resp.Data.TaskStatus,
-		CreatedAt:  resp.Data.CreatedAt,
-		UpdatedAt:  resp.Data.UpdatedAt,
-		TaskInfo: &OfficialTaskInfo{
-			ExternalTaskID: externalTaskID,
-		},
-	}
+    // 转换响应格式（统一平台任务ID）
+    platformID := utils.AddTaskPrefix(task.PlatformTaskID)
+    officialData := &OfficialImageTaskData{
+        TaskID:     platformID,
+        TaskStatus: resp.Data.TaskStatus,
+        CreatedAt:  resp.Data.CreatedAt,
+        UpdatedAt:  resp.Data.UpdatedAt,
+        TaskInfo: &OfficialTaskInfo{
+            ExternalTaskID: externalTaskID,
+        },
+    }
 
 	return &TaskImageResponse{
 		StatusCode: http.StatusOK,

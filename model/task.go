@@ -29,10 +29,11 @@ const (
 )
 
 type Task struct {
-	ID                   int64          `json:"id" gorm:"primary_key;AUTO_INCREMENT"`
-	CreatedAt            int64          `json:"created_at" gorm:"index"`
-	UpdatedAt            int64          `json:"updated_at"`
-	TaskID               string         `json:"task_id" gorm:"type:varchar(50);index"`           // 第三方id，不一定有/ song id\ Task id
+    ID                   int64          `json:"id" gorm:"primary_key;AUTO_INCREMENT"`
+    CreatedAt            int64          `json:"created_at" gorm:"index"`
+    UpdatedAt            int64          `json:"updated_at"`
+    PlatformTaskID       string         `json:"platform_task_id" gorm:"type:varchar(32);index"`
+    TaskID               string         `json:"task_id" gorm:"type:varchar(50);index"`           // 第三方id，不一定有/ song id\ Task id
 	ExternalTaskID       string         `json:"external_task_id" gorm:"type:varchar(100);index"` // 用户自定义任务ID
 	Platform             string         `json:"platform" gorm:"type:varchar(30);index"`          // 平台
 	UserId               int            `json:"user_id" gorm:"index"`
@@ -57,6 +58,26 @@ type Task struct {
 	VideoHeight          int            `json:"video_height" gorm:"default:0"`
 	VideoFps             float64        `json:"video_fps" gorm:"type:double precision;default:0"`
 	VideoDuration        float64        `json:"video_duration" gorm:"type:double precision;default:0"`
+}
+
+// GetTaskByID 通过自增主键查询任务
+func GetTaskByID(id int64) (*Task, error) {
+    var task Task
+    err := DB.Where("id = ?", id).First(&task).Error
+    if errors.Is(err, gorm.ErrRecordNotFound) {
+        return nil, nil
+    }
+    return &task, err
+}
+
+// GetTaskByPlatformTaskID 按平台任务ID获取任务（限定平台与用户）
+func GetTaskByPlatformTaskID(platform string, userId int, platformTaskID string) (*Task, error) {
+    task := &Task{}
+    err := DB.Where("platform = ? and user_id = ? and platform_task_id = ?", platform, userId, platformTaskID).First(task).Error
+    if errors.Is(err, gorm.ErrRecordNotFound) {
+        return nil, nil
+    }
+    return task, err
 }
 
 func GetTaskByTaskIds(platform string, userId int, taskIds []string) (task []*Task, err error) {
