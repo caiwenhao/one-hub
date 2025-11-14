@@ -4,7 +4,9 @@ import PercentIcon from '@mui/icons-material/Percent';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import Decimal from 'decimal.js';
-import { renderQuota } from 'utils/common';
+import { renderQuota, trimMoney } from 'utils/common';
+import { getCurrencyPreference } from 'utils/currencyPreferences';
+import { usdToCnyRate } from 'utils/currencyPreferences';
 import { calculateOriginalQuota } from './QuotaWithDetailRow';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
@@ -21,20 +23,19 @@ export function calculatePrice(ratio, groupDiscount, isTimes) {
     discount = discount.mul(1000);
   }
 
-  // Calculate the price as a Decimal
+  // Calculate the USD price as Decimal, return number (USD)
   let priceDecimal = discount.mul(0.002);
-
-  // For display purposes, format with 6 decimal places and trim trailing zeros
-  let priceString = priceDecimal.toFixed(6);
-  priceString = priceString.replace(/(\.\d*?[1-9])0+$|\.0*$/, '$1');
-
-  // For calculations, return the actual number value
-  return priceString;
+  return Number(priceDecimal.toFixed(6));
 }
 
 // QuotaWithDetailContent is responsible for rendering the detailed content
 export default function QuotaWithDetailContent({ item, totalInputTokens, totalOutputTokens }) {
   const { t } = useTranslation();
+  const currency = getCurrencyPreference();
+  const sym = currency === 'USD' ? '$' : '￥';
+  const rate = currency === 'USD' ? 1 : usdToCnyRate();
+
+  const fmt = (usdValue) => `${sym}${trimMoney((Number(usdValue || 0) * rate).toFixed(6))}`;
   // Calculate the original quota based on the formula
   const originalQuota = calculateOriginalQuota(item);
   const quota = item.quota || 0;
@@ -49,29 +50,29 @@ export default function QuotaWithDetailContent({ item, totalInputTokens, totalOu
     item.metadata?.input_price_origin ||
     (item.metadata?.input_ratio
       ? isSora
-        ? `$${calculatePrice(item.metadata.input_ratio, 1, true)} /sec`
-        : `$${calculatePrice(item.metadata.input_ratio, 1, false)} /M`
+        ? `${fmt(calculatePrice(item.metadata.input_ratio, 1, true))} /sec`
+        : `${fmt(calculatePrice(item.metadata.input_ratio, 1, false))} /M`
       : isSora
-        ? '$0 /sec'
-        : '$0 /M');
+        ? `${sym}0 /sec`
+        : `${sym}0 /M`);
   const originalOutputPrice =
     item.metadata?.output_price_origin ||
     (item.metadata?.output_ratio
       ? isSora
-        ? '$0'
-        : `$${calculatePrice(item.metadata.output_ratio, 1, false)} /M`
-      : '$0');
+        ? `${sym}0`
+        : `${fmt(calculatePrice(item.metadata.output_ratio, 1, false))} /M`
+      : `${sym}0`);
 
   // Calculate actual prices based on ratios and group discount
   const groupRatio = item.metadata?.group_ratio || 1;
   const inputPrice =
     item.metadata?.input_price ||
-    (item.metadata?.input_ratio ? `$${calculatePrice(item.metadata.input_ratio, groupRatio, isSora)} ` : '$0');
+    (item.metadata?.input_ratio ? `${fmt(calculatePrice(item.metadata.input_ratio, groupRatio, isSora))} ` : `${sym}0`);
   const outputPrice =
     item.metadata?.output_price ||
     (item.metadata?.output_ratio
-      ? `$${calculatePrice(item.metadata.output_ratio, groupRatio, false)}`
-      : '$0');
+      ? `${fmt(calculatePrice(item.metadata.output_ratio, groupRatio, false))}`
+      : `${sym}0`);
 
   const inputPriceUnit = inputPrice + (isSora ? ' /sec' : ' /M');
   const outputPriceUnit = outputPrice + (isSora ? '' : ' /M');
@@ -93,9 +94,9 @@ export default function QuotaWithDetailContent({ item, totalInputTokens, totalOu
   if (extraBilling && Object.keys(extraBilling).length > 0) {
     Object.entries(extraBilling).forEach(([key, data]) => {
       if (data.type !== '') {
-        extraBillingSteps.push(`${key}[${data.type}] : $${data.price} x ${data.call_count}`);
+        extraBillingSteps.push(`${key}[${data.type}] : ${fmt(data.price)} x ${data.call_count}`);
       } else {
-        extraBillingSteps.push(`${key} : $${data.price} x ${data.call_count}`);
+        extraBillingSteps.push(`${key} : ${fmt(data.price)} x ${data.call_count}`);
       }
     });
   }

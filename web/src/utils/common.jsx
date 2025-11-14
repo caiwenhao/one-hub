@@ -1,4 +1,5 @@
 import Decimal from 'decimal.js';
+import { getCurrencyPreference, usdToCnyRate } from './currencyPreferences';
 import { enqueueSnackbar } from 'notistack';
 import { snackbarConstants } from 'constants/SnackbarConstants';
 import { API } from './api';
@@ -527,10 +528,18 @@ export function renderQuota(quota, digits = 2) {
   let displayInCurrency = localStorage.getItem('display_in_currency');
   displayInCurrency = displayInCurrency === 'true';
   if (displayInCurrency) {
-    if (quota < 0) {
-      return '-$' + calculateQuota(Math.abs(quota), digits);
+    const currency = getCurrencyPreference(); // 默认 CNY
+    const positive = Math.abs(Number(quota));
+    const usdVal = Number(calculateQuota(positive, digits));
+    if (currency === 'USD') {
+      const val = trimMoney(usdVal.toFixed(digits));
+      return (quota < 0 ? '-$' : '$') + val;
     }
-    return '$' + calculateQuota(quota, digits);
+    // CNY 默认：按汇率转换
+    const rate = usdToCnyRate();
+    const cnyVal = usdVal * rate;
+    const val = trimMoney(cnyVal.toFixed(digits));
+    return (quota < 0 ? '-￥' : '￥') + val;
   }
   return renderNumber(quota);
 }
@@ -730,4 +739,31 @@ export function ValueFormatter(value, onlyUsd = false, unitMillion = false) {
   rmb = rmb.replace(/(\.\d*?[1-9])0+$|\.0*$/, '$1');
 
   return `$${usd} / ￥${rmb}`;
+}
+
+// 新增：按偏好币种格式化（不修改现有调用处）
+export function ValueFormatterByCurrency(value, currency = null, unitMillion = false) {
+  const prefer = currency || getCurrencyPreference();
+  // 复用现有实现：只取单币显示
+  let decimalValue = new Decimal((value ?? 0).toString());
+  if (decimalValue.isZero()) return 'Free';
+  if (unitMillion) decimalValue = decimalValue.mul(1000);
+  if (prefer === 'USD') {
+    const usd = decimalValue.mul(0.002).toPrecision(6).replace(/(\.\d*?[1-9])0+$|\.0*$/, '$1');
+    return `$${usd}`;
+  }
+  const rmb = decimalValue.mul(0.014).toPrecision(6).replace(/(\.\d*?[1-9])0+$|\.0*$/, '$1');
+  return `￥${rmb}`;
+}
+
+// 去除金额字符串无意义的尾随 0 与小数点
+export function trimMoney(value) {
+  if (value === null || value === undefined) return '';
+  let s = String(value).trim();
+  if (!s) return '';
+  // 统一小数格式
+  s = s.replace(/\s+/g, '');
+  // 只处理数字样式（可能包含负号和小数点）
+  if (!/^[-+]?\d*(?:\.\d+)?$/.test(s)) return s;
+  return s.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
 }

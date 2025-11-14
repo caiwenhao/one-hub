@@ -5,13 +5,14 @@ import { Card, Stack, Typography, Table, TableBody, TableCell, TableContainer, T
 import FilterBar from 'ui-component/FilterBar';
 import { Icon } from '@iconify/react';
 import { API } from 'utils/api';
-import { showError, ValueFormatter, copy, useIsAdmin } from 'utils/common';
+import { showError, ValueFormatterByCurrency, trimMoney, copy, useIsAdmin } from 'utils/common';
 import { useTheme } from '@mui/material/styles';
 import Label from 'ui-component/Label';
 import ToggleButtonGroup from 'ui-component/ToggleButton';
 import { alpha } from '@mui/material/styles';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { getUnitPreference, setUnitPreference, PAGE_KEYS, UNIT_OPTIONS } from 'utils/unitPreferences';
+import { getCurrencyPreference, setCurrencyPreference, CURRENCY_PAGE_KEYS, CURRENCY_OPTIONS } from 'utils/currencyPreferences';
 
 // ----------------------------------------------------------------------
 export default function ModelPrice() {
@@ -30,6 +31,7 @@ export default function ModelPrice() {
   const [selectedOwnedBy, setSelectedOwnedBy] = useState('all');
   // 使用偏好存储的单位默认值（M单位）
   const [unit, setUnit] = useState(() => getUnitPreference(PAGE_KEYS.MODEL_PRICE));
+  const [currency, setCurrency] = useState(() => getCurrencyPreference(CURRENCY_PAGE_KEYS.MODEL_PRICE));
   const [onlyShowAvailable, setOnlyShowAvailable] = useState(true); // 默认开启“只显示可用”过滤
   // 渠道列表与选择
   const [channels, setChannels] = useState([]);
@@ -141,7 +143,7 @@ export default function ModelPrice() {
             if (type === 'tokens') {
               nowUnit = `/ 1${unit}`;
             }
-            return ValueFormatter(value, true, isM) + nowUnit;
+            return ValueFormatterByCurrency(value, currency, isM) + nowUnit;
           }
           return value;
         };
@@ -168,7 +170,7 @@ export default function ModelPrice() {
 
     setRows(newRows);
     setFilteredRows(newRows);
-  }, [availableModels, userGroupMap, selectedGroup, selectedOwnedBy, t, unit, onlyShowAvailable, selectedChannel, channels]);
+  }, [availableModels, userGroupMap, selectedGroup, selectedOwnedBy, t, unit, currency, onlyShowAvailable, selectedChannel, channels]);
 
   useEffect(() => {
     const filtered = rows.filter((row) => row.model.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -192,6 +194,13 @@ export default function ModelPrice() {
       setUnit(newUnit);
       // 保存用户单位偏好
       setUnitPreference(newUnit, PAGE_KEYS.MODEL_PRICE);
+    }
+  };
+
+  const handleCurrencyChange = (event, newCurrency) => {
+    if (newCurrency !== null) {
+      setCurrency(newCurrency);
+      setCurrencyPreference(newCurrency, CURRENCY_PAGE_KEYS.MODEL_PRICE);
     }
   };
 
@@ -307,9 +316,26 @@ export default function ModelPrice() {
                     mx: 0.5,
                     border: 0,
                     boxShadow: theme.palette.mode === 'dark' ? '0 1px 4px rgba(0,0,0,0.2)' : '0 1px 4px rgba(0,0,0,0.05)',
-                    '&.Mui-selected': {
-                      boxShadow: `0 0 0 1px ${theme.palette.primary.main}`
-                    }
+                    '&.Mui-selected': { boxShadow: `0 0 0 1px ${theme.palette.primary.main}` }
+                  }
+                }}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                Currency:
+              </Typography>
+              <ToggleButtonGroup
+                value={currency}
+                onChange={handleCurrencyChange}
+                options={CURRENCY_OPTIONS}
+                aria-label="currency toggle"
+                size="small"
+                sx={{
+                  '& .MuiToggleButtonGroup-grouped': {
+                    borderRadius: '6px !important',
+                    mx: 0.5,
+                    border: 0,
+                    boxShadow: theme.palette.mode === 'dark' ? '0 1px 4px rgba(0,0,0,0.2)' : '0 1px 4px rgba(0,0,0,0.05)',
+                    '&.Mui-selected': { boxShadow: `0 0 0 1px ${theme.palette.primary.main}` }
                   }
                 }}
               />
@@ -688,12 +714,17 @@ export default function ModelPrice() {
                         const p = row.priceDisplay;
                         let tip;
                         if (p) {
+                          const sym = currency === 'USD' ? '$' : '￥';
+                          const inRaw = currency === 'USD' ? p.input_usd ?? p.input_rmb : p.input_rmb ?? p.input_usd;
+                          const outRaw = currency === 'USD' ? p.output_usd ?? p.output_rmb : p.output_rmb ?? p.output_usd;
+                          const inVal = trimMoney(inRaw);
+                          const outVal = trimMoney(outRaw);
                           if (p.unit === 'USD/sec') {
-                            tip = `单价：$${p.input_usd ?? p.input_rmb} / 秒`;
+                            tip = `单价：${sym}${inVal} / 秒`;
                           } else {
                             tip = p.type === 'times'
-                              ? `单价：$${p.input_usd ?? p.input_rmb} / 次`
-                              : `基础单价：输入 $${p.input_usd ?? p.input_rmb} / 1k，输出 $${p.output_usd ?? p.output_rmb} / 1k`;
+                              ? `单价：${sym}${inVal} / 次`
+                              : `基础单价：输入 ${sym}${inVal} / 1k，输出 ${sym}${outVal} / 1k`;
                           }
                         } else {
                           const lower = row.model.toLowerCase();
@@ -869,11 +900,14 @@ export default function ModelPrice() {
                                   <TableCell>
                                     {vp.input_usd || vp.input_rmb ? (
                                       <Label color="info" variant="outlined" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
-                                        {vp.unit === 'USD/sec'
-                                          ? `$${vp.input_usd ?? vp.input_rmb} / 秒`
-                                          : vp.type === 'times'
-                                            ? `$${vp.input_usd ?? vp.input_rmb} / 次`
-                                            : `$${vp.input_usd ?? vp.input_rmb} / 1k`}
+                                        {(() => {
+                                          const sym = currency === 'USD' ? '$' : '￥';
+                                          const raw = currency === 'USD' ? vp.input_usd ?? vp.input_rmb : vp.input_rmb ?? vp.input_usd;
+                                          const val = trimMoney(raw);
+                                          if (vp.unit === 'USD/sec') return `${sym}${val} / 秒`;
+                                          if (vp.type === 'times') return `${sym}${val} / 次`;
+                                          return `${sym}${val} / 1k`;
+                                        })()}
                                       </Label>
                                     ) : (
                                       <Typography variant="body2" color="text.disabled">—</Typography>
@@ -882,11 +916,14 @@ export default function ModelPrice() {
                                   <TableCell>
                                     {vp.output_usd || vp.output_rmb ? (
                                       <Label color="info" variant="outlined" sx={{ borderRadius: '4px', fontSize: '0.75rem', py: 0.25, px: 0.75 }}>
-                                        {vp.unit === 'USD/sec'
-                                          ? `$${vp.output_usd ?? vp.output_rmb} / 秒`
-                                          : vp.type === 'times'
-                                            ? `$${vp.output_usd ?? vp.output_rmb} / 次`
-                                            : `$${vp.output_usd ?? vp.output_rmb} / 1k`}
+                                        {(() => {
+                                          const sym = currency === 'USD' ? '$' : '￥';
+                                          const raw = currency === 'USD' ? vp.output_usd ?? vp.output_rmb : vp.output_rmb ?? vp.output_usd;
+                                          const val = trimMoney(raw);
+                                          if (vp.unit === 'USD/sec') return `${sym}${val} / 秒`;
+                                          if (vp.type === 'times') return `${sym}${val} / 次`;
+                                          return `${sym}${val} / 1k`;
+                                        })()}
                                       </Label>
                                     ) : (
                                       <Typography variant="body2" color="text.disabled">—</Typography>
