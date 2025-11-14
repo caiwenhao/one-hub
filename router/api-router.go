@@ -26,7 +26,7 @@ func SetApiRouter(router *gin.Engine) {
 	{
 		apiRouter.GET("/image/:id", controller.CheckImg)
 		apiRouter.GET("/status", controller.GetStatus)
-        apiRouter.GET("/notice", controller.GetNotice)
+		apiRouter.GET("/notice", controller.GetNotice)
 		apiRouter.GET("/prices", middleware.PricesAuth(), middleware.CORS(), controller.GetPricesList)
 		apiRouter.GET("/ownedby", relay.GetModelOwnedBy)
 		apiRouter.GET("/available_model", middleware.CORS(), middleware.TrySetUserBySession(), relay.AvailableModel)
@@ -76,9 +76,9 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.GET("/dashboard/uptimekuma/status-page/heartbeat", controller.UptimeKumaStatusPageHeartbeat)
 				selfRoute.GET("/invoice", controller.GetUserInvoice)
 				selfRoute.GET("/invoice/detail", controller.GetUserInvoiceDetail)
-            selfRoute.GET("/self", controller.GetSelf)
-            selfRoute.PUT("/self", controller.UpdateSelf)
-            selfRoute.GET("/allowed_groups", controller.GetSelfAllowedGroups)
+				selfRoute.GET("/self", controller.GetSelf)
+				selfRoute.PUT("/self", controller.UpdateSelf)
+				selfRoute.GET("/allowed_groups", controller.GetSelfAllowedGroups)
 				// selfRoute.DELETE("/self", controller.DeleteSelf)
 				selfRoute.GET("/token", controller.GenerateAccessToken)
 				selfRoute.GET("/aff", controller.GetAffCode)
@@ -94,9 +94,9 @@ func SetApiRouter(router *gin.Engine) {
 				adminRoute.GET("/", controller.GetUsersList)
 				adminRoute.GET("/:id", controller.GetUser)
 				adminRoute.POST("/", controller.CreateUser)
-                adminRoute.POST("/manage", controller.ManageUser)
-                adminRoute.GET("/allowed_groups/:id", controller.GetUserAllowedGroups)
-                adminRoute.PUT("/allowed_groups/:id", controller.SetUserAllowedGroups)
+				adminRoute.POST("/manage", controller.ManageUser)
+				adminRoute.GET("/allowed_groups/:id", controller.GetUserAllowedGroups)
+				adminRoute.PUT("/allowed_groups/:id", controller.SetUserAllowedGroups)
 				adminRoute.POST("/quota/:id", controller.ChangeUserQuota)
 				adminRoute.PUT("/", controller.UpdateUser)
 				adminRoute.DELETE("/:id", controller.DeleteUser)
@@ -197,21 +197,21 @@ func SetApiRouter(router *gin.Engine) {
 			redemptionRoute.PUT("/", controller.UpdateRedemption)
 			redemptionRoute.DELETE("/:id", controller.DeleteRedemption)
 		}
-			logRoute := apiRouter.Group("/log")
-			logRoute.GET("/", middleware.AdminAuth(), controller.GetLogsList)
-			// 导出日志 CSV（管理员）
-			logRoute.GET("/export", middleware.AdminAuth(), controller.ExportLogsCSV)
-			// 选项（管理员）：模型名/渠道/用户名
-			logRoute.GET("/options", middleware.AdminAuth(), controller.GetLogOptions)
-			logRoute.DELETE("/", middleware.AdminAuth(), controller.DeleteHistoryLogs)
-			logRoute.GET("/stat", middleware.AdminAuth(), controller.GetLogsStat)
-			logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
-			// logRoute.GET("/search", middleware.AdminAuth(), controller.SearchAllLogs)
-			logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogsList)
-			// 导出日志 CSV（当前用户）
-			logRoute.GET("/self/export", middleware.UserAuth(), controller.ExportUserLogsCSV)
-			// 选项（用户）：模型名/渠道（仅与自身数据相关）
-			logRoute.GET("/self/options", middleware.UserAuth(), controller.GetUserLogOptions)
+		logRoute := apiRouter.Group("/log")
+		logRoute.GET("/", middleware.AdminAuth(), controller.GetLogsList)
+		// 导出日志 CSV（管理员）
+		logRoute.GET("/export", middleware.AdminAuth(), controller.ExportLogsCSV)
+		// 选项（管理员）：模型名/渠道/用户名
+		logRoute.GET("/options", middleware.AdminAuth(), controller.GetLogOptions)
+		logRoute.DELETE("/", middleware.AdminAuth(), controller.DeleteHistoryLogs)
+		logRoute.GET("/stat", middleware.AdminAuth(), controller.GetLogsStat)
+		logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
+		// logRoute.GET("/search", middleware.AdminAuth(), controller.SearchAllLogs)
+		logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogsList)
+		// 导出日志 CSV（当前用户）
+		logRoute.GET("/self/export", middleware.UserAuth(), controller.ExportUserLogsCSV)
+		// 选项（用户）：模型名/渠道（仅与自身数据相关）
+		logRoute.GET("/self/options", middleware.UserAuth(), controller.GetUserLogOptions)
 		// logRoute.GET("/self/search", middleware.UserAuth(), controller.SearchUserLogs)
 		groupRoute := apiRouter.Group("/group")
 		groupRoute.Use(middleware.AdminAuth())
@@ -238,6 +238,18 @@ func SetApiRouter(router *gin.Engine) {
 			pricesRoute.POST("/sync", controller.SyncPricing)
 			pricesRoute.GET("/updateService", controller.GetUpdatePriceService)
 
+		}
+
+		// 客户级模型分组与价格配置（管理员）
+		customerPricingRoute := apiRouter.Group("/customer_pricing")
+		customerPricingRoute.Use(middleware.AdminAuth())
+		{
+			// 模型分组定义管理
+			customerPricingRoute.GET("/model_groups", controller.GetModelGroups)
+			customerPricingRoute.POST("/model_groups", controller.UpsertModelGroup)
+			// 某用户在某模型下的分组价与授权
+			customerPricingRoute.GET("/users/:id/model_pricing", controller.GetUserModelPricing)
+			customerPricingRoute.POST("/users/:id/model_pricing", controller.UpdateUserModelPricing)
 		}
 
 		paymentRoute := apiRouter.Group("/payment")

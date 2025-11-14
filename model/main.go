@@ -31,6 +31,9 @@ func SetupDB() {
 	config.RootUserEmail = GetRootUserEmail()
 	NewModelOwnedBys()
 
+	// 为已有价格记录补齐默认模型分组，保证后续客户价与分组逻辑有合理的初始数据
+	EnsureDefaultModelGroupForPrice()
+
 	if viper.GetBool("batch_update_enabled") {
 		config.BatchUpdateEnabled = true
 		config.BatchUpdateInterval = utils.GetOrDefault("batch_update_interval", 5)
@@ -161,6 +164,20 @@ func InitDB() (err error) {
 			return err
 		}
 		err = db.AutoMigrate(&Price{})
+		if err != nil {
+			return err
+		}
+
+		// 模型分组与客户价相关表
+		err = db.AutoMigrate(&ModelGroup{})
+		if err != nil {
+			return err
+		}
+		err = db.AutoMigrate(&UserModelGroupPrice{})
+		if err != nil {
+			return err
+		}
+		err = db.AutoMigrate(&UserModelGroupPermission{})
 		if err != nil {
 			return err
 		}

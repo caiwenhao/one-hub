@@ -1,20 +1,20 @@
 package relay_util
 
 import (
-    "context"
-    "encoding/json"
-    "errors"
-    "math"
-    "net/http"
-    "one-api/common"
-    "one-api/common/config"
-    "one-api/common/logger"
-    "one-api/model"
-    "one-api/types"
-    "time"
+	"context"
+	"encoding/json"
+	"errors"
+	"math"
+	"net/http"
+	"one-api/common"
+	"one-api/common/config"
+	"one-api/common/logger"
+	"one-api/model"
+	"one-api/types"
+	"time"
 
-    "github.com/gin-gonic/gin"
-    "strings"
+	"github.com/gin-gonic/gin"
+	"strings"
 )
 
 type Quota struct {
@@ -47,44 +47,61 @@ func NewQuota(c *gin.Context, modelName string, promptTokens int) *Quota {
 		HandelStatus: false,
 	}
 
-	quota.price = *model.PricingInstance.GetPrice(quota.modelName)
+	// 通过客户价 + 模型分组解析最终价格
+	groupCode := c.GetString("model_group")
+	userID := c.GetInt("id")
+	price, resolvedGroup, err := model.ResolveCustomerPrice(userID, quota.modelName, groupCode)
+	if err != nil {
+		// 解析失败时，回退到旧逻辑，避免因为配置不完整导致服务整体不可用
+		// 同时在系统日志中记录，便于后续排查
+		logger.SysError("ResolveCustomerPrice failed: " + err.Error())
+		price = model.PricingInstance.GetPrice(quota.modelName)
+		resolvedGroup = ""
+	}
+	if price == nil {
+		// 理论上不应出现；为安全起见，构造一个零价以避免 panic
+		price = &model.Price{Model: quota.modelName}
+	}
+	_ = resolvedGroup // 预留：后续可写入日志或 context
+
+	quota.price = *price
 	quota.groupRatio = c.GetFloat64("group_ratio")
 	quota.groupName = c.GetString("token_group")
 	quota.inputRatio = quota.price.GetInput() * quota.groupRatio
 	quota.outputRatio = quota.price.GetOutput() * quota.groupRatio
 
-    // 动态价档：Gemini 2.5 Pro（含 computer-use 族）大上下文（>200k tokens）按更高档计价
-    lowerModel := strings.ToLower(strings.TrimSpace(quota.modelName))
-    if (strings.HasPrefix(lowerModel, "gemini-2.5-pro") || strings.HasPrefix(lowerModel, "gemini-2.5-computer-use")) && promptTokens > 200000 {
-        // 输入 $2.50/M → 0.0025/1k → 1.25；输出 $15/M → 0.015/1k → 7.5
-        quota.inputRatio = 1.25 * quota.groupRatio
-        quota.outputRatio = 7.5 * quota.groupRatio
-    }
+	// 动态价档：Gemini 2.5 Pro（含 computer-use 族）大上下文（>200k tokens）按更高档计价
+	lowerModel := strings.ToLower(strings.TrimSpace(quota.modelName))
+	if (strings.HasPrefix(lowerModel, "gemini-2.5-pro") || strings.HasPrefix(lowerModel, "gemini-2.5-computer-use")) && promptTokens > 200000 {
+		// 输入 $2.50/M → 0.0025/1k → 1.25；输出 $15/M → 0.015/1k → 7.5
+		quota.inputRatio = 1.25 * quota.groupRatio
+		quota.outputRatio = 7.5 * quota.groupRatio
+	}
 
-    // 动态模态：Gemini 2.5 Flash（非 lite/image/native-audio）若包含音频输入，输入单价切换至 $1.00/M（ratio=0.5）
-    if strings.HasPrefix(lowerModel, "gemini-2.5-flash") &&
-        !strings.Contains(lowerModel, "flash-lite") &&
-        !strings.Contains(lowerModel, "image") &&
-        !strings.Contains(lowerModel, "native-audio") &&
-        c.GetBool("gemini_audio_input") {
-        quota.inputRatio = 0.5 * quota.groupRatio
-    }
+	// 动态模态：Gemini 2.5 Flash（非 lite/image/native-audio）若包含音频输入，输入单价切换至 $1.00/M（ratio=0.5）
+	if strings.HasPrefix(lowerModel, "gemini-2.5-flash") &&
+		!strings.Contains(lowerModel, "flash-lite") &&
+		!strings.Contains(lowerModel, "image") &&
+		!strings.Contains(lowerModel, "native-audio") &&
+		c.GetBool("gemini_audio_input") {
+		quota.inputRatio = 0.5 * quota.groupRatio
+	}
 
 	return quota
 }
 
 func (q *Quota) PreQuotaConsumption() *types.OpenAIErrorWithStatusCode {
-    if q.price.Type == model.TimesPriceType {
-        q.preConsumedQuota = int(1000 * q.outputRatio)
-    } else if q.price.Input != 0 || q.price.Output != 0 {
-        // Sora 按秒计费：预扣时同样按 seconds×1000 计算
-        pt := q.promptTokens
-        lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
-        if strings.HasPrefix(lowerModel, "sora-2") {
-            pt = pt * 1000
-        }
-        q.preConsumedQuota = int(float64(pt)*q.inputRatio) + config.PreConsumedQuota
-    }
+	if q.price.Type == model.TimesPriceType {
+		q.preConsumedQuota = int(1000 * q.outputRatio)
+	} else if q.price.Input != 0 || q.price.Output != 0 {
+		// Sora 按秒计费：预扣时同样按 seconds×1000 计算
+		pt := q.promptTokens
+		lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
+		if strings.HasPrefix(lowerModel, "sora-2") {
+			pt = pt * 1000
+		}
+		q.preConsumedQuota = int(float64(pt)*q.inputRatio) + config.PreConsumedQuota
+	}
 
 	if q.preConsumedQuota == 0 {
 		return nil
@@ -231,65 +248,65 @@ func (q *Quota) GetGroupRatio() float64 {
 }
 
 func (q *Quota) GetLogMeta(usage *types.Usage) map[string]any {
-    meta := map[string]any{
-        "group_name":   q.groupName,
-        "price_type":   q.price.Type,
-        "group_ratio":  q.groupRatio,
-        "input_ratio":  q.price.GetInput(),
-        "output_ratio": q.price.GetOutput(),
-    }
+	meta := map[string]any{
+		"group_name":   q.groupName,
+		"price_type":   q.price.Type,
+		"group_ratio":  q.groupRatio,
+		"input_ratio":  q.price.GetInput(),
+		"output_ratio": q.price.GetOutput(),
+	}
 
-    // 标注 MiniMax 上游来源（official/ppinfra），用于对账与观测
-    if q.channelId > 0 {
-        if ch, err := model.GetChannelById(q.channelId); err == nil && ch != nil {
-            if ch.Type == config.ChannelTypeMiniMax {
-                upstream := "official"
-                raw := ch.GetCustomParameter()
-                if strings.TrimSpace(raw) != "" {
-                    var payload map[string]json.RawMessage
-                    if json.Unmarshal([]byte(raw), &payload) == nil {
-                        if vRaw, ok := payload["audio"]; ok {
-                            var audio map[string]any
-                            if json.Unmarshal(vRaw, &audio) == nil {
-                                if up, ok2 := audio["upstream"].(string); ok2 && strings.TrimSpace(up) != "" {
-                                    upstream = strings.ToLower(strings.TrimSpace(up))
-                                }
-                            }
-                        }
-                        if upstream == "official" {
-                            if upRaw, ok := payload["upstream"]; ok {
-                                var up string
-                                if json.Unmarshal(upRaw, &up) == nil && strings.TrimSpace(up) != "" {
-                                    upstream = strings.ToLower(strings.TrimSpace(up))
-                                }
-                            }
-                        }
-                    }
-                }
-                base := strings.ToLower(strings.TrimSpace(ch.GetBaseURL()))
-                if upstream == "official" && base != "" && strings.Contains(base, "ppinfra") {
-                    upstream = "ppinfra"
-                }
-                meta["upstream"] = upstream
-            }
-        }
-    }
+	// 标注 MiniMax 上游来源（official/ppinfra），用于对账与观测
+	if q.channelId > 0 {
+		if ch, err := model.GetChannelById(q.channelId); err == nil && ch != nil {
+			if ch.Type == config.ChannelTypeMiniMax {
+				upstream := "official"
+				raw := ch.GetCustomParameter()
+				if strings.TrimSpace(raw) != "" {
+					var payload map[string]json.RawMessage
+					if json.Unmarshal([]byte(raw), &payload) == nil {
+						if vRaw, ok := payload["audio"]; ok {
+							var audio map[string]any
+							if json.Unmarshal(vRaw, &audio) == nil {
+								if up, ok2 := audio["upstream"].(string); ok2 && strings.TrimSpace(up) != "" {
+									upstream = strings.ToLower(strings.TrimSpace(up))
+								}
+							}
+						}
+						if upstream == "official" {
+							if upRaw, ok := payload["upstream"]; ok {
+								var up string
+								if json.Unmarshal(upRaw, &up) == nil && strings.TrimSpace(up) != "" {
+									upstream = strings.ToLower(strings.TrimSpace(up))
+								}
+							}
+						}
+					}
+				}
+				base := strings.ToLower(strings.TrimSpace(ch.GetBaseURL()))
+				if upstream == "official" && base != "" && strings.Contains(base, "ppinfra") {
+					upstream = "ppinfra"
+				}
+				meta["upstream"] = upstream
+			}
+		}
+	}
 
-    // 对 Sora（sora-2 系列）标注秒单位，并记录视频秒数（由 usage.PromptTokens 提供）
-    lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
-    if strings.HasPrefix(lowerModel, "sora-2") {
-        meta["unit"] = "sec"
-        if usage != nil && usage.PromptTokens > 0 {
-            meta["video_seconds"] = usage.PromptTokens
-        }
-    }
-    // 对 Veo（veo-* 系列）标注秒单位
-    if strings.HasPrefix(lowerModel, "veo-") {
-        meta["unit"] = "sec"
-        if usage != nil && usage.PromptTokens > 0 {
-            meta["video_seconds"] = usage.PromptTokens
-        }
-    }
+	// 对 Sora（sora-2 系列）标注秒单位，并记录视频秒数（由 usage.PromptTokens 提供）
+	lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
+	if strings.HasPrefix(lowerModel, "sora-2") {
+		meta["unit"] = "sec"
+		if usage != nil && usage.PromptTokens > 0 {
+			meta["video_seconds"] = usage.PromptTokens
+		}
+	}
+	// 对 Veo（veo-* 系列）标注秒单位
+	if strings.HasPrefix(lowerModel, "veo-") {
+		meta["unit"] = "sec"
+		if usage != nil && usage.PromptTokens > 0 {
+			meta["video_seconds"] = usage.PromptTokens
+		}
+	}
 
 	firstResponseTime := q.GetFirstResponseTime()
 	if firstResponseTime > 0 {
@@ -319,20 +336,20 @@ func (q *Quota) getRequestTime() int {
 
 // 通过 token 数获取消费配额
 func (q *Quota) GetTotalQuota(promptTokens, completionTokens int, extraBilling map[string]types.ExtraBilling) (quota int) {
-    if q.price.Type == model.TimesPriceType {
-        quota = int(1000 * q.outputRatio)
-    } else {
-        // Sora（OpenAI /v1/videos）按秒计费：内部换算为 seconds × 1000（对齐 tokens 基线 1k）
-        lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
-        if strings.HasPrefix(lowerModel, "sora-2") {
-            promptTokens = promptTokens * 1000
-        }
-        // Veo（Gemini /models/veo-*）按秒计费：同样按 seconds × 1000 结算
-        if strings.HasPrefix(lowerModel, "veo-") {
-            promptTokens = promptTokens * 1000
-        }
-        quota = int(math.Ceil((float64(promptTokens) * q.inputRatio) + (float64(completionTokens) * q.outputRatio)))
-    }
+	if q.price.Type == model.TimesPriceType {
+		quota = int(1000 * q.outputRatio)
+	} else {
+		// Sora（OpenAI /v1/videos）按秒计费：内部换算为 seconds × 1000（对齐 tokens 基线 1k）
+		lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
+		if strings.HasPrefix(lowerModel, "sora-2") {
+			promptTokens = promptTokens * 1000
+		}
+		// Veo（Gemini /models/veo-*）按秒计费：同样按 seconds × 1000 结算
+		if strings.HasPrefix(lowerModel, "veo-") {
+			promptTokens = promptTokens * 1000
+		}
+		quota = int(math.Ceil((float64(promptTokens) * q.inputRatio) + (float64(completionTokens) * q.outputRatio)))
+	}
 
 	q.GetExtraBillingData(extraBilling)
 	extraBillingQuota := 0

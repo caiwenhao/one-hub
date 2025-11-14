@@ -19,6 +19,7 @@ func GetStatus(c *gin.Context) {
 	if telegram.TGEnabled {
 		telegramBot = telegram.TGBot.User.Username
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

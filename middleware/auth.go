@@ -134,7 +134,12 @@ func tokenAuth(c *gin.Context, key string) {
 	c.Set("token_id", token.Id)
 	c.Set("token_name", token.Name)
 	c.Set("token_group", token.Group)
-	c.Set("token_setting", utils.GetPointer(token.Setting.Data()))
+	setting := token.Setting.Data()
+	// 分组令牌：若 Token 配置了 PricingGroup，则写入模型分组上下文
+	if setting.PricingGroup != "" {
+		c.Set("model_group", setting.PricingGroup)
+	}
+	c.Set("token_setting", utils.GetPointer(setting))
 	if len(parts) > 1 {
 		if model.IsAdmin(token.UserId) {
 			if strings.HasPrefix(parts[1], "!") {
@@ -229,21 +234,21 @@ func MjAuth() func(c *gin.Context) {
 }
 
 func SpecifiedChannel() func(c *gin.Context) {
-    return func(c *gin.Context) {
-        channelId := c.GetInt("specific_channel_id")
-        c.Set("specific_channel_id_ignore", false)
+	return func(c *gin.Context) {
+		channelId := c.GetInt("specific_channel_id")
+		c.Set("specific_channel_id_ignore", false)
 
-        // 放行部分标准文件接口，交由业务逻辑自行定位渠道（如根据 artifact/file_id 映射）
-        path := c.Request.URL.Path
-        if path == "/v1/files/retrieve" || path == "/v1/files/retrieve_content" || path == "/v1/files/resolve" {
-            c.Next()
-            return
-        }
+		// 放行部分标准文件接口，交由业务逻辑自行定位渠道（如根据 artifact/file_id 映射）
+		path := c.Request.URL.Path
+		if path == "/v1/files/retrieve" || path == "/v1/files/retrieve_content" || path == "/v1/files/resolve" {
+			c.Next()
+			return
+		}
 
-        if channelId <= 0 {
-            abortWithMessage(c, http.StatusForbidden, "必须指定渠道")
-            return
-        }
-        c.Next()
-    }
+		if channelId <= 0 {
+			abortWithMessage(c, http.StatusForbidden, "必须指定渠道")
+			return
+		}
+		c.Next()
+	}
 }

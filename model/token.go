@@ -63,6 +63,10 @@ func (token *Token) AfterCreate(tx *gorm.DB) (err error) {
 
 type TokenSetting struct {
 	Heartbeat HeartbeatSetting `json:"heartbeat,omitempty"`
+
+	// PricingGroup 可选：用于指定该令牌默认使用的模型计费分组（例如 default / hq / enterprise）
+	// 为空时由系统使用模型默认分组；非空时会在鉴权阶段写入 gin.Context 的 model_group。
+	PricingGroup string `json:"pricing_group,omitempty"`
 }
 
 type HeartbeatSetting struct {
