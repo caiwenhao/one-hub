@@ -291,3 +291,150 @@ func UpdateUserModelPricing(c *gin.Context) {
 		"message": "",
 	})
 }
+
+// GetUserAvailableModels 返回某个用户可配置客户价的模型列表（仅包含已接入渠道且对该用户分组可用的模型）
+// 逻辑：基于用户当前 Group，复用现有 AvailableModels（ChannelGroup + 全局价）计算可用模型集合。
+func GetUserAvailableModels(c *gin.Context) {
+	idStr := c.Param("id")
+	userID, err := strconv.Atoi(idStr)
+	if err != nil || userID <= 0 {
+		common.APIRespondWithError(c, http.StatusOK, err)
+		return
+	}
+
+	// 加载用户信息，获取分组
+	user, err := model.GetUserById(userID, false)
+	if err != nil {
+		common.APIRespondWithError(c, http.StatusOK, err)
+		return
+	}
+	groupName := user.Group
+	if groupName == "" {
+		groupName = "default"
+	}
+
+	// 基于 ChannelsChooser 的路由规则获取「该用户分组可用的模型」集合
+	modelNames, err := model.ChannelGroup.GetGroupModels(groupName)
+	if err != nil {
+		common.APIRespondWithError(c, http.StatusOK, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    modelNames,
+	})
+}
+
+// ConfiguredPriceDTO 用于返回用户已配置的客户价概览
+type ConfiguredPriceDTO struct {
+	Model  string          `json:"model"`
+	Groups []ModelGroupDTO `json:"groups"`
+}
+
+// GetUserConfiguredPrices 获取某用户已配置的所有客户价（概览）
+func GetUserConfiguredPrices(c *gin.Context) {
+	idStr := c.Param("id")
+	userID, err := strconv.Atoi(idStr)
+	if err != nil || userID <= 0 {
+		common.APIRespondWithError(c, http.StatusOK, err)
+		return
+	}
+
+	// 查询该用户所有已启用的客户价记录
+	var prices []model.UserModelGroupPrice
+	if err := model.DB.Where("user_id = ? AND enabled = ?", userID, true).Find(&prices).Error; err != nil {
+		common.APIRespondWithError(c, http.StatusOK, err)
+		return
+	}
+
+	// 按模型分组
+	modelMap := make(map[string][]model.UserModelGroupPrice)
+	for _, p := range prices {
+		modelMap[p.Model] = append(modelMap[p.Model], p)
+	}
+
+	// 查询所有相关的模型分组信息
+	var allModels []string
+	for m := range modelMap {
+		allModels = append(allModels, m)
+	}
+
+	var modelGroups []model.ModelGroup
+	if len(allModels) > 0 {
+		if err := model.DB.Where("model IN ?", allModels).Find(&modelGroups).Error; err != nil {
+			common.APIRespondWithError(c, http.StatusOK, err)
+			return
+		}
+	}
+
+	// 构建分组信息映射
+	groupInfoMap := make(map[string]model.ModelGroup)
+	for _, mg := range modelGroups {
+		key := mg.Model + ":" + mg.GroupCode
+		groupInfoMap[key] = mg
+	}
+
+	// 查询授权信息
+	var perms []model.UserModelGroupPermission
+	if len(allModels) > 0 {
+		if err := model.DB.Where("user_id = ? AND model IN ? AND enabled = ?", userID, allModels, true).Find(&perms).Error; err != nil {
+			common.APIRespondWithError(c, http.StatusOK, err)
+			return
+		}
+	}
+
+	permMap := make(map[string]bool)
+	for _, p := range perms {
+		key := p.Model + ":" + p.GroupCode
+		permMap[key] = true
+	}
+
+	// 构建返回结果
+	var result []ConfiguredPriceDTO
+	for model, priceList := range modelMap {
+		dto := ConfiguredPriceDTO{
+			Model:  model,
+			Groups: []ModelGroupDTO{},
+		}
+
+		for _, p := range priceList {
+			key := p.Model + ":" + p.GroupCode
+			groupInfo, hasGroupInfo := groupInfoMap[key]
+
+			groupDTO := ModelGroupDTO{
+				Model:            p.Model,
+				GroupCode:        p.GroupCode,
+				HasCustomerPrice: true,
+				Type:             p.Type,
+				InputRate:        p.InputRate,
+				OutputRate:       p.OutputRate,
+			}
+
+			if hasGroupInfo {
+				groupDTO.DisplayName = groupInfo.DisplayName
+				groupDTO.Description = groupInfo.Description
+				groupDTO.IsDefault = groupInfo.IsDefault
+				groupDTO.BillingType = groupInfo.BillingType
+			}
+
+			// 默认分组始终视为可用
+			if groupDTO.IsDefault {
+				groupDTO.Permitted = true
+			} else {
+				groupDTO.Permitted = permMap[key]
+			}
+
+			dto.Groups = append(dto.Groups, groupDTO)
+		}
+
+		result = append(result, dto)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    result,
+	})
+}

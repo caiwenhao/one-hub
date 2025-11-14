@@ -52,7 +52,8 @@ export function setCurrencyPreference(currency, pageKey = null) {
 export const CURRENCY_PAGE_KEYS = {
   MODEL_PRICE: 'modelPrice',
   UNIFIED_PRICING: 'unifiedPricing',
-  LOG: 'log'
+  LOG: 'log',
+  CLIENT_PRICE: 'clientPrice'
 };
 
 // 汇率与单位换算（与后端/priceConverter 保持一致）

@@ -28,6 +28,8 @@ const InvoiceDetail = Loadable(lazy(() => import('views/Invoice/detail')));
 const Dashboard = Loadable(lazy(() => import('views/Dashboard')));
 
 const SystemInfo = Loadable(lazy(() => import('views/SystemInfo')));
+const ClientPrice = Loadable(lazy(() => import('views/ClientPrice')));
+const ModelGroupAdmin = Loadable(lazy(() => import('views/ModelGroupAdmin')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -80,6 +82,10 @@ const MainRoutes = {
       element: <User />
     },
     {
+      path: 'client_price',
+      element: <ClientPrice />
+    },
+    {
       path: 'profile',
       element: <Profile />
     },
@@ -118,6 +124,10 @@ const MainRoutes = {
     {
       path: 'user_group',
       element: <UserGroup />
+    },
+    {
+      path: 'model_groups',
+      element: <ModelGroupAdmin />
     },
     {
       path: 'model_ownedby',

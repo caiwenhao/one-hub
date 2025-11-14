@@ -13,7 +13,8 @@ const icons = {
   IconBrandPaypal: () => <Icon width={20} icon="solar:wallet-money-bold-duotone" />,
   IconCoins: () => <Icon width={20} icon="solar:hand-money-bold-duotone" />,
   IconUsers: () => <Icon width={20} icon="solar:users-group-rounded-bold-duotone" />,
-  IconModel: () => <Icon width={20} icon="mingcute:ai-fill" />
+  IconModel: () => <Icon width={20} icon="mingcute:ai-fill" />,
+  IconPricing: () => <Icon width={20} icon="solar:wallet-money-bold-duotone" />
 };
 
 const Setting = {
@@ -56,11 +57,29 @@ const Setting = {
           isAdmin: true
         },
         {
+          id: 'model_groups',
+          title: '模型分组',
+          type: 'item',
+          url: '/panel/model_groups',
+          icon: icons.IconModel,
+          breadcrumbs: false,
+          isAdmin: true
+        },
+        {
           id: 'pricing',
           title: '模型价格',
           type: 'item',
           url: '/panel/pricing',
           icon: icons.IconReceipt2,
+          breadcrumbs: false,
+          isAdmin: true
+        },
+        {
+          id: 'client_price',
+          title: '客户价格',
+          type: 'item',
+          url: '/panel/client_price',
+          icon: icons.IconPricing,
           breadcrumbs: false,
           isAdmin: true
         },

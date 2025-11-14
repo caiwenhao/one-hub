@@ -250,6 +250,10 @@ func SetApiRouter(router *gin.Engine) {
 			// 某用户在某模型下的分组价与授权
 			customerPricingRoute.GET("/users/:id/model_pricing", controller.GetUserModelPricing)
 			customerPricingRoute.POST("/users/:id/model_pricing", controller.UpdateUserModelPricing)
+			// 某用户可配置客户价的模型列表（仅包含已接入渠道的模型）
+			customerPricingRoute.GET("/users/:id/available_models", controller.GetUserAvailableModels)
+			// 某用户已配置的所有客户价（概览）
+			customerPricingRoute.GET("/users/:id/configured_prices", controller.GetUserConfiguredPrices)
 		}
 
 		paymentRoute := apiRouter.Group("/payment")

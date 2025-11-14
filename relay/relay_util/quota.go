@@ -37,6 +37,24 @@ type Quota struct {
 	extraBillingData  map[string]ExtraBillingData
 }
 
+// secondsToVirtualTokens 将秒级用量统一折算为内部使用的“虚拟 tokens”
+// 目前 Sora / Veo 等视频模型统一按 seconds × 1000 的等价关系折算，
+// 通过集中函数方便后续按模型扩展不同的换算规则。
+func secondsToVirtualTokens(modelName string, seconds int) int {
+	lowerModel := strings.ToLower(strings.TrimSpace(modelName))
+
+	// 目前 Sora（OpenAI /v1/videos）与 Veo（Gemini /models/veo-*）均按 seconds×1000 折算
+	if strings.HasPrefix(lowerModel, "sora-2") {
+		return seconds * 1000
+	}
+	if strings.HasPrefix(lowerModel, "veo-") {
+		return seconds * 1000
+	}
+
+	// 其他按秒计费模型默认同样按 seconds×1000 折算，后续可按模型名称扩展
+	return seconds * 1000
+}
+
 func NewQuota(c *gin.Context, modelName string, promptTokens int) *Quota {
 	quota := &Quota{
 		modelName:    modelName,
@@ -94,11 +112,17 @@ func (q *Quota) PreQuotaConsumption() *types.OpenAIErrorWithStatusCode {
 	if q.price.Type == model.TimesPriceType {
 		q.preConsumedQuota = int(1000 * q.outputRatio)
 	} else if q.price.Input != 0 || q.price.Output != 0 {
-		// Sora 按秒计费：预扣时同样按 seconds×1000 计算
 		pt := q.promptTokens
-		lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
-		if strings.HasPrefix(lowerModel, "sora-2") {
-			pt = pt * 1000
+		// 对于显式的按秒计费价目，统一通过 secondsToVirtualTokens 折算
+		if q.price.Type == model.SecondsPriceType {
+			pt = secondsToVirtualTokens(q.modelName, pt)
+		} else {
+			// 兼容历史实现：部分 Sora 价目仍按 tokens 类型配置，这里保留旧逻辑避免行为变更
+			lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
+			// Sora 按秒计费：预扣时同样按 seconds×1000 计算
+			if strings.HasPrefix(lowerModel, "sora-2") {
+				pt = pt * 1000
+			}
 		}
 		q.preConsumedQuota = int(float64(pt)*q.inputRatio) + config.PreConsumedQuota
 	}
@@ -339,14 +363,20 @@ func (q *Quota) GetTotalQuota(promptTokens, completionTokens int, extraBilling m
 	if q.price.Type == model.TimesPriceType {
 		quota = int(1000 * q.outputRatio)
 	} else {
-		// Sora（OpenAI /v1/videos）按秒计费：内部换算为 seconds × 1000（对齐 tokens 基线 1k）
-		lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
-		if strings.HasPrefix(lowerModel, "sora-2") {
-			promptTokens = promptTokens * 1000
-		}
-		// Veo（Gemini /models/veo-*）按秒计费：同样按 seconds × 1000 结算
-		if strings.HasPrefix(lowerModel, "veo-") {
-			promptTokens = promptTokens * 1000
+		// 显式按秒计费的价目：统一通过 secondsToVirtualTokens 折算
+		if q.price.Type == model.SecondsPriceType {
+			promptTokens = secondsToVirtualTokens(q.modelName, promptTokens)
+		} else {
+			// 兼容历史实现：Sora / Veo 在部分环境中仍按 tokens 类型配置
+			// Sora（OpenAI /v1/videos）按秒计费：内部换算为 seconds × 1000（对齐 tokens 基线 1k）
+			lowerModel := strings.ToLower(strings.TrimSpace(q.modelName))
+			if strings.HasPrefix(lowerModel, "sora-2") {
+				promptTokens = promptTokens * 1000
+			}
+			// Veo（Gemini /models/veo-*）按秒计费：同样按 seconds × 1000 结算
+			if strings.HasPrefix(lowerModel, "veo-") {
+				promptTokens = promptTokens * 1000
+			}
 		}
 		quota = int(math.Ceil((float64(promptTokens) * q.inputRatio) + (float64(completionTokens) * q.outputRatio)))
 	}
