@@ -28,6 +28,8 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { useSelector } from 'react-redux';
 import { useLogType } from './type/LogType';
+import ToggleButtonGroup from 'ui-component/ToggleButton';
+import { getCurrencyPreference, setCurrencyPreference, CURRENCY_PAGE_KEYS, CURRENCY_OPTIONS } from 'utils/currencyPreferences';
 
 export default function Log() {
   const { t } = useTranslation();
@@ -62,6 +64,7 @@ export default function Log() {
 
   const [logs, setLogs] = useState([]);
   const userIsAdmin = useIsAdmin();
+  const [currency, setCurrency] = useState(() => getCurrencyPreference(CURRENCY_PAGE_KEYS.LOG));
 
   // 添加列显示设置相关状态
   const [columnVisibility, setColumnVisibility] = useState({
@@ -128,6 +131,16 @@ export default function Log() {
     setPage(0);
     setRowsPerPage(newRowsPerPage);
     savePageSize('log', newRowsPerPage);
+  };
+
+  const handleCurrencyChange = (event, newCurrency) => {
+    if (newCurrency !== null) {
+      setCurrency(newCurrency);
+      // 设置页面级偏好
+      setCurrencyPreference(newCurrency, CURRENCY_PAGE_KEYS.LOG);
+      // 同步设置全局偏好（renderQuota 读取全局）
+      setCurrencyPreference(newCurrency);
+    }
   };
 
   const searchLogs = async () => {
@@ -203,6 +216,7 @@ export default function Log() {
         params.order = order === 'desc' ? `-${sort}` : sort;
       }
       const url = userIsAdmin ? '/api/log/export' : '/api/log/self/export';
+      params.currency = currency;
       const res = await API.get(url, {
         params,
         responseType: 'blob'
@@ -229,7 +243,7 @@ export default function Log() {
 
   // 行为区（刷新/搜索/列设置）
   const actionsNode = matchUpMd ? (
-    <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
+    <ButtonGroup variant="outlined" aria-label="outlined small primary button group" sx={{ alignItems: 'center', gap: 1 }}>
       <Button onClick={handleRefresh} size="small" startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
         {t('logPage.refreshButton')}
       </Button>
@@ -239,6 +253,7 @@ export default function Log() {
       <Button onClick={handleExport} size="small" startIcon={<Icon icon="solar:download-minimalistic-bold-duotone" width={18} />}>
         {t('logPage.exportButton', { defaultValue: '导出CSV' })}
       </Button>
+      <ToggleButtonGroup value={currency} onChange={handleCurrencyChange} options={CURRENCY_OPTIONS} aria-label="currency toggle" size="small" />
       <Button onClick={handleColumnMenuOpen} size="small" startIcon={<Icon icon="solar:settings-bold-duotone" width={18} />}>
         {t('logPage.columnSettings')}
       </Button>
@@ -254,6 +269,7 @@ export default function Log() {
       <IconButton onClick={handleExport} size="small">
         <Icon icon="solar:download-minimalistic-bold-duotone" width={18} />
       </IconButton>
+      <ToggleButtonGroup value={currency} onChange={handleCurrencyChange} options={CURRENCY_OPTIONS} aria-label="currency toggle" size="small" />
       <IconButton onClick={handleColumnMenuOpen} size="small">
         <Icon icon="solar:settings-bold-duotone" width={18} />
       </IconButton>

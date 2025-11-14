@@ -429,18 +429,33 @@ func buildLogsExportQuery(c *gin.Context, base *gorm.DB, forUserID *int) *gorm.D
 	return tx
 }
 
-func quotaValuesForCSV(quota int) (raw string, currency string) {
-	raw = strconv.Itoa(quota)
-	if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
-		currency = fmt.Sprintf("%.6f", float64(quota)/config.QuotaPerUnit)
-	}
-	return
+func quotaValuesForCSV(quota int, currencyType string) (raw string, currency string) {
+    raw = strconv.Itoa(quota)
+    if !config.DisplayInCurrencyEnabled || config.QuotaPerUnit <= 0 {
+        return
+    }
+    // 基于 USD 计算
+    usd := float64(quota) / config.QuotaPerUnit
+    if strings.ToUpper(currencyType) == "USD" {
+        currency = fmt.Sprintf("%.6f", usd)
+        return
+    }
+    // 默认 CNY：按倍率换算（RMBRate / DollarRate）
+    ratio := model.RMBRate / model.DollarRate
+    currency = fmt.Sprintf("%.6f", usd*ratio)
+    return
 }
 
 // ExportLogsCSV 管理员导出日志 CSV（不包含输入/输出片段）
 func ExportLogsCSV(c *gin.Context) {
-	// 构建查询
-	tx := buildLogsExportQuery(c, model.DB, nil)
+    // 构建查询
+    tx := buildLogsExportQuery(c, model.DB, nil)
+
+    // 币种：USD | CNY（默认 CNY）
+    currencyType := strings.ToUpper(c.Query("currency"))
+    if currencyType != "USD" {
+        currencyType = "CNY"
+    }
 
 	// 输出头
 	filename := time.Now().In(time.Local).Format("logs_20060102_150405.csv")
@@ -452,13 +467,13 @@ func ExportLogsCSV(c *gin.Context) {
 		return
 	}
 
-    w := csv.NewWriter(c.Writer)
-    header := []string{"时间", "用户", "渠道", "模型", "令牌", "平台任务ID", "上游任务ID"}
-    if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
-        header = append(header, "金额(货币)")
-    }
-    header = append(header, "请求耗时(s)", "来源IP", "流式")
-    _ = w.Write(header)
+	w := csv.NewWriter(c.Writer)
+	header := []string{"时间", "用户", "渠道", "模型", "令牌", "平台任务ID", "上游任务ID"}
+	if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
+		header = append(header, fmt.Sprintf("金额(%s)", currencyType))
+	}
+	header = append(header, "请求耗时(s)", "来源IP", "流式")
+	_ = w.Write(header)
 
 	// 分批导出，避免占用过多内存
 	const batchSize = 1000
@@ -484,7 +499,7 @@ func ExportLogsCSV(c *gin.Context) {
 			if r.IsStream {
 				isStream = "是"
 			}
-			_, quotaCurrency := quotaValuesForCSV(r.Quota)
+			_, quotaCurrency := quotaValuesForCSV(r.Quota, currencyType)
 
             // 从 metadata 中提取任务ID
             platformTaskID := ""
@@ -531,8 +546,14 @@ func ExportLogsCSV(c *gin.Context) {
 
 // ExportUserLogsCSV 导出当前登录用户的日志 CSV
 func ExportUserLogsCSV(c *gin.Context) {
-	uid := c.GetInt("id")
-	tx := buildLogsExportQuery(c, model.DB, &uid)
+    uid := c.GetInt("id")
+    tx := buildLogsExportQuery(c, model.DB, &uid)
+
+    // 币种：USD | CNY（默认 CNY）
+    currencyType := strings.ToUpper(c.Query("currency"))
+    if currencyType != "USD" {
+        currencyType = "CNY"
+    }
 
 	filename := time.Now().In(time.Local).Format("logs_20060102_150405.csv")
 	c.Header("Content-Type", "text/csv; charset=utf-8")
@@ -547,7 +568,7 @@ func ExportUserLogsCSV(c *gin.Context) {
     // 非管理员导出：包含“渠道”列（仅 id），新增“平台任务ID”列
     header := []string{"时间", "用户", "渠道", "模型", "令牌", "平台任务ID"}
     if config.DisplayInCurrencyEnabled && config.QuotaPerUnit > 0 {
-        header = append(header, "金额(货币)")
+        header = append(header, fmt.Sprintf("金额(%s)", currencyType))
     }
     header = append(header, "请求耗时(s)", "来源IP", "流式")
     _ = w.Write(header)
@@ -569,7 +590,7 @@ func ExportUserLogsCSV(c *gin.Context) {
             if r.IsStream {
                 isStream = "是"
             }
-            _, quotaCurrency := quotaValuesForCSV(r.Quota)
+            _, quotaCurrency := quotaValuesForCSV(r.Quota, currencyType)
             // 非管理员导出记录：渠道仅输出 channel_id（无 id 时留空）
             channelIDStr := ""
             if r.ChannelId > 0 {
