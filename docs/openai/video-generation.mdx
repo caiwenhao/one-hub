@@ -26,12 +26,12 @@ curl -X POST "https://models.kapon.cloud/v1/videos" \
 - `seconds`：视频时长（秒，字符串传递更兼容）。常见可用档位：
   - `sora-2`：`10`、`15`
   - `sora-2-pro`：`15`、`25`
-  - 特定上游（如 `ezlinkai`）仅支持：`4`、`8`、`12`
+  - OpenAI 官方 API 仅支持：`4`、`8`、`12`
 - `size`：视频分辨率，如 `1280x720`、`1920x1080`
 
 <Callout type="tip">
 时长选择建议：
-- 快速预览：优先 10 秒（或在 `ezlinkai` 上游使用 4/8/12 秒）
+- 快速预览：优先 10 秒（若使用 OpenAI 官方 API，请按其仅支持的 4/8/12 秒档位）
 - 正式成片：`sora-2-pro` 的 25 秒可以呈现更完整叙事，但生成与下载时间也更长
 </Callout>
 
@@ -147,7 +147,7 @@ curl -X POST "https://models.kapon.cloud/v1/videos" \
 ```
 
 <Callout type="warning">
-若通道为 `ezlinkai`，`seconds` 必须是 4、8 或 12 且需在 multipart 表单中显式提供。请确保 `-F seconds=8` 使用的是纯数字，不要加引号，也不要误用 Bash/Zsh 的保留变量 `SECONDS`。
+若通道为 OpenAI 官方 API，`seconds` 必须是 4、8 或 12 且需在 multipart 表单中显式提供。请确保 `-F seconds=8` 使用的是纯数字，不要加引号，也不要误用 Bash/Zsh 的保留变量 `SECONDS`。
 </Callout>
 
 ### Python SDK 示例（openai-python）
